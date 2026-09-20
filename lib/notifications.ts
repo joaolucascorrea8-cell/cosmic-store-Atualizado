@@ -38,15 +38,18 @@ export async function notifyAdminDiscord(message: string) {
 
 export async function sendDiscordDm(discordId: string | null | undefined, message: string, buttonLabel?: string, link?: string) {
   const token = process.env.DISCORD_BOT_TOKEN;
-  if (!token || !discordId) return;
+  if (!token) throw new Error("DISCORD_BOT_TOKEN não configurado.");
+  if (!discordId) throw new Error("O perfil do cliente não possui discord_id.");
   const channelResponse = await fetch("https://discord.com/api/v10/users/@me/channels", {
     method: "POST",
     headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ recipient_id: discordId }),
   });
-  if (!channelResponse.ok) return;
+  if (!channelResponse.ok) {
+    throw new Error(`Discord não abriu a DM (${channelResponse.status}): ${(await channelResponse.text()).slice(0, 500)}`);
+  }
   const channel = await channelResponse.json() as { id: string };
-  await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
+  const messageResponse = await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
     method: "POST",
     headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -54,6 +57,9 @@ export async function sendDiscordDm(discordId: string | null | undefined, messag
       components: buttonLabel && link ? [{ type: 1, components: [{ type: 2, style: 5, label: buttonLabel, url: link }] }] : undefined,
     }),
   });
+  if (!messageResponse.ok) {
+    throw new Error(`Discord recusou a DM (${messageResponse.status}): ${(await messageResponse.text()).slice(0, 500)}`);
+  }
 }
 
 export async function notifyCustomer(userId: string, title: string, body: string, path: string) {
