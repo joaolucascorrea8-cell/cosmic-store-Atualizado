@@ -8,7 +8,7 @@ import { notifyCustomer } from "@/lib/notifications";
 const allowed = ["paid","delivered","cancelled","proof_rejected"];
 
 export async function updateOrderStatus(formData:FormData){
-  await requireAdmin();
+  const adminUser=await requireAdmin();
   const orderId=String(formData.get("order_id")??""); const status=String(formData.get("status")??"");
   if(!orderId||!allowed.includes(status))throw new Error("Situação inválida.");
   const admin=createAdminClient(); const {data:order}=await admin.from("orders").select("user_id,order_code,status,stock_deducted_at,stock_restored_at").eq("id",orderId).single(); if(!order)throw new Error("Pedido não encontrado.");
@@ -27,6 +27,7 @@ export async function updateOrderStatus(formData:FormData){
   if(status==="delivered"){updates.delivered_at=now.toISOString();updates.chat_closed_at=now.toISOString();}
   if(status==="proof_rejected")updates.rejection_reason=rejectionReason;
   const {error}=await admin.from("orders").update(updates).eq("id",orderId); if(error)throw error;
+  await admin.from("order_admin_events").insert({order_id:orderId,admin_id:adminUser.id,action:`status:${status}`,details:status==="proof_rejected"?{rejection_reason:rejectionReason}:null});
   const notifications:Record<string,[string,string]>={
     paid:["Pagamento confirmado!",`O pagamento do pedido ${order.order_code} foi confirmado. O chat do pedido já está disponível.`],
     delivered:["Pedido entregue!",`O pedido ${order.order_code} foi marcado como entregue. Conte como foi sua experiência com a Cosmic Store.`],
@@ -38,7 +39,7 @@ export async function updateOrderStatus(formData:FormData){
 }
 
 export async function updateOrderChat(formData:FormData){
-  await requireAdmin();
+  const adminUser=await requireAdmin();
   const orderId=String(formData.get("order_id")??""); const action=String(formData.get("chat_action")??"");
   if(!orderId||!["open","close"].includes(action))throw new Error("Ação de atendimento inválida.");
   const admin=createAdminClient();
@@ -46,5 +47,6 @@ export async function updateOrderChat(formData:FormData){
   if(!order||!["paid","preparing_delivery","delivered"].includes(order.status))throw new Error("O chat ainda não está disponível para este pedido.");
   const {error}=await admin.from("orders").update({chat_closed_at:action==="close"?new Date().toISOString():null}).eq("id",orderId);
   if(error)throw error;
+  await admin.from("order_admin_events").insert({order_id:orderId,admin_id:adminUser.id,action:`chat:${action}`});
   revalidatePath(`/admin/pedidos/${orderId}`); revalidatePath(`/pedidos/${orderId}`);
 }

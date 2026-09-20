@@ -80,4 +80,13 @@ export async function notifyCustomer(userId: string, title: string, body: string
       console.error(`[notifyCustomer] Falha em ${channels[index]} para o usuário ${userId}:`, result.reason);
     }
   });
+  const channels = ["site", "email", "discord"];
+  await admin.from("notification_deliveries").insert(results.map((result, index) => ({
+    user_id: userId,
+    title,
+    link: path,
+    channel: channels[index],
+    status: result.status === "fulfilled" ? "sent" : "failed",
+    error_message: result.status === "rejected" ? String(result.reason instanceof Error ? result.reason.message : result.reason).slice(0, 500) : null,
+  })));
 }

@@ -11,5 +11,6 @@ html{scroll-behavior:smooth}body{min-height:100vh;margin:0;color:var(--foregroun
 .skip-link:focus{transform:translateY(0)}
 .page-state{display:grid;min-height:65dvh;place-items:center;padding:2rem;text-align:center}
 .page-state-card{width:min(34rem,100%);border:1px solid rgba(255,255,255,.1);border-radius:1.5rem;background:rgba(18,16,23,.94);padding:2rem}
-@media(max-width:767px){body{background-attachment:scroll}header{backdrop-filter:blur(10px)}body::before{opacity:.28}}
+@media(max-width:767px){body{background-attachment:scroll}header{backdrop-filter:blur(10px)}body::before{opacity:.28}input,textarea,select{font-size:16px}}
+@media(max-width:420px){.shell,.wide-shell,.catalog-shell{width:min(100% - 1rem,1740px)}.product-grid{grid-template-columns:repeat(1,minmax(0,1fr))!important;gap:1rem}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
