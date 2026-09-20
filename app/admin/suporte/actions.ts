@@ -1,0 +1,3 @@
+"use server";
+import {revalidatePath} from "next/cache";import {redirect} from "next/navigation";import {requireAdmin} from "@/lib/require-admin";import {createAdminClient} from "@/lib/supabase/admin";
+export async function updateTicketStatus(formData:FormData){await requireAdmin();const id=String(formData.get("id")??"");const status=String(formData.get("status")??"");if(!["open","closed"].includes(status))throw new Error("Situação inválida.");await createAdminClient().from("support_tickets").update({status,closed_at:status==="closed"?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq("id",id);revalidatePath("/admin/suporte");revalidatePath(`/admin/suporte/${id}`);revalidatePath(`/suporte/${id}`);redirect(`/admin/suporte/${id}`);}

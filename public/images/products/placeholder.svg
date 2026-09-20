@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450">
+  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#7c3aed" stop-opacity=".45"/><stop offset="1" stop-color="#3b0764" stop-opacity=".12"/></linearGradient></defs>
+  <rect width="600" height="450" rx="32" fill="#121017"/>
+  <rect width="600" height="450" rx="32" fill="url(#g)"/>
+  <path d="M300 112l28 73 73 28-73 28-28 73-28-73-73-28 73-28z" fill="#a78bfa"/>
+  <text x="300" y="370" text-anchor="middle" fill="#ddd6fe" font-family="Arial,sans-serif" font-size="28" font-weight="700">COSMIC</text>
+</svg>
