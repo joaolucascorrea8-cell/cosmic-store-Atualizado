@@ -11,12 +11,18 @@ export async function createUserNotification(userId: string, title: string, body
 export async function sendEmail(to: string | undefined, subject: string, html: string) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
-  if (!apiKey || !from || !to) return;
-  await fetch("https://api.resend.com/emails", {
+  if (!apiKey) throw new Error("RESEND_API_KEY não configurada.");
+  if (!from) throw new Error("EMAIL_FROM não configurado.");
+  if (!to) throw new Error("Destinatário do e-mail não encontrado.");
+  const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from, to: [to], subject, html }),
   });
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`Resend recusou o e-mail (${response.status}): ${details.slice(0, 500)}`);
+  }
 }
 
 export async function notifyAdminDiscord(message: string) {
@@ -57,10 +63,15 @@ export async function notifyCustomer(userId: string, title: string, body: string
     admin.from("profiles").select("discord_id").eq("id", userId).maybeSingle(),
   ]);
   const link = `${siteUrl}${path}`;
-  await Promise.allSettled([
+  const results = await Promise.allSettled([
     createUserNotification(userId, title, body, path),
     sendEmail(authData.user?.email, title, `<div style="font-family:Arial,sans-serif"><h2>${title}</h2><p>${body}</p><p><a href="${link}">Abrir na Cosmic Store</a></p></div>`),
     sendDiscordDm(profile?.discord_id, `**${title}**\n${body}`, "Abrir na Cosmic Store", link),
   ]);
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      const channels = ["notificação interna", "e-mail", "Discord"];
+      console.error(`[notifyCustomer] Falha em ${channels[index]} para o usuário ${userId}:`, result.reason);
+    }
+  });
 }
-
