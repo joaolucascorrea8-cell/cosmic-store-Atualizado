@@ -1,14 +1,4 @@
 import Link from "next/link";
-
 export default function SiteFooter() {
-  return (
-    <footer className="mt-16 border-t border-white/[.08] bg-black/20">
-      <div className="shell grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div><Link href="/" className="text-xl font-black">COSMIC<span className="text-violet-500">.</span></Link><p className="mt-3 max-w-sm text-sm leading-6 text-zinc-400">Produtos digitais, atendimento acompanhado e uma experiência criada para jogadores.</p></div>
-        <div><p className="text-xs font-bold uppercase tracking-[.18em] text-zinc-300">Navegação</p><nav aria-label="Navegação do rodapé" className="mt-4 grid gap-2 text-sm text-zinc-400"><Link href="/produtos" className="hover:text-white">Todos os produtos</Link><Link href="/jogos" className="hover:text-white">Jogos</Link><Link href="/chat" className="hover:text-white">Comunidade</Link></nav></div>
-        <div><p className="text-xs font-bold uppercase tracking-[.18em] text-zinc-300">Segurança</p><nav aria-label="Políticas da loja" className="mt-4 grid gap-2 text-sm text-zinc-400"><Link href="/termos" className="hover:text-white">Termos de Uso</Link><Link href="/privacidade" className="hover:text-white">Privacidade</Link><Link href="/reembolso" className="hover:text-white">Política de reembolso</Link></nav></div>
-      </div>
-      <div className="border-t border-white/[.06]"><div className="shell flex flex-col justify-between gap-2 py-5 text-xs text-zinc-400 sm:flex-row"><p>© 2026 Cosmic Store. Todos os direitos reservados.</p><p>Entrega estimada em até 24 horas após a confirmação.</p></div></div>
-    </footer>
-  );
+  return <footer className="mt-12 border-t border-white/[.08] bg-[#09080f]"><div className="shell grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.45fr_1fr_1fr_1fr]"><div><Link href="/" className="text-2xl font-black tracking-tight">COSMIC<span className="text-violet-400">.</span></Link><p className="mt-3 max-w-xs text-sm leading-6 text-zinc-400">Uma loja de itens digitais feita para o seu universo gamer.</p><p className="mt-4 text-xs text-zinc-500">Pagamento via Pix · Confirmação manual de comprovantes</p></div><div><h2 className="footer-title">Explorar</h2><nav className="footer-links"><Link href="/produtos">Todos os produtos</Link><Link href="/jogos">Jogos</Link><Link href="/chat">Comunidade</Link></nav></div><div><h2 className="footer-title">Sua conta</h2><nav className="footer-links"><Link href="/pedidos">Acompanhar pedidos</Link><Link href="/suporte">Central de suporte</Link><Link href="/notificacoes">Notificações</Link></nav></div><div><h2 className="footer-title">Informações</h2><nav className="footer-links"><Link href="/termos">Termos de uso</Link><Link href="/privacidade">Privacidade</Link><Link href="/reembolso">Reembolso</Link></nav></div></div><div className="border-t border-white/[.06]"><div className="shell flex flex-wrap items-center justify-between gap-2 py-5 text-xs text-zinc-500"><span>© 2026 Cosmic Store. Todos os direitos reservados.</span><span>Entrega estimada em até 24 horas após confirmação do pagamento.</span></div></div></footer>;
 }

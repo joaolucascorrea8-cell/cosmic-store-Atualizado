@@ -6,12 +6,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyCustomer } from "@/lib/notifications";
 
 const allowed = ["paid","delivered","cancelled","proof_rejected"];
+const transitions: Record<string, string[]> = {
+  awaiting_payment: ["cancelled"],
+  proof_submitted: ["paid", "proof_rejected", "cancelled"],
+  under_review: ["paid", "proof_rejected", "cancelled"],
+  proof_rejected: ["cancelled"],
+  paid: ["delivered", "cancelled"],
+  preparing_delivery: ["delivered", "cancelled"],
+};
 
 export async function updateOrderStatus(formData:FormData){
   const adminUser=await requireAdmin();
   const orderId=String(formData.get("order_id")??""); const status=String(formData.get("status")??"");
   if(!orderId||!allowed.includes(status))throw new Error("Situação inválida.");
   const admin=createAdminClient(); const {data:order}=await admin.from("orders").select("user_id,order_code,status,stock_deducted_at,stock_restored_at").eq("id",orderId).single(); if(!order)throw new Error("Pedido não encontrado.");
+  if (order.status === status) return; // Evita ações repetidas e avisos duplicados.
+  if (!transitions[order.status]?.includes(status)) throw new Error("A situação deste pedido mudou. Recarregue a página.");
   const rejectionReason=String(formData.get("rejection_reason")??"").trim();
   if(status==="proof_rejected"&&(rejectionReason.length<5||rejectionReason.length>300))throw new Error("Informe um motivo de 5 a 300 caracteres.");
   if(status==="paid"&&!['paid','preparing_delivery','delivered'].includes(order.status)){
@@ -26,7 +36,9 @@ export async function updateOrderStatus(formData:FormData){
   if(status==="paid"){updates.paid_at=now.toISOString();updates.delivery_due_at=new Date(now.getTime()+24*60*60*1000).toISOString();updates.chat_closed_at=null;updates.rejection_reason=null;}
   if(status==="delivered"){updates.delivered_at=now.toISOString();updates.chat_closed_at=now.toISOString();}
   if(status==="proof_rejected")updates.rejection_reason=rejectionReason;
-  const {error}=await admin.from("orders").update(updates).eq("id",orderId); if(error)throw error;
+  const {data:updated,error}=await admin.from("orders").update(updates).eq("id",orderId).eq("status",order.status).select("id").maybeSingle();
+  if(error)throw error;
+  if(!updated)throw new Error("Outro administrador já alterou este pedido. Atualize a página.");
   await admin.from("order_admin_events").insert({order_id:orderId,admin_id:adminUser.id,action:`status:${status}`,details:status==="proof_rejected"?{rejection_reason:rejectionReason}:null});
   const notifications:Record<string,[string,string]>={
     paid:["Pagamento confirmado!",`O pagamento do pedido ${order.order_code} foi confirmado. O chat do pedido já está disponível.`],

@@ -1,0 +1,7 @@
+"use client";
+import { useState } from "react";
+const slugify = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100);
+export default function NamedSlugFields({ prefix, type }: { prefix: string; type: "game" | "category" }) {
+  const [name, setName] = useState(""); const [slug, setSlug] = useState(""); const [custom, setCustom] = useState(false);
+  return <><div><label htmlFor={`${prefix}_name`} className="admin-label">Nome {type === "game" ? "do jogo" : "da categoria"}</label><input id={`${prefix}_name`} name={type === "game" ? "name" : "category_name"} required minLength={2} maxLength={100} value={name} onChange={event => {setName(event.target.value);if (!custom) setSlug(slugify(event.target.value));}} placeholder={type === "game" ? "Ex.: Blox Fruits" : "Ex.: Frutas Permanentes"} className="admin-input" /></div><div><label htmlFor={`${prefix}_slug`} className="admin-label">Identificador (URL)</label><input id={`${prefix}_slug`} name={type === "game" ? "slug" : "category_slug"} required maxLength={100} pattern="[a-z0-9]+(-[a-z0-9]+)*" value={slug} onChange={event => {setSlug(slugify(event.target.value));setCustom(true);}} placeholder={type === "game" ? "blox-fruits" : "frutas-permanentes"} className="admin-input" /><p className="mt-1.5 text-xs text-zinc-500">Gerado automaticamente pelo nome. Você pode alterar.</p></div></>;
+}

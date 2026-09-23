@@ -1,50 +1,13 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import AddToCartButton from '@/app/components/AddToCartButton';
+import Image from "next/image";
+import Link from "next/link";
+import AddToCartButton from "@/app/components/AddToCartButton";
 
+type Product = { id: string; name: string; description: string; price: number; slug: string; image_url?: string | null; stock?: number; unlimited_stock?: boolean };
 
-interface ProductCardProps {
-  produto: {
-    id: string;
-    name: string;        // Ajustado para inglês
-    description: string; // Ajustado para inglês
-    price: number;       // Ajustado para inglês
-    slug: string;
-    image_url?: string | null;
-    stock?: number;
-    unlimited_stock?: boolean;
-  };
-}
-
-export default function ProductCard({ produto }: ProductCardProps) {
-  return (
-    <article className="card-hover surface group flex min-w-0 flex-col overflow-hidden rounded-2xl text-white">
-      
-      {/* Imagem Quadrada Compacta (Vitrine Profissional) */}
-      <Link href={`/produto/${produto.slug}`} aria-hidden="true" tabIndex={-1} className="relative block aspect-square w-full overflow-hidden bg-[radial-gradient(circle_at_50%_45%,rgba(139,92,246,.26),transparent_58%),#171020]">
-        <Image 
-          src={produto.image_url || '/images/products/placeholder.svg'} 
-          alt=""
-          fill
-          sizes="(max-width: 639px) 50vw, (max-width: 899px) 33vw, (max-width: 1199px) 25vw, (max-width: 1499px) 17vw, 12.5vw"
-          className="object-contain p-3 transition-transform duration-500 group-hover:scale-108"
-        />
-      </Link>
-      
-      {/* Textos Informativos */}
-      <div className="flex flex-1 flex-col border-t border-white/[.06] p-3">
-        <span className="truncate text-xs font-bold uppercase tracking-wider text-violet-400">
-          {produto.unlimited_stock ? "Estoque ilimitado" : `${produto.stock ?? 0} disponíveis`}
-        </span>
-        <Link href={`/produto/${produto.slug}`} className="mt-1.5 line-clamp-2 min-h-10 text-sm font-black hover:text-violet-300">
-          {produto.name}
-        </Link>
-        <p className="mt-1.5 line-clamp-2 min-h-10 text-xs leading-5 text-zinc-400">
-          {produto.description || 'Sem descrição disponível.'}
-        </p>
-        <p className="mt-3 text-sm font-extrabold">{Number(produto.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-        <div className="mt-2"><AddToCartButton produto={produto} compact /></div>
-      </div>
-    </article>
-  );
+export default function ProductCard({ produto }: { produto: Product }) {
+  const soldOut = !produto.unlimited_stock && Number(produto.stock ?? 0) <= 0;
+  return <article className="product-tile group flex min-w-0 flex-col overflow-hidden">
+    <Link href={`/produto/${produto.slug}`} className="product-tile-image relative block aspect-square overflow-hidden" aria-label={`Ver ${produto.name}`}><Image src={produto.image_url || "/images/products/placeholder.svg"} alt={produto.name} fill sizes="(max-width: 600px) 50vw, (max-width: 1000px) 33vw, 25vw" className="object-contain p-5 transition-transform duration-300 group-hover:scale-[1.06]" /><span className={`absolute left-3 top-3 rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-wider ${soldOut ? "bg-zinc-800 text-zinc-300" : "border border-emerald-400/20 bg-[#11291e] text-emerald-300"}`}>{soldOut ? "Esgotado" : "Disponível"}</span></Link>
+    <div className="flex flex-1 flex-col p-4"><Link href={`/produto/${produto.slug}`} className="line-clamp-2 min-h-11 text-sm font-bold leading-5 transition hover:text-violet-300 sm:text-base">{produto.name}</Link><p className="mt-1 line-clamp-2 min-h-9 text-xs leading-[1.15rem] text-zinc-500">{produto.description || "Item digital para o seu jogo."}</p><div className="mt-auto border-t border-white/[.07] pt-3"><p className="mb-3 text-lg font-black tracking-tight text-white">{Number(produto.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p><AddToCartButton produto={produto} compact /></div></div>
+  </article>;
 }

@@ -9,6 +9,8 @@ export default function SupportChat({ ticketId, userId, initialMessages, canSend
   const [messages, setMessages] = useState(initialMessages);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
   const keepAtBottom = useRef(true);
   const subscribedRef = useRef(false);
@@ -45,21 +47,26 @@ export default function SupportChat({ ticketId, userId, initialMessages, canSend
   async function send(event: FormEvent) {
     event.preventDefault();
     const clean = message.trim();
-    if (!clean) return;
+    if (!clean || sendingRef.current) return;
+    sendingRef.current = true;
+    setSending(true);
     keepAtBottom.current = true;
-    setMessage("");
-    setError("");
-    const temp = `temp-${Date.now()}`;
-    setMessages((current) => [...current, { id: temp, user_id: userId, message: clean, created_at: new Date().toISOString() }]);
-    const response = await fetch(`/api/support/${ticketId}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: clean }) });
-    const data = await response.json();
-    if (!response.ok) {
-      setMessages((current) => current.filter((item) => item.id !== temp));
+    setMessage("");setError("");
+    const temp = `temp-${crypto.randomUUID()}`;
+    setMessages(current => [...current,{id:temp,user_id:userId,message:clean,created_at:new Date().toISOString()}]);
+    try {
+      const response = await fetch(`/api/support/${ticketId}/messages`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:clean})});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Não foi possível enviar.");
+      await refresh();
+    } catch (caught) {
+      setMessages(current => current.filter(item => item.id !== temp));
       setMessage(clean);
-      setError(data.error ?? "Não foi possível enviar.");
-      return;
+      setError(caught instanceof Error ? caught.message : "Falha na conexão. Tente novamente.");
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
     }
-    await refresh();
   }
 
   return (
@@ -67,7 +74,7 @@ export default function SupportChat({ ticketId, userId, initialMessages, canSend
       <div role="log" aria-live="polite" aria-relevant="additions" ref={listRef} onScroll={(event) => { const element = event.currentTarget; keepAtBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80; }} className="h-[52dvh] min-h-[380px] space-y-3 overflow-y-auto p-5">
         {messages.map((item) => <div key={item.id} className={`flex ${item.user_id === userId ? "justify-end" : "justify-start"} ${item.id.startsWith("temp-") ? "opacity-70" : ""}`}><div className={`max-w-[82%] rounded-2xl px-4 py-3 ${item.user_id === userId ? "bg-violet-600" : "bg-white/[.06]"}`}><p className="text-xs font-bold opacity-70">{item.profiles?.nickname ?? (item.user_id === userId ? "Você" : "Equipe Cosmic")}</p><p className="mt-1 whitespace-pre-wrap text-sm">{item.message}</p><time className="mt-2 block text-xs opacity-70">{item.id.startsWith("temp-") ? "enviando..." : new Date(item.created_at).toLocaleString("pt-BR")}</time></div></div>)}
       </div>
-      {canSend ? <form onSubmit={send} className="flex gap-2 border-t border-white/[.07] p-4"><label htmlFor="support-message" className="sr-only">Mensagem para o suporte</label><input id="support-message" value={message} onChange={(event) => setMessage(event.target.value)} maxLength={1500} placeholder="Escreva sua mensagem..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/25 px-4 py-3 outline-none focus:border-violet-500" /><button className="min-h-11 rounded-xl bg-violet-600 px-5 font-bold">Enviar</button></form> : <div className="border-t border-white/[.07] p-4 text-center text-sm text-zinc-400">Atendimento encerrado. A equipe pode reabri-lo se necessário.</div>}
+      {canSend ? <form onSubmit={send} className="flex flex-col gap-2 border-t border-white/[.07] p-4 sm:flex-row"><label htmlFor="support-message" className="sr-only">Mensagem para o suporte</label><input id="support-message" value={message} onChange={(event) => setMessage(event.target.value)} maxLength={1500} disabled={sending} placeholder="Escreva sua mensagem..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/25 px-4 py-3 outline-none focus:border-violet-500" /><button disabled={sending || !message.trim()} className="min-h-11 rounded-xl bg-violet-600 px-5 font-bold disabled:opacity-50">{sending ? "Enviando..." : "Enviar"}</button></form> : <div className="border-t border-white/[.07] p-4 text-center text-sm text-zinc-400">Atendimento encerrado. A equipe pode reabri-lo se necessário.</div>}
       {error && <p role="alert" className="px-4 pb-4 text-xs text-red-300">{error}</p>}
     </section>
   );

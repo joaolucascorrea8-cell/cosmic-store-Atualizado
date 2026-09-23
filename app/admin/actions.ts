@@ -60,7 +60,7 @@ export async function createGame(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/jogos");
-  redirect("/admin?created=game");
+  redirect("/admin/catalogo?created=game");
 }
 
 export async function createCategory(formData: FormData) {
@@ -83,7 +83,7 @@ export async function createCategory(formData: FormData) {
   }
   revalidatePath("/admin");
   revalidatePath("/jogos");
-  redirect("/admin?created=category");
+  redirect("/admin/catalogo?created=category");
 }
 
 async function replaceCatalogImage(
@@ -138,7 +138,7 @@ export async function updateGameImage(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/");
   revalidatePath("/jogos");
-  redirect("/admin?updated=game-image");
+  redirect("/admin/catalogo?updated=game-image");
 }
 
 export async function updateCategoryImage(formData: FormData) {
@@ -161,7 +161,7 @@ export async function updateCategoryImage(formData: FormData) {
     const { data: game } = await supabase.from("games").select("slug").eq("id", category.game_id).single();
     if (game?.slug) revalidatePath(`/${game.slug}`);
   }
-  redirect("/admin?updated=category-image");
+  redirect("/admin/catalogo?updated=category-image");
 }
 export async function createProduct(formData: FormData) {
   await requireAdmin();
@@ -618,3 +618,67 @@ redirect("/admin/produtos?sucesso=produto-atualizado");
 
 
 
+
+// Edição e exclusão segura do catálogo: evita cascatas que apagariam produtos.
+export async function updateGameDetails(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("game_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const visibility = String(formData.get("is_active") ?? "");
+  if (!["true", "false"].includes(visibility)) throw new Error("Selecione uma visibilidade válida.");
+  const isActive = visibility === "true";
+  if (!/^[0-9a-f-]{36}$/i.test(id) || name.length < 2 || name.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100) throw new Error("Dados do jogo inválidos.");
+  const admin = createAdminClient();
+  const { data: before } = await admin.from("games").select("slug").eq("id",id).maybeSingle();
+  if (!before) throw new Error("Jogo não encontrado.");
+  const { error } = await admin.from("games").update({ name, slug, is_active: isActive }).eq("id", id);
+  if (error) throw new Error(error.code === "23505" ? "O identificador já está sendo usado." : "Não foi possível editar o jogo.");
+  revalidatePath("/");revalidatePath("/jogos");revalidatePath(`/`+before.slug);revalidatePath(`/${slug}`);revalidatePath("/admin/catalogo");
+  redirect("/admin/catalogo?updated=game");
+}
+
+export async function updateCategoryDetails(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("category_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  if (!/^[0-9a-f-]{36}$/i.test(id) || name.length < 2 || name.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100) throw new Error("Dados da categoria inválidos.");
+  const admin = createAdminClient();
+  const { error } = await admin.from("categories").update({ name, slug }).eq("id", id);
+  if (error) throw new Error(error.code === "23505" ? "O identificador já está sendo usado." : "Não foi possível editar a categoria.");
+  revalidatePath("/");revalidatePath("/jogos");revalidatePath("/admin/catalogo");
+  redirect("/admin/catalogo?updated=category");
+}
+
+export async function deleteEmptyGame(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("game_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Jogo inválido.");
+  const admin = createAdminClient();
+  const { count, error: checkError } = await admin.from("categories").select("id",{head:true,count:"exact"}).eq("game_id",id);
+  if (checkError || count === null) throw new Error("Não foi possível conferir as categorias.");
+  if (count > 0) throw new Error("Exclua ou transfira as categorias antes de remover o jogo.");
+  const { data, error } = await admin.from("games").delete().eq("id",id).select("image_url").maybeSingle();
+  if (error) throw new Error("Não foi possível remover o jogo.");
+  const path = getManagedProductImagePath(data?.image_url ?? null);
+  if (path) await admin.storage.from(PRODUCT_IMAGE_BUCKET).remove([path]);
+  revalidatePath("/");revalidatePath("/jogos");revalidatePath("/admin/catalogo");
+  redirect("/admin/catalogo?updated=game-deleted");
+}
+
+export async function deleteEmptyCategory(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("category_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Categoria inválida.");
+  const admin = createAdminClient();
+  const { count, error: checkError } = await admin.from("products").select("id",{head:true,count:"exact"}).eq("category_id",id);
+  if (checkError || count === null) throw new Error("Não foi possível conferir os produtos.");
+  if (count > 0) throw new Error("Esta categoria ainda tem produtos. Remova os produtos primeiro.");
+  const { data, error } = await admin.from("categories").delete().eq("id",id).select("image_url").maybeSingle();
+  if (error) throw new Error("Não foi possível remover a categoria.");
+  const path = getManagedProductImagePath(data?.image_url ?? null);
+  if (path) await admin.storage.from(PRODUCT_IMAGE_BUCKET).remove([path]);
+  revalidatePath("/");revalidatePath("/jogos");revalidatePath("/admin/catalogo");
+  redirect("/admin/catalogo?updated=category-deleted");
+}
