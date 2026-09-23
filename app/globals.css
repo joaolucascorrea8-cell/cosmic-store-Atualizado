@@ -118,3 +118,9 @@ body::before { opacity:.14; background-size:280px 280px,400px 400px; }
 @media(max-width:550px){ .checkout-steps li { flex-direction:column;gap:.45rem;padding:.65rem .4rem;font-size:.67rem;text-align:center; } }
 /* Em aparelhos de 361–420px, mantém dois cards sem os oito/um da grade antiga. */
 @media (min-width:361px) and (max-width:420px){.product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:.65rem}.product-tile>div{padding:.65rem}}
+.admin-product-order-row { display:flex;align-items:center;gap:.75rem;padding:.7rem .8rem;border:1px solid rgba(255,255,255,.075);border-radius:10px;background:#0d0b12;transition:border-color .15s,background .15s,opacity .15s; }
+.admin-product-order-row:hover { border-color:rgba(167,139,250,.34);background:#110e18; }
+.admin-order-button { display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:#211a2b;color:#eee7f8;font-weight:900;transition:border-color .15s,opacity .15s; }
+.admin-order-button:hover:not(:disabled) { border-color:#ae81ff; }
+.admin-order-button:disabled { cursor:not-allowed;opacity:.28; }
+@media(max-width:520px){ .admin-product-order-row { gap:.55rem;padding:.65rem; }.admin-product-order-row > div:nth-of-type(2) { min-width:90px; } }

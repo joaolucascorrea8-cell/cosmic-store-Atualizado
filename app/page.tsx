@@ -14,7 +14,7 @@ export default async function Home() {
   const [{ data: games }, { data: categories }, { data: products }, { data: feedbacks }] = await Promise.all([
     supabase.from("games").select("id,name,slug,image_url").eq("is_active", true).order("name"),
     supabase.from("categories").select("id,name,slug,game_id,image_url").order("name").limit(6),
-    supabase.from("products").select("id,name,slug,description,price,image_url,stock,unlimited_stock").eq("is_active", true).order("name").limit(8),
+    supabase.from("products").select("id,name,slug,description,price,image_url,stock,unlimited_stock,display_order").eq("is_active", true).order("display_order", { ascending: true }).order("name", { ascending: true }).limit(8),
     supabase.from("feedbacks").select("id,rating,comment,author_nickname,created_at").eq("is_visible", true).order("created_at", { ascending: false }).limit(3),
   ]);
   const activeGames = games ?? [];

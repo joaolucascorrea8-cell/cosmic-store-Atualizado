@@ -163,6 +163,42 @@ export async function updateCategoryImage(formData: FormData) {
   }
   redirect("/admin/catalogo?updated=category-image");
 }
+
+export async function saveProductOrder(productIds: string[]) {
+  await requireAdmin();
+
+  if (!Array.isArray(productIds) || productIds.length > 1000) {
+    return { error: "Ordem de produtos inválida." };
+  }
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const ids = productIds.map((id) => String(id).trim());
+
+  if (ids.some((id) => !uuidRegex.test(id)) || new Set(ids).size !== ids.length) {
+    return { error: "A lista de produtos contém itens inválidos ou repetidos." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("set_product_display_order", {
+    product_ids: ids,
+  });
+
+  if (error) {
+    console.error("Erro ao salvar ordem dos produtos:", error.code);
+    return {
+      error:
+        "Não foi possível salvar a ordem. Se outro produto foi cadastrado agora, atualize a página e tente novamente.",
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/produtos");
+  revalidatePath("/admin/produtos");
+
+  return { error: null };
+}
+
 export async function createProduct(formData: FormData) {
   await requireAdmin();
 
@@ -296,6 +332,22 @@ if (!category) {
   throw new Error("A categoria selecionada não existe.");
 }
 
+const { data: lastProduct, error: orderError } = await admin
+  .from("products")
+  .select("display_order")
+  .order("display_order", { ascending: false })
+  .limit(1)
+  .maybeSingle();
+
+if (orderError) {
+  console.error("Erro ao calcular ordem do produto:", orderError.code);
+  throw new Error(
+    "Não foi possível definir a posição do produto. Confira se a migration de ordenação foi executada."
+  );
+}
+
+const nextDisplayOrder = Math.max(0, Number(lastProduct?.display_order ?? 0)) + 10;
+
 const productData = {
   category_id: categoryId,
   name,
@@ -306,6 +358,7 @@ const productData = {
   unlimited_stock: unlimitedStock,
   image_url: imageUrl || null,
   is_active: isActive,
+  display_order: nextDisplayOrder,
 };
 
   // O cadastro permanece bloqueado até concluirmos as validações.
@@ -328,7 +381,7 @@ if (insertError) {
 
 revalidatePath("/admin/produtos");
 revalidatePath("/");
-revalidatePath("/produtos/blox-fruits/frutas-permanentes");
+revalidatePath("/produtos");
 
 redirect("/admin/produtos?sucesso=produto-cadastrado");
 }
@@ -416,7 +469,7 @@ if (deletedImagePath) {
 
 revalidatePath("/admin/produtos");
 revalidatePath("/");
-revalidatePath("/produtos/blox-fruits/frutas-permanentes");
+revalidatePath("/produtos");
 
 redirect("/admin/produtos?sucesso=produto-excluido");
 }
@@ -610,7 +663,7 @@ if (existingProduct.image_url !== (imageUrl || null)) {
 
 revalidatePath("/admin/produtos");
 revalidatePath("/");
-revalidatePath("/produtos/blox-fruits/frutas-permanentes");
+revalidatePath("/produtos");
 revalidatePath(`/admin/produtos/${productId}/editar`);
 
 redirect("/admin/produtos?sucesso=produto-atualizado");

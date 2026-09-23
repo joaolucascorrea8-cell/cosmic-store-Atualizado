@@ -43,6 +43,7 @@ Nunca envie `.env.local` para o GitHub. A chave `SUPABASE_SERVICE_ROLE_KEY` deve
 - Recuperação e redefinição de senha.
 - Proteção do painel pelas permissões da tabela `admins`.
 - Cadastro, edição, ativação/desativação e exclusão de produtos.
+- Ordenação manual dos produtos na vitrine pelo painel administrativo.
 - Cadastro de jogos.
 - Checkout Pix com valor calculado no servidor.
 - Upload privado de comprovante.
@@ -78,3 +79,7 @@ Ele cria a tabela `profiles`, as políticas RLS, o perfil automático para conta
 ## Configuração completa
 
 Consulte `GUIA_CONFIGURACAO.md` para configurar Supabase, Pix, e-mail e Discord e realizar os testes.
+
+## Ordem manual de produtos
+
+Para usar a ordenação manual da vitrine, execute também `supabase/migrations/202609230001_product_display_order.sql` no Supabase antes do deploy.
