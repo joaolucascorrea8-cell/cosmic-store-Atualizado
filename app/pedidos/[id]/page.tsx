@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import SiteHeader from "@/app/components/SiteHeader";
 import SiteFooter from "@/app/components/SiteFooter";
+import NotificationReadMarker from "@/app/components/NotificationReadMarker";
 import { createClient } from "@/lib/supabase/server";
 import { orderStatus } from "@/lib/order-status";
 import OrderChat from "./OrderChat";
@@ -31,6 +32,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   return <>
     <SiteHeader />
+    <NotificationReadMarker userId={user.id} scope="orders" />
     <OrderStatusWatcher orderId={id} initialStatus={order.status} initialChatClosedAt={order.chat_closed_at} />
     <main className="shell min-h-[70vh] py-12">
       <div className="mx-auto max-w-3xl">

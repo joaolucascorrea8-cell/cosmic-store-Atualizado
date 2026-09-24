@@ -6,6 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 
 type NotificationItem = { id: string; title: string; body: string; link: string | null; read_at: string | null; created_at: string };
 
+function scopeFromLink(link: string | null) {
+  if (link?.startsWith("/suporte")) return "support";
+  if (link?.startsWith("/pedidos")) return "orders";
+  return "other";
+}
+
 export default function NotificationList({ initial, userId }: { initial: NotificationItem[]; userId: string }) {
   const [items, setItems] = useState(initial);
   const unread = useMemo(() => items.filter((item) => !item.read_at).length, [items]);
@@ -25,7 +31,7 @@ export default function NotificationList({ initial, userId }: { initial: Notific
     const { error } = await createClient().from("notifications").update({ read_at: now }).eq("id", item.id);
     if (!error) {
       setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read_at: now } : entry));
-      window.dispatchEvent(new CustomEvent("cosmic-notifications-read", { detail: { amount: 1 } }));
+      window.dispatchEvent(new CustomEvent("cosmic-notifications-read", { detail: { amount: 1, scope: scopeFromLink(item.link) } }));
     }
   }
 
