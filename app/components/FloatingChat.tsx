@@ -8,6 +8,16 @@ import { playNotificationTone, unlockNotificationAudio } from "@/lib/client-noti
 
 const SOUND_KEY = "cosmic-notification-sound";
 const hiddenRoutes = ["/checkout", "/chat"];
+const conversationNotificationTitles = new Set([
+  "Nova mensagem de pedido",
+  "Nova mensagem no seu pedido",
+  "Cliente enviou uma imagem",
+  "Nova imagem no seu pedido",
+  "Nova mensagem no suporte",
+  "Cliente enviou uma imagem no suporte",
+  "Resposta do suporte",
+  "Nova imagem do suporte",
+]);
 
 type NotificationPayload = {
   id: string;
@@ -23,6 +33,16 @@ function scopeFromLink(link?: string | null): NotificationScope {
   if (link?.startsWith("/suporte") || link?.startsWith("/admin/suporte")) return "support";
   if (link?.startsWith("/pedidos") || link?.startsWith("/admin/pedidos")) return "orders";
   return "other";
+}
+
+function normalizePath(value?: string | null) {
+  if (!value) return "";
+  const clean = value.split("?")[0]?.split("#")[0] ?? "";
+  return clean.length > 1 ? clean.replace(/\/$/, "") : clean;
+}
+
+function isConversationNotification(notification: NotificationPayload) {
+  return conversationNotificationTitles.has(notification.title ?? "");
 }
 
 function countNotifications(items: NotificationPayload[]): NotificationCounts {
@@ -63,6 +83,23 @@ export default function FloatingChat({
     if (unlocked) playNotificationTone(isAdmin ? "admin" : "customer");
   }, [isAdmin]);
 
+  const isActivelyViewing = useCallback((notification: NotificationPayload) => {
+    if (!isConversationNotification(notification)) return false;
+    if (normalizePath(notification.link) !== normalizePath(pathname)) return false;
+    return document.visibilityState === "visible" && document.hasFocus();
+  }, [pathname]);
+
+  const markNotificationIdsRead = useCallback(async (ids: string[]) => {
+    if (!ids.length) return true;
+    const { error } = await createClient()
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .in("id", ids)
+      .is("read_at", null);
+    return !error;
+  }, [userId]);
+
   const applyUnread = useCallback((items: NotificationPayload[], announceNew: boolean) => {
     const unseen = items.filter((item) => !seenNotificationIds.current.has(item.id));
     items.forEach((item) => seenNotificationIds.current.add(item.id));
@@ -71,15 +108,32 @@ export default function FloatingChat({
   }, [announce]);
 
   const refreshUnread = useCallback(async (announceNew = true) => {
-    const { data, error } = await createClient()
+    const supabase = createClient();
+    const { data, error } = await supabase
       .from("notifications")
       .select("id,title,body,link,created_at")
       .eq("user_id", userId)
       .is("read_at", null)
       .order("created_at", { ascending: false })
       .limit(100);
-    if (!error && data) applyUnread(data as NotificationPayload[], announceNew);
-  }, [applyUnread, userId]);
+    if (error || !data) return;
+
+    const items = data as NotificationPayload[];
+    const activeConversationItems = items.filter(isActivelyViewing);
+    let remaining = items;
+
+    if (activeConversationItems.length > 0) {
+      const ids = activeConversationItems.map((item) => item.id);
+      const marked = await markNotificationIdsRead(ids);
+      if (marked) {
+        ids.forEach((id) => seenNotificationIds.current.add(id));
+        const readIds = new Set(ids);
+        remaining = items.filter((item) => !readIds.has(item.id));
+      }
+    }
+
+    applyUnread(remaining, announceNew);
+  }, [applyUnread, isActivelyViewing, markNotificationIdsRead, userId]);
 
   useEffect(() => {
     originalTitle.current = document.title;
@@ -108,24 +162,38 @@ export default function FloatingChat({
 
   useEffect(() => {
     const supabase = createClient();
+
+    const handleIncoming = async (notification: NotificationPayload) => {
+      if (!notification.id || seenNotificationIds.current.has(notification.id)) return;
+      seenNotificationIds.current.add(notification.id);
+
+      // Mensagem da conversa que já está aberta e realmente visível: considera lida
+      // imediatamente e não toca som. Eventos importantes (pedido, comprovante,
+      // novo suporte, mudança de status etc.) continuam avisando normalmente.
+      if (isActivelyViewing(notification)) {
+        const marked = await markNotificationIdsRead([notification.id]);
+        if (marked) {
+          void refreshUnread(false);
+          return;
+        }
+      }
+
+      setCounts((current) => {
+        const scope = scopeFromLink(notification.link);
+        return {
+          total: current.total + 1,
+          support: current.support + (scope === "support" ? 1 : 0),
+          orders: current.orders + (scope === "orders" ? 1 : 0),
+          other: current.other + (scope === "other" ? 1 : 0),
+        };
+      });
+      void announce(notification);
+    };
+
     const channel = supabase.channel(`floating-notifications-${userId}`).on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-      (event) => {
-        const notification = event.new as NotificationPayload;
-        if (!notification.id || seenNotificationIds.current.has(notification.id)) return;
-        seenNotificationIds.current.add(notification.id);
-        setCounts((current) => {
-          const scope = scopeFromLink(notification.link);
-          return {
-            total: current.total + 1,
-            support: current.support + (scope === "support" ? 1 : 0),
-            orders: current.orders + (scope === "orders" ? 1 : 0),
-            other: current.other + (scope === "other" ? 1 : 0),
-          };
-        });
-        void announce(notification);
-      },
+      (event) => { void handleIncoming(event.new as NotificationPayload); },
     ).subscribe();
 
     // Fallback deliberado: se o Realtime estiver bloqueado/desativado, a aba aberta
@@ -141,7 +209,13 @@ export default function FloatingChat({
       document.removeEventListener("visibilitychange", sync);
       void supabase.removeChannel(channel);
     };
-  }, [announce, refreshUnread, userId]);
+  }, [announce, isActivelyViewing, markNotificationIdsRead, refreshUnread, userId]);
+
+  useEffect(() => {
+    // Ao entrar em uma conversa que já tinha mensagens não lidas, limpa apenas
+    // aquelas mensagens se esta aba estiver realmente sendo visualizada.
+    if (document.visibilityState === "visible" && document.hasFocus()) void refreshUnread(false);
+  }, [pathname, refreshUnread]);
 
   useEffect(() => {
     const restoreTitle = () => {
