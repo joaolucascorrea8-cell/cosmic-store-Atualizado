@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { notifyAdminDiscord, sendEmail } from "@/lib/notifications";
+import { createAdminNotifications, notifyAdminDiscord, sendEmail } from "@/lib/notifications";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,6 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const text = `🔔 Novo comprovante: **${order.order_code}** — ${Number(order.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
   await Promise.allSettled([
+    createAdminNotifications("Novo comprovante recebido", `O pedido ${order.order_code} enviou um comprovante.`, `/admin/pedidos/${id}`, user.id),
     notifyAdminDiscord(text),
     sendEmail(process.env.ADMIN_NOTIFICATION_EMAIL, `Novo comprovante — ${order.order_code}`, `<h2>Novo comprovante recebido</h2><p>Pedido ${order.order_code}</p><p><a href="${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/admin/pedidos/${id}">Abrir pedido</a></p>`),
   ]);

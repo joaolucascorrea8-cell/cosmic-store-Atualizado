@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getStoredNotificationVolume, playNotificationTone, unlockNotificationAudio } from "@/lib/client-notification-sound";
+import { playNotificationTone, unlockNotificationAudio } from "@/lib/client-notification-sound";
 
 const SOUND_KEY = "cosmic-notification-sound";
 type Counts = { proofs: number; support: number; reports: number };
@@ -57,8 +57,7 @@ export default function AdminLiveAlerts({ initial }: { initial: Counts }) {
     localStorage.setItem(SOUND_KEY, next ? "on" : "off");
     if (next) {
       const unlocked = await unlockNotificationAudio();
-      if (unlocked) playNotificationTone("preview", getStoredNotificationVolume());
-      if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission();
+      if (unlocked) playNotificationTone("preview");
     }
     window.dispatchEvent(new CustomEvent("cosmic-sound-setting", { detail: { enabled: next } }));
   }

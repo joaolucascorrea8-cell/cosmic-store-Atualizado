@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { safeInternalPath } from "@/lib/safe-redirect";
 
-const discordInviteUrl = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL || "https://discord.gg/qQkQzKng3";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -108,7 +107,6 @@ export default function LoginPage() {
         <button type="button" onClick={() => void loginDiscord()} disabled={loading} className="w-full rounded-lg bg-[#5865F2] p-3 font-semibold hover:bg-[#4752C4] disabled:opacity-50">
           {loading ? "Conectando..." : `${mode === "login" ? "Entrar" : "Cadastrar"} com Discord`}
         </button>
-        <a href={discordInviteUrl} target="_blank" rel="noreferrer" className="mt-3 block rounded-lg border border-[#5865F2]/30 bg-[#5865F2]/10 p-3 text-center text-sm font-bold text-[#c8ceff] hover:bg-[#5865F2]/20">Só quer entrar no nosso servidor? Abrir Discord ↗</a>
         <div className="my-6 flex items-center gap-3" aria-hidden="true"><div className="h-px flex-1 bg-gray-700" /><span className="text-sm text-gray-500">OU</span><div className="h-px flex-1 bg-gray-700" /></div>
         <form onSubmit={(event) => { event.preventDefault(); void submitEmail(); }}>
           {mode === "register" && <label className="mb-3 block text-sm font-bold text-gray-300">Nickname<input type="text" placeholder="Escolha seu nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={3} maxLength={24} required autoComplete="nickname" disabled={loading} className="mt-2 w-full rounded-lg border border-gray-700 bg-[#080812] p-3" /></label>}

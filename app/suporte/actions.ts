@@ -1,3 +1,39 @@
 "use server";
-import {redirect} from "next/navigation";import {createClient} from "@/lib/supabase/server";
-export async function createSupportTicket(formData:FormData){const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login?next=/suporte");const subject=String(formData.get("subject")??"").trim();const category=String(formData.get("category")??"other");const message=String(formData.get("message")??"").trim();if(subject.length<3||subject.length>120||message.length<5||message.length>1500)throw new Error("Preencha o assunto e explique o problema.");const {data:ticket,error}=await supabase.from("support_tickets").insert({user_id:user.id,subject,category}).select("id").single();if(error||!ticket)throw new Error("Não foi possível abrir o atendimento.");const {error:messageError}=await supabase.from("support_messages").insert({ticket_id:ticket.id,user_id:user.id,message});if(messageError)throw new Error("O atendimento foi criado, mas a mensagem não foi enviada.");redirect(`/suporte/${ticket.id}`);}
+
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminNotifications, notifyAdminDiscord } from "@/lib/notifications";
+
+export async function createSupportTicket(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/suporte");
+
+  const subject = String(formData.get("subject") ?? "").trim();
+  const category = String(formData.get("category") ?? "other");
+  const message = String(formData.get("message") ?? "").trim();
+  if (subject.length < 3 || subject.length > 120 || message.length < 5 || message.length > 1500) {
+    throw new Error("Preencha o assunto e explique o problema.");
+  }
+
+  const { data: ticket, error } = await supabase
+    .from("support_tickets")
+    .insert({ user_id: user.id, subject, category })
+    .select("id")
+    .single();
+  if (error || !ticket) throw new Error("Não foi possível abrir o atendimento.");
+
+  const { error: messageError } = await supabase.from("support_messages").insert({
+    ticket_id: ticket.id,
+    user_id: user.id,
+    message,
+  });
+  if (messageError) throw new Error("O atendimento foi criado, mas a mensagem não foi enviada.");
+
+  await Promise.allSettled([
+    createAdminNotifications("Novo atendimento de suporte", subject, `/admin/suporte/${ticket.id}`, user.id),
+    notifyAdminDiscord(`🛟 Novo atendimento no suporte: **${subject}**`),
+  ]);
+
+  redirect(`/suporte/${ticket.id}`);
+}

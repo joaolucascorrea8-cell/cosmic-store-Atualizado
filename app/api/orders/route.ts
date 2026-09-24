@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPixPayload } from "@/lib/pix";
+import { createAdminNotifications, notifyAdminDiscord } from "@/lib/notifications";
 
 type RequestedItem = { id?: unknown; quantity?: unknown };
 type CreatedOrder = { id: string; order_code: string; status: string; total: number; pix_payload: string };
@@ -54,6 +55,10 @@ export async function POST(request: Request) {
     }
     const { error: itemsError } = await admin.from("order_items").insert(itemRows.map(item => ({ ...item, order_id: order.id })));
     if (itemsError) {await admin.from("orders").delete().eq("id", order.id).eq("status", "awaiting_payment");throw itemsError;}
+    await Promise.allSettled([
+      createAdminNotifications("Novo pedido recebido", `Pedido ${order.order_code} acabou de ser criado.`, `/admin/pedidos/${order.id}`, user.id),
+      notifyAdminDiscord(`🛒 Novo pedido **${order.order_code}** — ${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`),
+    ]);
     return orderResponse(order);
   } catch (error) {
     console.error("Falha no checkout:", error instanceof Error ? error.message : "Erro desconhecido");

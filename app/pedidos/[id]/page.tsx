@@ -3,6 +3,7 @@ import SiteHeader from "@/app/components/SiteHeader";
 import SiteFooter from "@/app/components/SiteFooter";
 import NotificationReadMarker from "@/app/components/NotificationReadMarker";
 import { createClient } from "@/lib/supabase/server";
+import { withSignedChatAttachments } from "@/lib/chat-attachments";
 import { orderStatus } from "@/lib/order-status";
 import OrderChat from "./OrderChat";
 import FeedbackForm from "./FeedbackForm";
@@ -24,15 +25,16 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const chatAvailable = ["paid", "preparing_delivery", "delivered"].includes(order.status);
   const canSend = chatAvailable && !order.chat_closed_at;
   const { data: messages } = chatAvailable
-    ? await supabase.from("order_messages").select("id,user_id,message,created_at,profiles(nickname,avatar_url)").eq("order_id", id).order("created_at")
+    ? await supabase.from("order_messages").select("id,user_id,message,created_at,attachment_path,attachment_name,attachment_type,profiles(nickname,avatar_url)").eq("order_id", id).order("created_at")
     : { data: [] };
+  const signedMessages = chatAvailable ? await withSignedChatAttachments(messages ?? []) : [];
   const { data: feedback } = order.status === "delivered"
     ? await supabase.from("feedbacks").select("rating,comment").eq("order_id", id).maybeSingle()
     : { data: null };
 
   return <>
     <SiteHeader />
-    <NotificationReadMarker userId={user.id} scope="orders" />
+    <NotificationReadMarker userId={user.id} scope="orders" link={`/pedidos/${id}`} />
     <OrderStatusWatcher orderId={id} initialStatus={order.status} initialChatClosedAt={order.chat_closed_at} />
     <main className="shell min-h-[70vh] py-12">
       <div className="mx-auto max-w-3xl">
@@ -57,7 +59,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         {order.status === "proof_submitted" && <p className="mt-5 rounded-xl border border-sky-500/20 bg-sky-500/10 p-4 text-sky-200">Recebemos seu comprovante. Você será avisado quando o pagamento for conferido.</p>}
         {order.status === "proof_rejected" && <><p className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-red-200"><strong>Comprovante recusado.</strong><span className="mt-1 block">Motivo: {order.rejection_reason ?? "O comprovante não pôde ser confirmado."}</span></p><ProofReuploadForm orderId={id} /></>}
         {chatAvailable
-          ? <OrderChat orderId={id} userId={user.id} initialMessages={(messages ?? []) as never[]} canSend={canSend} />
+          ? <OrderChat orderId={id} userId={user.id} initialMessages={signedMessages as never[]} canSend={canSend} />
           : <section className="mt-6 rounded-2xl border border-white/10 bg-white/[.03] p-6"><h2 className="font-black">Chat do pedido</h2><p className="mt-2 text-sm text-zinc-500">Será liberado assim que o pagamento for confirmado.</p></section>}
         {order.status === "delivered" && <FeedbackForm orderId={id} userId={user.id} initial={feedback} />}
       </div>
