@@ -18,10 +18,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/pedidos/${id}`);
 
-  const { data: order } = await supabase.from("orders").select("id,order_code,status,total,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,order_items(product_name,unit_price,quantity)").eq("id", id).maybeSingle();
+  const { data: order } = await supabase.from("orders").select("id,order_code,status,total,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity)").eq("id", id).maybeSingle();
   if (!order) notFound();
 
   const status = orderStatus[order.status] ?? { label: order.status, className: "bg-white/5 text-zinc-300" };
+  const maskEmail = (email?: string | null) => { if (!email) return "seu e-mail"; const [local, domain] = email.split("@"); if (!domain) return "seu e-mail"; return `${local.slice(0, 2)}${"*".repeat(Math.max(3, Math.min(6, local.length - 2)))}@${domain}`; };
+  const maskedEmail = maskEmail(user.email);
   const chatAvailable = ["paid", "preparing_delivery", "delivered"].includes(order.status);
   const canSend = chatAvailable && !order.chat_closed_at;
   const { data: messages } = chatAvailable
@@ -57,6 +59,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         </section>
 
         {order.status === "proof_submitted" && <p className="mt-5 rounded-xl border border-sky-500/20 bg-sky-500/10 p-4 text-sky-200">Recebemos seu comprovante. Você será avisado quando o pagamento for conferido.</p>}
+        {order.delivery_email_sent_at ? <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100"><strong>🎉 Confirmação de entrega enviada.</strong><span className="mt-1 block">Enviamos o e-mail e a imagem da entrega para <strong>{maskedEmail}</strong>. Se não aparecer na caixa de entrada, confira também Spam e Promoções.</span></p> : order.payment_email_sent_at ? <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100"><strong>✅ Pagamento confirmado.</strong><span className="mt-1 block">Enviamos a confirmação para <strong>{maskedEmail}</strong>. Se não encontrar, confira também Spam e Promoções.</span></p> : null}
         {order.status === "proof_rejected" && <><p className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-red-200"><strong>Comprovante recusado.</strong><span className="mt-1 block">Motivo: {order.rejection_reason ?? "O comprovante não pôde ser confirmado."}</span></p><ProofReuploadForm orderId={id} /></>}
         {chatAvailable
           ? <OrderChat orderId={id} userId={user.id} initialMessages={signedMessages as never[]} canSend={canSend} />

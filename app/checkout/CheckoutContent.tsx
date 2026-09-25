@@ -16,10 +16,10 @@ export default function CheckoutContent() {
     if (busy.current || !items.length || gameNickname.trim().length<2) return;
     busy.current=true;setLoading(true);setError("");
     try {
-      const fingerprint=JSON.stringify({nickname:gameNickname.trim(),items:items.map(({id,quantity})=>({id,quantity})).sort((a,b)=>a.id.localeCompare(b.id))});
+      const fingerprint=JSON.stringify({nickname:gameNickname.trim(),items:items.map(({id,quantity,kind})=>({id,quantity,kind:kind??"product"})).sort((a,b)=>`${a.kind}:${a.id}`.localeCompare(`${b.kind}:${b.id}`))});
       let token=crypto.randomUUID();
       try {const saved=JSON.parse(sessionStorage.getItem(checkoutStorageKey)??"null") as {fingerprint?:string;token?:string}|null;if(saved?.fingerprint===fingerprint&&saved.token) token=saved.token;sessionStorage.setItem(checkoutStorageKey,JSON.stringify({fingerprint,token}));}catch{sessionStorage.setItem(checkoutStorageKey,JSON.stringify({fingerprint,token}));}
-      const response=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({gameNickname:gameNickname.trim(),checkoutToken:token,items:items.map(({id,quantity})=>({id,quantity}))})});
+      const response=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({gameNickname:gameNickname.trim(),checkoutToken:token,items:items.map(({id,quantity,kind})=>({id,quantity,kind:kind??"product"}))})});
       const data=await response.json();
       if(response.status===401){router.push("/login?next=/checkout");return;}
       if(!response.ok)throw new Error(data.error??"Não foi possível criar o pedido.");

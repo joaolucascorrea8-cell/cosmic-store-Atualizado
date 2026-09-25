@@ -10,6 +10,7 @@ const Nav = ({ admin = false, discordUrl }: { admin?: boolean; discordUrl: strin
   <Link href="/">Início</Link>
   <Link href="/produtos">Produtos</Link>
   <Link href="/jogos">Jogos</Link>
+  <Link href="/combos">Combos</Link>
   <Link href="/suporte">Suporte</Link>
   <a href={discordUrl} target="_blank" rel="noreferrer" className="!text-[#b9a8ff]">Discord ↗</a>
   {admin && <Link href="/admin" className="!text-violet-300">Painel admin</Link>}

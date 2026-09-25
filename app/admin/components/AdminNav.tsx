@@ -5,6 +5,8 @@ const items = [
   { href: "/admin", label: "Visão geral", icon: "◫" },
   { href: "/admin/pedidos", label: "Pedidos e Pix", icon: "▤" },
   { href: "/admin/produtos", label: "Produtos", icon: "◈" },
+  { href: "/admin/combos", label: "Combos", icon: "✦" },
+  { href: "/admin/campanhas", label: "Campanhas", icon: "↗" },
   { href: "/admin/catalogo", label: "Jogos e categorias", icon: "▦" },
   { href: "/admin/suporte", label: "Suporte", icon: "◎" },
   { href: "/admin/comunidade", label: "Comunidade", icon: "♧" },
