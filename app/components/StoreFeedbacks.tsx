@@ -1,3 +1,52 @@
-type Feedback={id:string;rating:number;comment:string;author_nickname:string;created_at:string;source?:string|null;attachment_url?:string|null};
+import Link from "next/link";
+import ReviewCard from "@/app/components/ReviewCard";
 
-export default function StoreFeedbacks({feedbacks}:{feedbacks:Feedback[]}){if(!feedbacks.length)return null;return <section className="shell"><p className="eyebrow">AVALIAÇÕES REAIS</p><h2 className="section-title">Quem compra, recomenda</h2><div className="mt-8 grid gap-4 md:grid-cols-3">{feedbacks.slice(0,3).map(item=><article key={item.id} className="surface card-hover rounded-3xl p-6"><div className="text-amber-300" aria-label={`${item.rating} estrelas`}>{"★".repeat(item.rating)}<span className="text-zinc-700">{"★".repeat(5-item.rating)}</span></div><p className="mt-5 min-h-14 leading-7 text-zinc-300">“{item.comment}”</p>{item.attachment_url&&<a href={item.attachment_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg border border-violet-400/20 bg-violet-500/[.06] px-3 py-2 text-xs font-bold text-violet-200 hover:border-violet-400/50">📷 Ver imagem da entrega ↗</a>}<div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-white/[.06] pt-4 text-xs"><strong>{item.author_nickname}</strong><span className={item.source==="discord"?"text-indigo-300":"text-emerald-400"}>{item.source==="discord"?"Discord · Avaliação importada":"✓ Compra verificada"}</span></div><p className="mt-2 text-[10px] text-zinc-600">{new Date(item.created_at).toLocaleDateString("pt-BR")}</p></article>)}</div></section>}
+type Feedback = {
+  id: string;
+  rating: number;
+  comment: string;
+  author_nickname: string;
+  created_at: string;
+  source?: string | null;
+  attachment_url?: string | null;
+};
+
+type StoreFeedbacksProps = {
+  feedbacks: Feedback[];
+  showMoreLink?: boolean;
+};
+
+export default function StoreFeedbacks({ feedbacks, showMoreLink = true }: StoreFeedbacksProps) {
+  if (!feedbacks.length) return null;
+
+  return (
+    <section className="shell">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">AVALIAÇÕES REAIS</p>
+          <h2 className="section-title">Quem compra, recomenda</h2>
+          <p className="section-description">Experiências de clientes que já compraram na Cosmic Store.</p>
+        </div>
+        {showMoreLink && (
+          <Link href="/avaliacoes" className="section-link">
+            Ver mais avaliações ↗
+          </Link>
+        )}
+      </div>
+
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        {feedbacks.slice(0, 3).map((item) => (
+          <ReviewCard key={item.id} review={item} />
+        ))}
+      </div>
+
+      {showMoreLink && (
+        <div className="mt-6 flex justify-center md:hidden">
+          <Link href="/avaliacoes" className="btn-secondary">
+            Ver mais avaliações →
+          </Link>
+        </div>
+      )}
+    </section>
+  );
+}
