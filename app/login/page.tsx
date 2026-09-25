@@ -220,7 +220,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace(nextPath() === "/" ? "/conta" : nextPath());
+      router.replace("/conta");
       router.refresh();
     } catch {
       setError("Não foi possível verificar a confirmação agora.");
@@ -274,12 +274,12 @@ export default function LoginPage() {
           return;
         }
 
-        router.replace(nextPath() === "/" ? "/conta" : nextPath());
+        router.replace("/conta");
         router.refresh();
         return;
       }
 
-      const { error: loginError } = await supabase.auth.signInWithPassword({
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
@@ -299,7 +299,13 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace(nextPath());
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", loginData.user.id)
+        .maybeSingle();
+
+      router.replace(profile?.onboarding_completed === true ? nextPath() : "/conta");
       router.refresh();
     } catch {
       setError("Não foi possível conectar. Tente novamente.");

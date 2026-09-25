@@ -10,6 +10,7 @@ type ProfileFormProps = {
   initialNickname: string;
   initialAvatarUrl: string | null;
   provider: string;
+  initialOnboardingCompleted: boolean;
 };
 
 const NICKNAME_PATTERN = /^[A-Za-z0-9_.-]{3,24}$/;
@@ -21,6 +22,7 @@ export default function ProfileForm({
   initialNickname,
   initialAvatarUrl,
   provider,
+  initialOnboardingCompleted,
 }: ProfileFormProps) {
   const router = useRouter();
   const [nickname, setNickname] = useState(initialNickname);
@@ -30,6 +32,8 @@ export default function ProfileForm({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const isFirstSetup = !initialOnboardingCompleted;
 
   function chooseAvatar(file: File | null) {
     setError("");
@@ -87,6 +91,7 @@ export default function ProfileForm({
         id: userId,
         nickname: cleanNickname,
         avatar_url: nextAvatarUrl,
+        onboarding_completed: true,
       });
 
       if (profileError) {
@@ -99,6 +104,13 @@ export default function ProfileForm({
       setAvatarUrl(nextAvatarUrl);
       setAvatarFile(null);
       setPreviewUrl(nextAvatarUrl);
+
+      if (isFirstSetup) {
+        router.replace("/");
+        router.refresh();
+        return;
+      }
+
       setMessage("Perfil atualizado com sucesso.");
       router.refresh();
     } catch (caughtError) {
@@ -112,9 +124,23 @@ export default function ProfileForm({
 
   return (
     <form onSubmit={saveProfile} className="mt-8 space-y-6">
+      {isFirstSetup && (
+        <section className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-5">
+          <div className="flex gap-3">
+            <span className="text-2xl" aria-hidden="true">🌌</span>
+            <div>
+              <h2 className="font-black text-violet-100">Finalize seu perfil</h2>
+              <p className="mt-1 text-sm leading-6 text-zinc-300">
+                Sua conta já está pronta. Escolha seu nickname e, se quiser, uma foto. Depois de salvar você será levado para o início da Cosmic Store.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
         <h2 className="text-lg font-black">Foto do perfil</h2>
-        <p className="mt-1 text-sm text-zinc-400">JPG, PNG ou WebP de até 2 MB.</p>
+        <p className="mt-1 text-sm text-zinc-400">JPG, PNG ou WebP de até 2 MB. A foto é opcional.</p>
         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">
           {previewUrl ? (
             <div
@@ -178,7 +204,7 @@ export default function ProfileForm({
         disabled={saving}
         className="rounded-xl bg-violet-600 px-6 py-3 font-black hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {saving ? "Salvando..." : "Salvar perfil"}
+        {saving ? "Salvando..." : isFirstSetup ? "Começar na Cosmic Store" : "Salvar perfil"}
       </button>
     </form>
   );

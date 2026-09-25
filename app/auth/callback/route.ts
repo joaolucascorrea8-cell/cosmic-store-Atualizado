@@ -61,5 +61,20 @@ export async function GET(request: Request) {
     console.error("[Discord OAuth] Entrada automática não executada. Confira DISCORD_GUILD_ID, DISCORD_BOT_TOKEN e o escopo guilds.join.");
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  let destination = next;
+  if (data.user?.id) {
+    const { data: profile, error: onboardingError } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (onboardingError) {
+      console.error("[Discord OAuth] Não foi possível consultar o onboarding:", onboardingError.message);
+    } else if (profile?.onboarding_completed !== true) {
+      destination = "/conta";
+    }
+  }
+
+  return NextResponse.redirect(`${origin}${destination}`);
 }

@@ -12,7 +12,7 @@ export default async function AccountPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("nickname, avatar_url, auth_provider")
+    .select("nickname, avatar_url, auth_provider, onboarding_completed")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -27,15 +27,24 @@ export default async function AccountPage() {
   const fallbackNickname = `${metadataNickname.length >= 3 ? metadataNickname : "cliente"}_${user.id.slice(0, 6)}`;
   const provider = profile?.auth_provider
     ?? String(user.app_metadata?.provider ?? "email");
+  const onboardingCompleted = profile?.onboarding_completed === true;
 
   return (
     <>
       <SiteHeader />
       <main className="shell min-h-[calc(100vh-160px)] py-12">
         <div className="max-w-2xl">
-          <span className="text-xs font-black uppercase tracking-[0.25em] text-violet-400">Sua conta</span>
-          <h1 className="mt-3 text-3xl font-black sm:text-4xl">Meu perfil</h1>
-          <p className="mt-3 text-zinc-400">Escolha como você aparecerá nos chats e nos feedbacks da Cosmic Store.</p>
+          <span className="text-xs font-black uppercase tracking-[0.25em] text-violet-400">
+            {onboardingCompleted ? "Sua conta" : "Primeiro acesso"}
+          </span>
+          <h1 className="mt-3 text-3xl font-black sm:text-4xl">
+            {onboardingCompleted ? "Meu perfil" : "Finalize seu perfil"}
+          </h1>
+          <p className="mt-3 text-zinc-400">
+            {onboardingCompleted
+              ? "Escolha como você aparecerá nos chats e nos feedbacks da Cosmic Store."
+              : "Só falta escolher como você quer aparecer na Cosmic Store. Depois disso você já pode começar a usar a loja normalmente."}
+          </p>
 
           <ProfileForm
             userId={user.id}
@@ -43,6 +52,7 @@ export default async function AccountPage() {
             initialNickname={profile?.nickname ?? fallbackNickname}
             initialAvatarUrl={profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null}
             provider={provider}
+            initialOnboardingCompleted={onboardingCompleted}
           />
         </div>
       </main>
@@ -50,4 +60,3 @@ export default async function AccountPage() {
     </>
   );
 }
-
