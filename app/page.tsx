@@ -12,13 +12,17 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const supabase = await createClient();
   const [{ data: games }, { data: categories }, { data: products }, { data: feedbacks }] = await Promise.all([
-    supabase.from("games").select("id,name,slug,image_url").eq("is_active", true).order("name"),
-    supabase.from("categories").select("id,name,slug,game_id,image_url").order("name").limit(6),
+    supabase.from("games").select("id,name,slug,image_url,display_order").eq("is_active", true).order("display_order", { ascending: true }).order("name"),
+    supabase.from("categories").select("id,name,slug,game_id,image_url,display_order").order("display_order", { ascending: true }).order("name"),
     supabase.from("products").select("id,name,slug,description,price,image_url,stock,unlimited_stock,display_order").eq("is_active", true).order("display_order", { ascending: true }).order("name", { ascending: true }).limit(8),
     supabase.from("feedbacks").select("id,rating,comment,author_nickname,created_at").eq("is_visible", true).order("created_at", { ascending: false }).limit(3),
   ]);
   const activeGames = games ?? [];
-  const visibleCategories = (categories ?? []).filter((category) => activeGames.some((game) => game.id === category.game_id));
+  const gamePosition = new Map(activeGames.map((game, index) => [game.id, index]));
+  const visibleCategories = (categories ?? [])
+    .filter((category) => activeGames.some((game) => game.id === category.game_id))
+    .sort((a, b) => (gamePosition.get(a.game_id) ?? 9999) - (gamePosition.get(b.game_id) ?? 9999) || Number(a.display_order) - Number(b.display_order) || a.name.localeCompare(b.name, "pt-BR"))
+    .slice(0, 6);
   const featured = products?.find((product) => product.image_url) ?? products?.[0];
   const heroImage = featured?.image_url || activeGames[0]?.image_url || "/images/products/20560-perm-dragon-blox-fruits.png";
   const heroHref = featured ? `/produto/${featured.slug}` : activeGames[0] ? `/${activeGames[0].slug}` : "/jogos";

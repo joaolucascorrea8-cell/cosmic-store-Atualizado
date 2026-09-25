@@ -17,8 +17,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const client = await createClient();
   const [productResult, categoryResult, gameResult] = await Promise.all([
     client.from("products").select("id,name,slug,description,price,image_url,stock,unlimited_stock,category_id,display_order").eq("is_active", true).order("display_order", { ascending: true }).order("name", { ascending: true }),
-    client.from("categories").select("id,name,game_id").order("name"),
-    client.from("games").select("id,name,slug").eq("is_active", true).order("name"),
+    client.from("categories").select("id,name,game_id,display_order").order("display_order", { ascending: true }).order("name"),
+    client.from("games").select("id,name,slug,display_order").eq("is_active", true).order("display_order", { ascending: true }).order("name"),
   ]);
 
   const games = gameResult.data ?? [];

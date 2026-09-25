@@ -13,11 +13,12 @@ import {
 import NamedSlugFields from "../components/NamedSlugFields";
 import PendingButton from "../components/PendingButton";
 import ConfirmRemoveButton from "../components/ConfirmRemoveButton";
+import CatalogOrderManager from "./CatalogOrderManager";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-type Game = { id: string; name: string; slug: string; image_url: string | null; is_active: boolean };
-type Category = { id: string; game_id: string; name: string; slug: string; image_url: string | null };
+type Game = { id: string; name: string; slug: string; image_url: string | null; is_active: boolean; display_order: number };
+type Category = { id: string; game_id: string; name: string; slug: string; image_url: string | null; display_order: number };
 type ProductRef = { category_id: string };
 
 export default async function CatalogAdmin({ searchParams }: {
@@ -27,12 +28,18 @@ export default async function CatalogAdmin({ searchParams }: {
   const params = await searchParams;
   const client = createAdminClient();
   const [gameResult, categoryResult, productResult] = await Promise.all([
-    client.from("games").select("id,name,slug,image_url,is_active").order("name"),
-    client.from("categories").select("id,game_id,name,slug,image_url").order("name"),
+    client.from("games").select("id,name,slug,image_url,is_active,display_order").order("display_order", { ascending: true }).order("name"),
+    client.from("categories").select("id,game_id,name,slug,image_url,display_order").order("display_order", { ascending: true }).order("name"),
     client.from("products").select("category_id"),
   ]);
   const games = (gameResult.data ?? []) as Game[];
-  const categories = (categoryResult.data ?? []) as Category[];
+  const gamePosition = new Map(games.map((game, index) => [game.id, index]));
+  const categories = ((categoryResult.data ?? []) as Category[]).sort(
+    (a, b) =>
+      (gamePosition.get(a.game_id) ?? 9999) - (gamePosition.get(b.game_id) ?? 9999) ||
+      Number(a.display_order) - Number(b.display_order) ||
+      a.name.localeCompare(b.name, "pt-BR")
+  );
   const products = (productResult.data ?? []) as ProductRef[];
   const gameNames = new Map(games.map(game => [game.id, game.name]));
 
@@ -48,6 +55,16 @@ export default async function CatalogAdmin({ searchParams }: {
     {(params.created || params.updated) && <p role="status" className="admin-notice mt-5">Alterações do catálogo salvas com sucesso.</p>}
     {(gameResult.error || categoryResult.error || productResult.error) && <p role="alert" className="admin-error mt-5">Falha ao carregar o catálogo. Recarregue a página antes de editar.</p>}
 
+    {!gameResult.error && !categoryResult.error && <section className="admin-panel mt-7">
+      <div className="admin-panel-heading">
+        <div><p className="eyebrow">ORDEM NA LOJA</p><h2 className="mt-1">Organizar jogos e categorias</h2><p>Defina a ordem dos jogos e, dentro de cada jogo, a ordem das categorias.</p></div>
+      </div>
+      <CatalogOrderManager
+        games={games.map(({ id, name, image_url, is_active, display_order }) => ({ id, name, image_url, is_active, display_order }))}
+        categories={categories.map(({ id, game_id, name, image_url, display_order }) => ({ id, game_id, name, image_url, display_order }))}
+      />
+    </section>}
+
     <div className="mt-7 grid items-start gap-5 xl:grid-cols-2">
       <section className="admin-panel">
         <div className="admin-panel-heading">
@@ -61,7 +78,7 @@ export default async function CatalogAdmin({ searchParams }: {
             <PendingButton className="btn-primary w-full">Cadastrar jogo</PendingButton>
           </form>
         </details>
-        <div className="mt-5 space-y-2">
+        <div className="mt-5 max-h-[640px] space-y-2 overflow-y-auto pr-1">
           {games.map(game => {
             const childCount = categories.filter(item => item.game_id === game.id).length;
             return <details key={game.id} className="admin-item-details">
@@ -112,7 +129,7 @@ export default async function CatalogAdmin({ searchParams }: {
             <PendingButton className="btn-primary w-full">Cadastrar categoria</PendingButton>
           </form> : <p className="mt-4 text-sm text-amber-200">Cadastre um jogo antes de criar categorias.</p>}
         </details>
-        <div className="mt-5 space-y-2">
+        <div className="mt-5 max-h-[640px] space-y-2 overflow-y-auto pr-1">
           {categories.map(category => {
             const productCount = products.filter(item => item.category_id === category.id).length;
             return <details key={category.id} className="admin-item-details">

@@ -46,11 +46,25 @@ export async function createGame(formData: FormData) {
   }
 
   const supabase = createAdminClient();
+  const { data: lastGame, error: orderError } = await supabase
+    .from("games")
+    .select("display_order")
+    .order("display_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (orderError) {
+    console.error("Erro ao consultar ordem dos jogos:", orderError.code);
+    throw new Error("Não foi possível preparar a ordem do jogo.");
+  }
+
+  const nextDisplayOrder = Math.max(0, Number(lastGame?.display_order ?? 0)) + 10;
 
   const { error } = await supabase.from("games").insert({
     name: cleanName,
     slug: cleanSlug,
     image_url: imageUrl || null,
+    display_order: nextDisplayOrder,
   });
 
   if (error) {
@@ -76,7 +90,27 @@ export async function createCategory(formData: FormData) {
     throw new Error("Envie uma imagem válida para a categoria.");
   }
   const supabase = createAdminClient();
-  const { error } = await supabase.from("categories").insert({ game_id: gameId, name, slug, image_url: imageUrl || null });
+  const { data: lastCategory, error: orderError } = await supabase
+    .from("categories")
+    .select("display_order")
+    .eq("game_id", gameId)
+    .order("display_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (orderError) {
+    console.error("Erro ao consultar ordem das categorias:", orderError.code);
+    throw new Error("Não foi possível preparar a ordem da categoria.");
+  }
+
+  const nextDisplayOrder = Math.max(0, Number(lastCategory?.display_order ?? 0)) + 10;
+  const { error } = await supabase.from("categories").insert({
+    game_id: gameId,
+    name,
+    slug,
+    image_url: imageUrl || null,
+    display_order: nextDisplayOrder,
+  });
   if (error) {
     console.error("Erro ao cadastrar categoria:", error.code);
     throw new Error("Não foi possível cadastrar a categoria.");
@@ -195,6 +229,83 @@ export async function saveProductOrder(productIds: string[]) {
   revalidatePath("/");
   revalidatePath("/produtos");
   revalidatePath("/admin/produtos");
+
+  return { error: null };
+}
+
+
+export async function saveGameOrder(gameIds: string[]) {
+  await requireAdmin();
+
+  if (!Array.isArray(gameIds) || gameIds.length > 500) {
+    return { error: "Ordem de jogos inválida." };
+  }
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const ids = gameIds.map((id) => String(id).trim());
+
+  if (ids.some((id) => !uuidRegex.test(id)) || new Set(ids).size !== ids.length) {
+    return { error: "A lista de jogos contém itens inválidos ou repetidos." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("set_game_display_order", {
+    game_ids: ids,
+  });
+
+  if (error) {
+    console.error("Erro ao salvar ordem dos jogos:", error.code);
+    return { error: "Não foi possível salvar a ordem dos jogos. Atualize a página e tente novamente." };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/jogos");
+  revalidatePath("/produtos");
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/admin/produtos");
+  revalidatePath("/admin/combos");
+
+  return { error: null };
+}
+
+export async function saveCategoryOrder(gameId: string, categoryIds: string[]) {
+  await requireAdmin();
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const cleanGameId = String(gameId).trim();
+  const ids = Array.isArray(categoryIds) ? categoryIds.map((id) => String(id).trim()) : [];
+
+  if (
+    !uuidRegex.test(cleanGameId) ||
+    ids.length > 1000 ||
+    ids.some((id) => !uuidRegex.test(id)) ||
+    new Set(ids).size !== ids.length
+  ) {
+    return { error: "Ordem de categorias inválida." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("set_category_display_order", {
+    target_game_id: cleanGameId,
+    category_ids: ids,
+  });
+
+  if (error) {
+    console.error("Erro ao salvar ordem das categorias:", error.code);
+    return { error: "Não foi possível salvar a ordem das categorias. Atualize a página e tente novamente." };
+  }
+
+  const { data: game } = await admin.from("games").select("slug").eq("id", cleanGameId).maybeSingle();
+
+  revalidatePath("/");
+  revalidatePath("/jogos");
+  revalidatePath("/produtos");
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/admin/produtos");
+  revalidatePath("/admin/combos");
+  if (game?.slug) revalidatePath(`/${game.slug}`);
 
   return { error: null };
 }

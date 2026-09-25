@@ -46,13 +46,17 @@ export default function ProductOrderManager({ products, categories }: Props) {
   );
   const [orderedIds, setOrderedIds] = useState(() => products.map((product) => product.id));
   const [categoryId, setCategoryId] = useState("all");
+  const [search, setSearch] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const normalizedSearch = search.trim().toLocaleLowerCase("pt-BR");
   const visibleIds = orderedIds.filter((id) => {
-    if (categoryId === "all") return true;
-    return productById.get(id)?.category_id === categoryId;
+    const product = productById.get(id);
+    if (!product) return false;
+    if (categoryId !== "all" && product.category_id !== categoryId) return false;
+    return !normalizedSearch || product.name.toLocaleLowerCase("pt-BR").includes(normalizedSearch);
   });
 
   function setVisibleOrder(nextVisibleIds: string[]) {
@@ -122,26 +126,43 @@ export default function ProductOrderManager({ products, categories }: Props) {
   return (
     <div className="mt-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="w-full max-w-md">
-          <label className="admin-label" htmlFor="order-category-filter">
-            Organizar por categoria
-          </label>
-          <select
-            id="order-category-filter"
-            className="admin-input"
-            value={categoryId}
-            onChange={(event) => {
-              setCategoryId(event.target.value);
-              setMessage(null);
-            }}
-          >
-            <option value="all">Todos os produtos</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label}
-              </option>
-            ))}
-          </select>
+        <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+          <div>
+            <label className="admin-label" htmlFor="order-product-search">
+              Buscar na vitrine
+            </label>
+            <input
+              id="order-product-search"
+              className="admin-input"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setMessage(null);
+              }}
+              placeholder="Ex.: Dragon"
+            />
+          </div>
+          <div>
+            <label className="admin-label" htmlFor="order-category-filter">
+              Organizar por categoria
+            </label>
+            <select
+              id="order-category-filter"
+              className="admin-input"
+              value={categoryId}
+              onChange={(event) => {
+                setCategoryId(event.target.value);
+                setMessage(null);
+              }}
+            >
+              <option value="all">Todos os produtos</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -164,7 +185,7 @@ export default function ProductOrderManager({ products, categories }: Props) {
       </div>
 
       <p className="mt-3 text-xs leading-5 text-zinc-500">
-        Arraste no computador, use as setas no celular ou digite a posição exata. A mesma ordem é usada na página inicial, no catálogo e nas categorias.
+        Pesquise pelo nome, filtre por categoria e organize somente os itens visíveis. Arraste no computador, use as setas no celular ou digite a posição exata.
       </p>
 
       {message && (
@@ -181,6 +202,7 @@ export default function ProductOrderManager({ products, categories }: Props) {
       )}
 
       <div className="mt-4 max-h-[620px] space-y-2 overflow-y-auto pr-1">
+        {!visibleIds.length && <div className="admin-empty">Nenhum produto corresponde à busca ou categoria selecionada.</div>}
         {visibleIds.map((id, index) => {
           const product = productById.get(id);
           if (!product) return null;

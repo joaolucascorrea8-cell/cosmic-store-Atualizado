@@ -25,8 +25,8 @@ export default async function AdminCombos({ searchParams }: { searchParams: Prom
 
   const [{ data: products }, { data: categories }, { data: games }, { data: combos }] = await Promise.all([
     admin.from("products").select("id,name,price,image_url,is_active,category_id").order("display_order").order("name"),
-    admin.from("categories").select("id,name,game_id").order("name"),
-    admin.from("games").select("id,name").order("name"),
+    admin.from("categories").select("id,name,game_id,display_order").order("display_order", { ascending: true }).order("name"),
+    admin.from("games").select("id,name,display_order").order("display_order", { ascending: true }).order("name"),
     admin.from("combos").select("id,name,slug,price,compare_at_price,image_url,is_active,ends_at,combo_items(quantity,products(id,name,image_url))").order("created_at", { ascending: false }),
   ]);
 
