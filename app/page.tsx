@@ -6,6 +6,7 @@ import SiteFooter from "@/app/components/SiteFooter";
 import ProductCard from "@/app/components/ProductCard";
 import StoreFeedbacks from "@/app/components/StoreFeedbacks";
 import CatalogCard from "@/app/components/CatalogCard";
+import { withSignedReviewAttachments } from "@/lib/review-attachments";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,9 @@ export default async function Home() {
     supabase.from("games").select("id,name,slug,image_url,display_order").eq("is_active", true).order("display_order", { ascending: true }).order("name"),
     supabase.from("categories").select("id,name,slug,game_id,image_url,display_order").order("display_order", { ascending: true }).order("name"),
     supabase.from("products").select("id,name,slug,description,price,image_url,stock,unlimited_stock,display_order").eq("is_active", true).order("display_order", { ascending: true }).order("name", { ascending: true }).limit(8),
-    supabase.from("feedbacks").select("id,rating,comment,author_nickname,created_at").eq("is_visible", true).order("created_at", { ascending: false }).limit(3),
+    supabase.from("feedbacks").select("id,rating,comment,author_nickname,created_at,source,attachment_path").eq("is_visible", true).order("created_at", { ascending: false }).limit(3),
   ]);
+  const signedFeedbacks = await withSignedReviewAttachments(feedbacks ?? []);
   const activeGames = games ?? [];
   const gamePosition = new Map(activeGames.map((game, index) => [game.id, index]));
   const visibleCategories = (categories ?? [])
@@ -38,6 +40,6 @@ export default async function Home() {
     {visibleCategories.length > 0 && <section className="shell pb-3"><div className="section-heading"><div><p className="eyebrow">ENCONTRE MAIS RÁPIDO</p><h2 className="section-title">Navegue por categoria</h2></div></div><div className="category-shortcuts mt-6">{visibleCategories.map((category) => {const game = activeGames.find((entry) => entry.id === category.game_id);return game ? <Link className="category-shortcut" href={`/${game.slug}/${category.slug}`} key={category.id}><span className="category-shortcut-icon">↗</span><span className="min-w-0"><strong className="block truncate">{category.name}</strong><small className="text-zinc-500">{game.name}</small></span><span className="ml-auto text-zinc-500">→</span></Link> : null;})}</div></section>}
     <section className="shell store-section" id="destaques"><div className="section-heading"><div><p className="eyebrow">VITRINE COSMIC</p><h2 className="section-title">Destaques do catálogo</h2><p className="section-description">Itens disponíveis para explorar agora.</p></div><Link href="/produtos" className="section-link">Ver todos os produtos ↗</Link></div>{products?.length ? <div className="product-grid mt-7">{products.map((product) => <ProductCard key={product.id} produto={product} />)}</div> : <div className="empty-store-state mt-7">Os produtos aparecerão aqui quando forem publicados.</div>}</section>
     <section className="shell pb-8"><div className="help-banner"><div><p className="eyebrow">PRECISA DE AJUDA?</p><h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Seu pedido não precisa ser uma dúvida.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">Acompanhe o status da compra, consulte as instruções do Pix e fale com a equipe no suporte.</p></div><Link href="/suporte" className="btn-secondary shrink-0">Ir para o suporte ↗</Link></div></section>
-    <section className="border-t border-white/[.07] bg-white/[.015] py-14"><StoreFeedbacks feedbacks={feedbacks ?? []} /></section>
+    <section className="border-t border-white/[.07] bg-white/[.015] py-14"><StoreFeedbacks feedbacks={signedFeedbacks} /></section>
   </main><SiteFooter /></div>;
 }

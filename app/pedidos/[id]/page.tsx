@@ -4,6 +4,7 @@ import SiteFooter from "@/app/components/SiteFooter";
 import NotificationReadMarker from "@/app/components/NotificationReadMarker";
 import { createClient } from "@/lib/supabase/server";
 import { withSignedChatAttachments } from "@/lib/chat-attachments";
+import { withSignedReviewAttachments } from "@/lib/review-attachments";
 import { orderStatus } from "@/lib/order-status";
 import OrderChat from "./OrderChat";
 import FeedbackForm from "./FeedbackForm";
@@ -30,9 +31,10 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     ? await supabase.from("order_messages").select("id,user_id,message,created_at,attachment_path,attachment_name,attachment_type,profiles(nickname,avatar_url)").eq("order_id", id).order("created_at")
     : { data: [] };
   const signedMessages = chatAvailable ? await withSignedChatAttachments(messages ?? []) : [];
-  const { data: feedback } = order.status === "delivered"
-    ? await supabase.from("feedbacks").select("rating,comment").eq("order_id", id).maybeSingle()
+  const { data: rawFeedback } = order.status === "delivered"
+    ? await supabase.from("feedbacks").select("rating,comment,attachment_path").eq("order_id", id).maybeSingle()
     : { data: null };
+  const feedback = rawFeedback ? (await withSignedReviewAttachments([rawFeedback]))[0] : null;
 
   return <>
     <SiteHeader />

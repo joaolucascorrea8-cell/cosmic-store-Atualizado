@@ -10,6 +10,7 @@ const items = [
   { href: "/admin/catalogo", label: "Jogos e categorias", icon: "▦" },
   { href: "/admin/suporte", label: "Suporte", icon: "◎" },
   { href: "/admin/comunidade", label: "Comunidade", icon: "♧" },
+  { href: "/admin/avaliacoes", label: "Avaliações", icon: "★" },
 ];
 
 export default function AdminNav() {
