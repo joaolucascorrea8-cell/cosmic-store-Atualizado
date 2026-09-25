@@ -1,14 +1,11 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendGmailEmail, type GmailAttachment } from "@/lib/gmail";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-export type NotificationAttachment = {
-  filename: string;
-  contentType: string;
-  bytes: Uint8Array;
-};
+export type NotificationAttachment = GmailAttachment;
 
 export async function createUserNotification(userId: string, title: string, body: string, link?: string) {
   const { error } = await createAdminClient().from("notifications").insert({ user_id: userId, title, body, link });
@@ -27,36 +24,19 @@ export async function createAdminNotifications(title: string, body: string, link
   if (insertError) throw new Error(`Não foi possível criar o alerta administrativo: ${insertError.message}`);
 }
 
+/**
+ * Envio genérico de e-mail pelo Gmail da loja.
+ * Mantido para os alertas administrativos existentes.
+ * E-mails de cliente são disparados de forma controlada em lib/order-emails.ts.
+ */
 export async function sendEmail(
   to: string | undefined,
   subject: string,
   html: string,
   attachment?: NotificationAttachment,
 ) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-  if (!apiKey) throw new Error("RESEND_API_KEY não configurada.");
-  if (!from) throw new Error("EMAIL_FROM não configurado.");
   if (!to) throw new Error("Destinatário do e-mail não encontrado.");
-
-  const payload: Record<string, unknown> = { from, to: [to], subject, html };
-  if (attachment) {
-    payload.attachments = [{
-      filename: attachment.filename,
-      content: Buffer.from(attachment.bytes).toString("base64"),
-      content_type: attachment.contentType,
-    }];
-  }
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`Resend recusou o e-mail (${response.status}): ${details.slice(0, 500)}`);
-  }
+  await sendGmailEmail({ to, subject, html, attachment });
 }
 
 export async function notifyAdminDiscord(message: string) {
@@ -124,6 +104,11 @@ export async function sendDiscordDm(
   }
 }
 
+/**
+ * Notificação normal de cliente: site + Discord.
+ * Não envia Gmail por mensagem comum. Os únicos e-mails automáticos do cliente
+ * são pagamento confirmado e pedido entregue, definidos em lib/order-emails.ts.
+ */
 export async function notifyCustomer(
   userId: string,
   title: string,
@@ -132,28 +117,19 @@ export async function notifyCustomer(
   attachment?: NotificationAttachment,
 ) {
   const admin = createAdminClient();
-  const [{ data: authData }, { data: profile }] = await Promise.all([
-    admin.auth.admin.getUserById(userId),
-    admin.from("profiles").select("discord_id").eq("id", userId).maybeSingle(),
-  ]);
+  const { data: profile } = await admin.from("profiles").select("discord_id").eq("id", userId).maybeSingle();
   const link = `${siteUrl}${path}`;
   const results = await Promise.allSettled([
     createUserNotification(userId, title, body, path),
-    sendEmail(
-      authData.user?.email,
-      title,
-      `<div style="font-family:Arial,sans-serif"><h2>${title}</h2><p>${body}</p>${attachment ? "<p>A imagem enviada pela equipe está anexada a este e-mail.</p>" : ""}<p><a href="${link}">Abrir na Cosmic Store</a></p></div>`,
-      attachment,
-    ),
     sendDiscordDm(profile?.discord_id, `**${title}**\n${body}`, "Abrir na Cosmic Store", link, attachment),
   ]);
   results.forEach((result, index) => {
     if (result.status === "rejected") {
-      const channels = ["notificação interna", "e-mail", "Discord"];
+      const channels = ["notificação interna", "Discord"];
       console.error(`[notifyCustomer] Falha em ${channels[index]} para o usuário ${userId}:`, result.reason);
     }
   });
-  const channels = ["site", "email", "discord"];
+  const channels = ["site", "discord"];
   await admin.from("notification_deliveries").insert(results.map((result, index) => ({
     user_id: userId,
     title,
