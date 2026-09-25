@@ -26,7 +26,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const products = productResult.data ?? [];
   const selectedGame = games.find((game) => game.slug === params.jogo);
   const q = normalizeSearch((params.q ?? "").slice(0, 100));
-  const selectedCategory = categories.find((category) => category.id === params.categoria && (!selectedGame || category.game_id === selectedGame.id));
+  const effectiveGame = selectedGame ?? (games.length === 1 ? games[0] : undefined);
+  const selectedCategory = categories.find((category) => category.id === params.categoria && Boolean(effectiveGame) && category.game_id === effectiveGame?.id);
 
   const visible = products.filter((product) => {
     const category = categories.find((entry) => entry.id === product.category_id);
