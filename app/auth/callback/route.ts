@@ -1,32 +1,31 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
 
+  const providerError = searchParams.get("error");
+  const providerErrorCode = searchParams.get("error_code");
+  if (providerError || providerErrorCode) {
+    const cancelled = providerError === "access_denied" || providerErrorCode === "access_denied";
+    return NextResponse.redirect(`${origin}/login?auth_error=${cancelled ? "discord_cancelled" : "discord_callback"}`);
+  }
+
   const code = searchParams.get("code");
-  const next = searchParams.get("next");
+  const next = safeInternalPath(searchParams.get("next"));
 
   if (!code) {
-    return NextResponse.redirect(
-      `${origin}/login?auth_error=callback`
-    );
+    return NextResponse.redirect(`${origin}/login?auth_error=discord_callback`);
   }
 
   const supabase = await createClient();
-
-  const { data, error } =
-    await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return NextResponse.redirect(
-      `${origin}/login?auth_error=callback`
-    );
-  }
-
-  if (next === "/reset-password") {
-    return NextResponse.redirect(`${origin}/reset-password`);
+    console.error("[Auth callback] Falha ao trocar código por sessão:", error.message);
+    return NextResponse.redirect(`${origin}/login?auth_error=discord_callback`);
   }
 
   const guildId = process.env.DISCORD_GUILD_ID;
@@ -62,9 +61,5 @@ export async function GET(request: Request) {
     console.error("[Discord OAuth] Entrada automática não executada. Confira DISCORD_GUILD_ID, DISCORD_BOT_TOKEN e o escopo guilds.join.");
   }
 
-  if (next?.startsWith("/") && !next.startsWith("//")) {
-    return NextResponse.redirect(`${origin}${next}`);
-  }
-
-  return NextResponse.redirect(`${origin}/`);
+  return NextResponse.redirect(`${origin}${next}`);
 }
