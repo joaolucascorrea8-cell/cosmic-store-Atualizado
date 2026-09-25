@@ -21,7 +21,7 @@ export default async function ComboPage({ params }: { params: Promise<{ slug: st
   const combo = data as unknown as Combo;
   const max = comboMaxQuantity(combo.combo_items);
   const products = (combo.combo_items ?? []).map((item) => ({ quantity: item.quantity, product: comboProduct(item.products) })).filter((row) => row.product);
-  const artworkProducts = products.map(({ product }) => ({ id: product!.id, name: product!.name, image_url: product!.image_url }));
+  const artworkProducts = products.map(({ product }) => ({ id: product!.id, name: product!.name, image_url: product!.image_url ?? null }));
   const cartImage = combo.image_url || products[0]?.product?.image_url || "/images/products/placeholder.svg";
   const saving = Math.max(0, Number(combo.compare_at_price) - Number(combo.price));
 

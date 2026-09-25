@@ -7,7 +7,7 @@ const money = (value: number) => Number(value).toLocaleString("pt-BR", { style: 
 
 export default function ComboCard({ combo }: { combo: Combo }) {
   const max = comboMaxQuantity(combo.combo_items);
-  const products = (combo.combo_items ?? []).map((item) => comboProduct(item.products)).filter(Boolean).map((product) => ({ id: product!.id, name: product!.name, image_url: product!.image_url }));
+  const products = (combo.combo_items ?? []).map((item) => comboProduct(item.products)).filter(Boolean).map((product) => ({ id: product!.id, name: product!.name, image_url: product!.image_url ?? null }));
   return <article className="product-tile group flex min-w-0 flex-col overflow-hidden">
     <Link href={`/combo/${combo.slug}`} className="product-tile-image relative block aspect-square overflow-hidden">
       {combo.image_url ? <img src={combo.image_url} alt={combo.name} className="h-full w-full object-contain p-5 transition-transform duration-300 group-hover:scale-[1.05]" /> : <ComboArtwork products={products} comboName={combo.name} className="transition-transform duration-300 group-hover:scale-[1.03]" />}
