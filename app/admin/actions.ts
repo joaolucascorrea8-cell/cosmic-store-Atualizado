@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeInternalPath } from "@/lib/safe-redirect";
 import {
   getManagedProductImagePath,
   isAllowedProductImageUrl,
@@ -12,7 +13,23 @@ import {
 
 export type UpdateProductState = {
   error: string | null;
+  success: string | null;
 };
+
+function safeProductReturnPath(value: FormDataEntryValue | null) {
+  const fallback = "/admin/produtos#estoque-catalogo";
+  const safe = safeInternalPath(typeof value === "string" ? value : null, fallback);
+  return safe === "/admin/produtos" || safe.startsWith("/admin/produtos?") || safe.startsWith("/admin/produtos#")
+    ? safe
+    : fallback;
+}
+
+function productReturnWithSuccess(path: string, success = "produto-atualizado") {
+  const parsed = new URL(path, "https://cosmic.local");
+  parsed.searchParams.set("sucesso", success);
+  const query = parsed.searchParams.toString();
+  return `${parsed.pathname}${query ? `?${query}` : ""}${parsed.hash || "#estoque-catalogo"}`;
+}
 
 export async function createGame(formData: FormData) {
   // Verificar a autorização antes de usar a chave administrativa.
@@ -582,7 +599,7 @@ revalidatePath("/admin/produtos");
 revalidatePath("/");
 revalidatePath("/produtos");
 
-redirect("/admin/produtos?sucesso=produto-excluido");
+redirect(productReturnWithSuccess(safeProductReturnPath(formData.get("return_to")), "produto-excluido"));
 }
 
 export async function updateProduct(
@@ -592,192 +609,142 @@ export async function updateProduct(
   await requireAdmin();
 
   const productId = String(formData.get("product_id") ?? "").trim();
-
-  if (!productId) {
-  return {
-    error: "ID do produto não informado.",
-  };
-}
   const uuidRegex =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-if (!uuidRegex.test(productId)) {
-  return {
-    error: "ID do produto inválido.",
-  };
-}
-
-const supabase = createAdminClient();
-
-const { data: existingProduct, error: lookupError } = await supabase
-  .from("products")
-  .select("id, image_url")
-  .eq("id", productId)
-  .maybeSingle();
-
-if (lookupError) {
-  console.error("Erro ao consultar produto:", lookupError.code);
-
-  return {
-    error: "Não foi possível consultar o produto. Tente novamente.",
-  };
-}
-
-if (!existingProduct) {
-  return {
-    error: "Produto não encontrado.",
-  };
-}
-
-const name = String(formData.get("name") ?? "").trim();
-
-if (name.length < 2 || name.length > 100) {
-  return {
-    error: "O nome do produto deve ter entre 2 e 100 caracteres.",
-  };
-}
-
-const slug = String(formData.get("slug") ?? "").trim();
-
-const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-if (slug.length < 2 || slug.length > 100 || !slugRegex.test(slug)) {
-  return {
-    error:
-      "O slug deve ter entre 2 e 100 caracteres e conter apenas letras minúsculas, números e hífens.",
-  };
-}
-const priceText = String(formData.get("price") ?? "").trim();
-
-if (!/^\d+(?:\.\d{1,2})?$/.test(priceText)) {
-  return {
-    error:
-      "O preço deve ser um número válido, com no máximo duas casas decimais.",
-  };
-}
-
-const price = Number(priceText);
-
-if (!Number.isFinite(price) || price < 0 || price > 9999999999.99) {
-  return {
-    error: "O preço informado está fora do intervalo permitido.",
-  };
-} 
-
-const unlimitedStockText = String(
-  formData.get("unlimited_stock") ?? ""
-);
-
-if (unlimitedStockText !== "true" && unlimitedStockText !== "false") {
-  return {
-    error: "Tipo de estoque inválido.",
-  };
-}
-
-const unlimitedStock = unlimitedStockText === "true";
-
-const stockText = String(formData.get("stock") ?? "").trim();
-
-if (!/^\d+$/.test(stockText)) {
-  return {
-    error: "O estoque deve ser um número inteiro não negativo.",
-  };
-}
-
-const stockNumber = Number(stockText);
-
-if (!Number.isSafeInteger(stockNumber) || stockNumber > 2147483647) {
-  return {
-    error: "A quantidade em estoque está fora do limite permitido.",
-  };
-}
-
-const stock = unlimitedStock ? 0 : stockNumber;
-
-const description = String(
-  formData.get("description") ?? ""
-).trim();
-
-if (description.length > 2000) {
-  return {
-    error: "A descrição do produto não pode ultrapassar 2.000 caracteres.",
-  };
-}
-
-const imageUrl = String(formData.get("image_url") ?? "").trim();
-
-if (imageUrl.length > 500 || !isAllowedProductImageUrl(imageUrl)) {
-  return {
-    error: "Envie uma imagem válida usando o campo de imagem.",
-  };
-}
-
-const isActiveText = String(formData.get("is_active") ?? "");
-
-if (isActiveText !== "true" && isActiveText !== "false") {
-  return {
-    error: "Status do produto inválido.",
-  };
-}
-
-const isActive = isActiveText === "true";
-
-const { data: updatedProduct, error: updateError } = await supabase
-  .from("products")
-  .update({
-    name,
-    slug,
-    description: description || null,
-    price,
-    stock,
-    unlimited_stock: unlimitedStock,
-    image_url: imageUrl || null,
-    is_active: isActive,
-  })
-  .eq("id", productId)
-  .select("id")
-  .single();
-
-if (updateError) {
-  console.error("Erro ao atualizar produto:", updateError.code);
-
-  if (updateError.code === "23505") {
-    return {
-      error: "Já existe um produto com esse slug nesta categoria.",
-    };
+  if (!uuidRegex.test(productId)) {
+    return { error: "ID do produto inválido.", success: null };
   }
 
-  return {
-    error: "Não foi possível atualizar o produto. Tente novamente.",
-  };
-}
+  const supabase = createAdminClient();
+  const { data: existingProduct, error: lookupError } = await supabase
+    .from("products")
+    .select("id, image_url, slug, category_id")
+    .eq("id", productId)
+    .maybeSingle();
 
-if (!updatedProduct) {
-  return {
-    error: "A atualização do produto não foi confirmada. Tente novamente.",
-  };
-}
+  if (lookupError) {
+    console.error("Erro ao consultar produto:", lookupError.code);
+    return { error: "Não foi possível consultar o produto. Tente novamente.", success: null };
+  }
+  if (!existingProduct) {
+    return { error: "Produto não encontrado.", success: null };
+  }
 
-if (existingProduct.image_url !== (imageUrl || null)) {
-  const oldImagePath = getManagedProductImagePath(existingProduct.image_url);
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 2 || name.length > 100) {
+    return { error: "O nome do produto deve ter entre 2 e 100 caracteres.", success: null };
+  }
 
-  if (oldImagePath) {
-    const { error: imageDeleteError } = await supabase.storage
-      .from(PRODUCT_IMAGE_BUCKET)
-      .remove([oldImagePath]);
+  const slug = String(formData.get("slug") ?? "").trim();
+  if (slug.length < 2 || slug.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    return { error: "O slug deve ter entre 2 e 100 caracteres e conter apenas letras minúsculas, números e hífens.", success: null };
+  }
 
-    if (imageDeleteError) {
-      console.error("Erro ao remover imagem antiga:", imageDeleteError.message);
+  const categoryId = String(formData.get("category_id") ?? "").trim();
+  if (!uuidRegex.test(categoryId)) {
+    return { error: "Selecione uma categoria válida.", success: null };
+  }
+
+  const { data: category, error: categoryError } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("id", categoryId)
+    .maybeSingle();
+  if (categoryError || !category) {
+    return { error: "A categoria selecionada não existe mais. Atualize a página e tente novamente.", success: null };
+  }
+
+  const priceText = String(formData.get("price") ?? "").trim();
+  if (!/^\d+(?:\.\d{1,2})?$/.test(priceText)) {
+    return { error: "O preço deve ser um número válido, com no máximo duas casas decimais.", success: null };
+  }
+  const price = Number(priceText);
+  if (!Number.isFinite(price) || price < 0 || price > 9999999999.99) {
+    return { error: "O preço informado está fora do intervalo permitido.", success: null };
+  }
+
+  const unlimitedStockText = String(formData.get("unlimited_stock") ?? "");
+  if (unlimitedStockText !== "true" && unlimitedStockText !== "false") {
+    return { error: "Tipo de estoque inválido.", success: null };
+  }
+  const unlimitedStock = unlimitedStockText === "true";
+
+  const stockText = String(formData.get("stock") ?? "").trim();
+  if (!/^\d+$/.test(stockText)) {
+    return { error: "O estoque deve ser um número inteiro não negativo.", success: null };
+  }
+  const stockNumber = Number(stockText);
+  if (!Number.isSafeInteger(stockNumber) || stockNumber > 2147483647) {
+    return { error: "A quantidade em estoque está fora do limite permitido.", success: null };
+  }
+  const stock = unlimitedStock ? 0 : stockNumber;
+
+  const description = String(formData.get("description") ?? "").trim();
+  if (description.length > 2000) {
+    return { error: "A descrição do produto não pode ultrapassar 2.000 caracteres.", success: null };
+  }
+
+  const imageUrl = String(formData.get("image_url") ?? "").trim();
+  if (imageUrl.length > 500 || !isAllowedProductImageUrl(imageUrl)) {
+    return { error: "Envie uma imagem válida usando o campo de imagem.", success: null };
+  }
+
+  const isActiveText = String(formData.get("is_active") ?? "");
+  if (isActiveText !== "true" && isActiveText !== "false") {
+    return { error: "Status do produto inválido.", success: null };
+  }
+  const isActive = isActiveText === "true";
+
+  const { data: updatedProduct, error: updateError } = await supabase
+    .from("products")
+    .update({
+      category_id: categoryId,
+      name,
+      slug,
+      description: description || null,
+      price,
+      stock,
+      unlimited_stock: unlimitedStock,
+      image_url: imageUrl || null,
+      is_active: isActive,
+    })
+    .eq("id", productId)
+    .select("id")
+    .single();
+
+  if (updateError) {
+    console.error("Erro ao atualizar produto:", updateError.code);
+    if (updateError.code === "23505") {
+      return { error: "Já existe um produto com esse slug nesta categoria.", success: null };
+    }
+    return { error: "Não foi possível atualizar o produto. Tente novamente.", success: null };
+  }
+  if (!updatedProduct) {
+    return { error: "A atualização do produto não foi confirmada. Tente novamente.", success: null };
+  }
+
+  if (existingProduct.image_url !== (imageUrl || null)) {
+    const oldImagePath = getManagedProductImagePath(existingProduct.image_url);
+    if (oldImagePath) {
+      const { error: imageDeleteError } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).remove([oldImagePath]);
+      if (imageDeleteError) console.error("Erro ao remover imagem antiga:", imageDeleteError.message);
     }
   }
-}
 
-revalidatePath("/admin/produtos");
-revalidatePath("/");
-revalidatePath("/produtos");
-revalidatePath(`/admin/produtos/${productId}/editar`);
+  revalidatePath("/admin/produtos");
+  revalidatePath("/");
+  revalidatePath("/produtos");
+  revalidatePath(`/produto/${existingProduct.slug}`);
+  revalidatePath(`/produto/${slug}`);
+  revalidatePath(`/admin/produtos/${productId}/editar`);
 
-redirect("/admin/produtos?sucesso=produto-atualizado");
+  const saveAction = String(formData.get("save_action") ?? "stay");
+  if (saveAction === "back") {
+    redirect(productReturnWithSuccess(safeProductReturnPath(formData.get("return_to"))));
+  }
+
+  return { error: null, success: "Produto atualizado com sucesso. Você pode continuar editando ou voltar para a lista filtrada." };
 }
 
 

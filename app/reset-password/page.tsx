@@ -12,6 +12,8 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
 
   useEffect(() => {
   const supabase = createClient();
@@ -107,10 +109,12 @@ export default function ResetPasswordPage() {
             </p>
 
             <input
-              type="password"
+              type={showPasswords ? "text" : "password"}
               placeholder="Nova senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => setCapsLock(e.getModifierState("CapsLock"))}
+              onKeyUp={(e) => setCapsLock(e.getModifierState("CapsLock"))}
               required
               minLength={8}
               autoComplete="new-password"
@@ -119,16 +123,25 @@ export default function ResetPasswordPage() {
             />
 
             <input
-              type="password"
+              type={showPasswords ? "text" : "password"}
               placeholder="Confirmar nova senha"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              onKeyDown={(e) => setCapsLock(e.getModifierState("CapsLock"))}
+              onKeyUp={(e) => setCapsLock(e.getModifierState("CapsLock"))}
               required
               minLength={8}
               autoComplete="new-password"
               disabled={loading}
               className="mb-4 w-full rounded-lg border border-gray-700 bg-[#080812] p-3"
             />
+
+            <div className="mb-4 flex items-center justify-between gap-3 text-xs">
+              <button type="button" onClick={() => setShowPasswords((value) => !value)} className="font-bold text-violet-300 hover:text-white">
+                {showPasswords ? "Ocultar senhas" : "Mostrar senhas"}
+              </button>
+              {capsLock && <span className="font-bold text-amber-300">Caps Lock ativado</span>}
+            </div>
 
             <button
               type="submit"

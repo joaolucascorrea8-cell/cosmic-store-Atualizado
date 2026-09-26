@@ -11,6 +11,7 @@ type ProfileFormProps = {
   initialAvatarUrl: string | null;
   provider: string;
   initialOnboardingCompleted: boolean;
+  afterOnboardingPath: string;
 };
 
 const NICKNAME_PATTERN = /^[A-Za-z0-9_.-]{3,24}$/;
@@ -23,6 +24,7 @@ export default function ProfileForm({
   initialAvatarUrl,
   provider,
   initialOnboardingCompleted,
+  afterOnboardingPath,
 }: ProfileFormProps) {
   const router = useRouter();
   const [nickname, setNickname] = useState(initialNickname);
@@ -106,7 +108,7 @@ export default function ProfileForm({
       setPreviewUrl(nextAvatarUrl);
 
       if (isFirstSetup) {
-        router.replace("/");
+        router.replace(afterOnboardingPath);
         router.refresh();
         return;
       }

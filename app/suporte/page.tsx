@@ -29,6 +29,7 @@ export default async function SupportPage() {
       <p className="eyebrow">Atendimento particular</p>
       <h1 className="section-title">Central de suporte</h1>
       <p className="mt-3 max-w-2xl text-zinc-500">Abra um atendimento para dúvidas gerais. Para assuntos de uma compra, informe o código do pedido na mensagem.</p>
+      <Link href="/ajuda" className="mt-3 inline-flex text-sm font-bold text-violet-300 hover:text-white">Antes de abrir um ticket, confira a ajuda rápida →</Link>
 
       <div className="mt-9 grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
         <section className="surface rounded-3xl p-6">

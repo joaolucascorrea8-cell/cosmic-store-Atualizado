@@ -10,6 +10,7 @@ import OrderChat from "./OrderChat";
 import FeedbackForm from "./FeedbackForm";
 import ProofReuploadForm from "./ProofReuploadForm";
 import OrderStatusWatcher from "./OrderStatusWatcher";
+import OrderProgress from "./OrderProgress";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </div>
           <span className={`w-fit rounded-full px-4 py-2 text-sm font-bold ${status.className}`}>{status.label}</span>
         </div>
+
+        <OrderProgress status={order.status} />
 
         <section className="mt-8 rounded-2xl border border-white/10 bg-[#121017] p-6">
           <div className="flex justify-between"><span className="text-zinc-400">Nickname no jogo</span><strong>{order.game_nickname}</strong></div>

@@ -3,12 +3,18 @@ import SiteHeader from "@/app/components/SiteHeader";
 import SiteFooter from "@/app/components/SiteFooter";
 import ProfileForm from "./ProfileForm";
 import { createClient } from "@/lib/supabase/server";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const params = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login?next=/conta");
+  if (!user) {
+    const requested = safeInternalPath(params.next, "/conta");
+    const loginNext = requested === "/" ? "/conta" : requested;
+    redirect(`/login?next=${encodeURIComponent(loginNext)}`);
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -28,6 +34,8 @@ export default async function AccountPage() {
   const provider = profile?.auth_provider
     ?? String(user.app_metadata?.provider ?? "email");
   const onboardingCompleted = profile?.onboarding_completed === true;
+  const requestedAfterSetup = safeInternalPath(params.next, "/");
+  const afterOnboardingPath = requestedAfterSetup.startsWith("/conta") ? "/" : requestedAfterSetup;
 
   return (
     <>
@@ -43,7 +51,7 @@ export default async function AccountPage() {
           <p className="mt-3 text-zinc-400">
             {onboardingCompleted
               ? "Escolha como você aparecerá nos chats e nos feedbacks da Cosmic Store."
-              : "Só falta escolher como você quer aparecer na Cosmic Store. Depois disso você já pode começar a usar a loja normalmente."}
+              : "Só falta escolher como você quer aparecer na Cosmic Store. Depois disso você volta automaticamente para onde estava."}
           </p>
 
           <ProfileForm
@@ -53,6 +61,7 @@ export default async function AccountPage() {
             initialAvatarUrl={profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null}
             provider={provider}
             initialOnboardingCompleted={onboardingCompleted}
+            afterOnboardingPath={afterOnboardingPath}
           />
         </div>
       </main>

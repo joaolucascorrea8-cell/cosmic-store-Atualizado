@@ -8,10 +8,10 @@ type OrderRow = {
   profiles: { nickname: string } | { nickname: string }[] | null;
 };
 
-const priority: Record<string, number> = { proof_submitted: 0, under_review: 1, paid: 2, proof_rejected: 3, awaiting_payment: 4, delivered: 5, cancelled: 6 };
+const priority: Record<string, number> = { proof_submitted: 0, under_review: 1, paid: 2, preparing_delivery: 3, proof_rejected: 4, awaiting_payment: 5, delivered: 6, cancelled: 7 };
 const filters = [
   ["", "Todos"], ["pending", "Aguardando análise"], ["awaiting_payment", "Aguardando pagamento"],
-  ["paid", "Pagos"], ["delivered", "Entregues"], ["cancelled", "Cancelados"],
+  ["delivery", "Aguardando entrega"], ["paid", "Pagos"], ["delivered", "Entregues"], ["cancelled", "Cancelados"],
 ];
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
@@ -34,13 +34,13 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
   const counts = {
     total: allOrders.length,
     proofs: allOrders.filter((order) => ["proof_submitted", "under_review"].includes(order.status)).length,
-    paid: allOrders.filter((order) => order.status === "paid").length,
+    delivery: allOrders.filter((order) => ["paid", "preparing_delivery"].includes(order.status)).length,
     delivered: allOrders.filter((order) => order.status === "delivered").length,
   };
   const orders = allOrders.filter((order) => {
     const profile = Array.isArray(order.profiles) ? order.profiles[0] : order.profiles;
     const matchesText = !query || [order.order_code, order.game_nickname, profile?.nickname ?? ""].some((value) => value.toLowerCase().includes(query));
-    const matchesStatus = !selectedStatus || (selectedStatus === "pending" ? ["proof_submitted", "under_review"].includes(order.status) : order.status === selectedStatus);
+    const matchesStatus = !selectedStatus || (selectedStatus === "pending" ? ["proof_submitted", "under_review"].includes(order.status) : selectedStatus === "delivery" ? ["paid", "preparing_delivery"].includes(order.status) : order.status === selectedStatus);
     return matchesText && matchesStatus;
   }).sort((a, b) => (priority[a.status] ?? 99) - (priority[b.status] ?? 99) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -48,7 +48,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-violet-400">Painel administrativo</p><h1 className="mt-2 text-3xl font-black">Pedidos</h1><p className="mt-2 text-sm text-zinc-400">Comprovantes pendentes aparecem primeiro.</p></div><Link href="/admin" className="min-h-11 rounded-xl border border-white/10 px-4 py-3 text-center text-sm font-bold">Voltar</Link></div>
 
     <section className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {[['Pedidos',counts.total,'text-white'],['Para analisar',counts.proofs,'text-amber-300'],['Pagos',counts.paid,'text-emerald-300'],['Entregues',counts.delivered,'text-violet-300']].map(([label,value,color]) => <div key={String(label)} className="rounded-2xl border border-white/10 bg-white/[.035] p-4 sm:p-5"><p className="text-xs font-bold uppercase tracking-wider text-zinc-400">{label}</p><strong className={`mt-2 block text-2xl sm:text-3xl ${color}`}>{value}</strong></div>)}
+      {[['Pedidos',counts.total,'text-white'],['Para analisar',counts.proofs,'text-amber-300'],['Aguardando entrega',counts.delivery,'text-emerald-300'],['Entregues',counts.delivered,'text-violet-300']].map(([label,value,color]) => <div key={String(label)} className="rounded-2xl border border-white/10 bg-white/[.035] p-4 sm:p-5"><p className="text-xs font-bold uppercase tracking-wider text-zinc-400">{label}</p><strong className={`mt-2 block text-2xl sm:text-3xl ${color}`}>{value}</strong></div>)}
     </section>
 
     <form className="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-white/[.025] p-4 md:grid-cols-[1fr_220px_auto]">

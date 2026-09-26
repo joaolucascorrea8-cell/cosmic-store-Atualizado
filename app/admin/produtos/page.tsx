@@ -43,7 +43,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
   const filtered = products.filter((product) =>
     (!q || `${product.name} ${product.slug} ${categoryNames.get(product.category_id) ?? ""}`.toLowerCase().includes(q)) &&
     (!category || product.category_id === category) &&
-    (!status || (status === "active" ? product.is_active : status === "inactive" ? !product.is_active : status === "out" ? !product.unlimited_stock && product.stock < 1 : true))
+    (!status || (status === "active" ? product.is_active : status === "inactive" ? !product.is_active : status === "out" ? !product.unlimited_stock && product.stock < 1 : status === "low" ? !product.unlimited_stock && product.stock > 0 && product.stock <= 2 : true))
   );
 
   const pageSize = 12;
@@ -52,6 +52,15 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
   const page = Number.isFinite(requestedPage) ? Math.min(Math.max(requestedPage, 1), totalPages) : 1;
   const pagedProducts = filtered.slice((page - 1) * pageSize, page * pageSize);
   const inventoryOpen = Boolean(params.q || params.status || params.category || params.p);
+
+  const lowStockCount = products.filter((product) => !product.unlimited_stock && product.stock > 0 && product.stock <= 2).length;
+  const currentListQuery = new URLSearchParams();
+  if (params.q) currentListQuery.set("q", params.q);
+  if (status) currentListQuery.set("status", status);
+  if (category) currentListQuery.set("category", category);
+  if (params.p) currentListQuery.set("p", params.p);
+  const currentListSuffix = currentListQuery.toString();
+  const returnTo = `/admin/produtos${currentListSuffix ? `?${currentListSuffix}` : ""}#estoque-catalogo`;
 
   function pageHref(nextPage: number) {
     const query = new URLSearchParams();
@@ -79,7 +88,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
 
     <details id="estoque-catalogo" className="admin-form-details mt-6" open={inventoryOpen}>
       <summary>
-        <span className="min-w-0"><strong className="block text-sm text-white">Estoque e catálogo</strong><small className="mt-1 block font-normal text-zinc-500">{products.length} produtos · {products.filter((p) => p.is_active).length} publicados · {products.filter((p) => !p.unlimited_stock && p.stock < 1).length} esgotados</small></span>
+        <span className="min-w-0"><strong className="block text-sm text-white">Estoque e catálogo</strong><small className="mt-1 block font-normal text-zinc-500">{products.length} produtos · {products.filter((p) => p.is_active).length} publicados · {products.filter((p) => !p.unlimited_stock && p.stock < 1).length} esgotados · {lowStockCount} com estoque baixo</small></span>
         <span className="shrink-0">Abrir gestão ⌄</span>
       </summary>
 
@@ -95,7 +104,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
           <label htmlFor="filter-category" className="sr-only">Filtrar categoria</label>
           <select className="admin-input" id="filter-category" name="category" defaultValue={category}><option value="">Todas as categorias</option>{categories.map((item) => <option key={item.id} value={item.id}>{categoryNames.get(item.id)}</option>)}</select>
           <label htmlFor="filter-status" className="sr-only">Filtrar status</label>
-          <select className="admin-input" id="filter-status" name="status" defaultValue={status}><option value="">Todos os status</option><option value="active">Publicados</option><option value="inactive">Inativos</option><option value="out">Esgotados</option></select>
+          <select className="admin-input" id="filter-status" name="status" defaultValue={status}><option value="">Todos os status</option><option value="active">Publicados</option><option value="inactive">Inativos</option><option value="out">Esgotados</option><option value="low">Estoque baixo (1–2)</option></select>
           <button type="submit" className="btn-primary">Filtrar</button>
           {(q || status || category) ? <Link href="/admin/produtos?p=1#estoque-catalogo" className="btn-secondary text-center">Limpar</Link> : <span />}
         </form>
@@ -105,7 +114,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
           {pagedProducts.map((product) => <article key={product.id} className="admin-product-row">
             <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-violet-500/10"><Image src={product.image_url || "/images/products/placeholder.svg"} alt="" fill sizes="56px" className="object-contain p-1" /></div>
             <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold">{product.name}</h3><p className="mt-1 truncate text-xs text-zinc-500">{categoryNames.get(product.category_id) ?? "Categoria não encontrada"}</p><p className="mt-1 text-xs text-zinc-400">Ordem #{displayPositions.get(product.id)} · {product.unlimited_stock ? "Estoque ilimitado" : `${product.stock} em estoque`} · <span className={product.is_active ? "text-emerald-300" : "text-amber-300"}>{product.is_active ? "Publicado" : "Inativo"}</span></p></div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2"><strong className="w-full text-right text-sm sm:w-auto">{Number(product.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong><Link href={`/admin/produtos/${product.id}/editar`} className="admin-small-button">Editar ↗</Link>{!product.is_active && <form action={deleteProduct}><input name="product_id" type="hidden" value={product.id} /><ConfirmDeleteButton /></form>}</div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2"><strong className="w-full text-right text-sm sm:w-auto">{Number(product.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong><Link href={`/admin/produtos/${product.id}/editar?returnTo=${encodeURIComponent(returnTo)}`} className="admin-small-button">Editar ↗</Link>{!product.is_active && <form action={deleteProduct}><input name="product_id" type="hidden" value={product.id} /><input name="return_to" type="hidden" value={returnTo} /><ConfirmDeleteButton /></form>}</div>
           </article>)}
           {!filtered.length && <div className="admin-empty">Nenhum produto corresponde aos filtros. <Link className="text-violet-300 underline" href="/admin/produtos?p=1#estoque-catalogo">Limpar filtros</Link></div>}
         </div>

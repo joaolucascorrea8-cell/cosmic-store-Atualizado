@@ -6,13 +6,13 @@ import { assertDeliveryImage, sendOrderStatusEmail, type OrderEmailKind } from "
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const allowed = ["paid", "delivered", "cancelled", "proof_rejected"];
+const allowed = ["paid", "preparing_delivery", "delivered", "cancelled", "proof_rejected"];
 const transitions: Record<string, string[]> = {
   awaiting_payment: ["cancelled"],
   proof_submitted: ["paid", "proof_rejected", "cancelled"],
   under_review: ["paid", "proof_rejected", "cancelled"],
   proof_rejected: ["cancelled"],
-  paid: ["delivered", "cancelled"],
+  paid: ["preparing_delivery", "cancelled"],
   preparing_delivery: ["delivered", "cancelled"],
 };
 
@@ -83,6 +83,7 @@ export async function updateOrderStatus(formData: FormData) {
 
   const notifications: Record<string, [string, string]> = {
     paid: ["Pagamento confirmado!", `O pagamento do pedido ${order.order_code} foi confirmado. O chat do pedido já está disponível.`],
+    preparing_delivery: ["Entrega em preparação", `A equipe começou a preparar a entrega do pedido ${order.order_code}. Acompanhe pelo chat do pedido.`],
     delivered: ["Pedido entregue!", `O pedido ${order.order_code} foi marcado como entregue. Conte como foi sua experiência com a Cosmic Store.`],
     cancelled: ["Pedido cancelado", `O pedido ${order.order_code} foi cancelado. Fale conosco se precisar de ajuda.`],
     proof_rejected: ["Comprovante não confirmado", `Não conseguimos confirmar o comprovante do pedido ${order.order_code}. Motivo: ${rejectionReason} Abra o pedido para enviar um novo arquivo.`],

@@ -5,19 +5,25 @@ import { safeInternalPath } from "@/lib/safe-redirect";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
+  const next = safeInternalPath(searchParams.get("next"));
+  const loginErrorUrl = (code: string) => {
+    const url = new URL("/login", origin);
+    url.searchParams.set("auth_error", code);
+    if (next !== "/") url.searchParams.set("next", next);
+    return url;
+  };
 
   const providerError = searchParams.get("error");
   const providerErrorCode = searchParams.get("error_code");
   if (providerError || providerErrorCode) {
     const cancelled = providerError === "access_denied" || providerErrorCode === "access_denied";
-    return NextResponse.redirect(`${origin}/login?auth_error=${cancelled ? "discord_cancelled" : "discord_callback"}`);
+    return NextResponse.redirect(loginErrorUrl(cancelled ? "discord_cancelled" : "discord_callback"));
   }
 
   const code = searchParams.get("code");
-  const next = safeInternalPath(searchParams.get("next"));
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?auth_error=discord_callback`);
+    return NextResponse.redirect(loginErrorUrl("discord_callback"));
   }
 
   const supabase = await createClient();
@@ -25,7 +31,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("[Auth callback] Falha ao trocar código por sessão:", error.message);
-    return NextResponse.redirect(`${origin}/login?auth_error=discord_callback`);
+    return NextResponse.redirect(loginErrorUrl("discord_callback"));
   }
 
   const guildId = process.env.DISCORD_GUILD_ID;
@@ -72,7 +78,7 @@ export async function GET(request: Request) {
     if (onboardingError) {
       console.error("[Discord OAuth] Não foi possível consultar o onboarding:", onboardingError.message);
     } else if (profile?.onboarding_completed !== true) {
-      destination = "/conta";
+      destination = `/conta?next=${encodeURIComponent(next)}`;
     }
   }
 
