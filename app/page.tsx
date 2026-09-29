@@ -40,6 +40,27 @@ export default async function Home() {
     {visibleCategories.length > 0 && <section className="shell pb-3"><div className="section-heading"><div><p className="eyebrow">ENCONTRE MAIS RÁPIDO</p><h2 className="section-title">Navegue por categoria</h2></div></div><div className="category-shortcuts mt-6">{visibleCategories.map((category) => {const game = activeGames.find((entry) => entry.id === category.game_id);return game ? <Link className="category-shortcut" href={`/${game.slug}/${category.slug}`} key={category.id}><span className="category-shortcut-icon">↗</span><span className="min-w-0"><strong className="block truncate">{category.name}</strong><small className="text-zinc-500">{game.name}</small></span><span className="ml-auto text-zinc-500">→</span></Link> : null;})}</div></section>}
     <section className="shell store-section" id="destaques"><div className="section-heading"><div><p className="eyebrow">VITRINE COSMIC</p><h2 className="section-title">Destaques do catálogo</h2><p className="section-description">Itens disponíveis para explorar agora.</p></div><Link href="/produtos" className="section-link">Ver todos os produtos ↗</Link></div>{products?.length ? <div className="product-grid mt-7">{products.map((product) => <ProductCard key={product.id} produto={product} />)}</div> : <div className="empty-store-state mt-7">Os produtos aparecerão aqui quando forem publicados.</div>}</section>
     <section className="shell pb-8"><div className="help-banner"><div><p className="eyebrow">PRECISA DE AJUDA?</p><h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Seu pedido não precisa ser uma dúvida.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">Veja como funciona a entrega, as diferenças entre os itens, o envio do comprovante e onde acompanhar sua compra.</p></div><div className="flex shrink-0 flex-wrap gap-2"><Link href="/ajuda" className="btn-secondary">Ver ajuda rápida ↗</Link><Link href="/suporte" className="btn-secondary">Falar com suporte ↗</Link></div></div></section>
+    <section className="shell pb-10" aria-labelledby="conta-e-privacidade">
+      <div className="overflow-hidden rounded-[26px] border border-white/[.08] bg-[#100e17]">
+        <div className="grid gap-0 lg:grid-cols-[1.15fr_.85fr]">
+          <div className="p-6 sm:p-8 lg:p-10">
+            <p className="eyebrow">CONTA E PRIVACIDADE</p>
+            <h2 id="conta-e-privacidade" className="mt-2 max-w-2xl text-2xl font-black tracking-tight sm:text-3xl">Entre com Google ou Discord de forma simples e transparente.</h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base">A conta da Cosmic Store serve para autenticar você, identificar seus pedidos, acompanhar entregas, receber avisos importantes e acessar o suporte. Ao usar o Google, solicitamos apenas informações básicas de identificação necessárias ao login, como nome, e-mail, identificador da conta e foto de perfil quando disponibilizada.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base">A Cosmic Store não recebe sua senha do Google e não solicita acesso ao conteúdo do Gmail, Google Drive, contatos, calendário, fotos ou documentos da sua Conta Google.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/privacidade" className="btn-secondary">Política de Privacidade ↗</Link>
+              <Link href="/termos" className="btn-secondary">Termos de uso ↗</Link>
+            </div>
+          </div>
+          <div className="grid gap-px border-t border-white/[.07] bg-white/[.07] sm:grid-cols-3 lg:grid-cols-1 lg:border-l lg:border-t-0">
+            <div className="bg-[#0c0b11] p-5 sm:p-6"><p className="text-xs font-black uppercase tracking-[.16em] text-violet-300">Dados básicos</p><p className="mt-2 text-sm leading-6 text-zinc-400">Nome, e-mail, identificador e foto de perfil quando fornecidos pelo método de login.</p></div>
+            <div className="bg-[#0c0b11] p-5 sm:p-6"><p className="text-xs font-black uppercase tracking-[.16em] text-violet-300">Finalidade</p><p className="mt-2 text-sm leading-6 text-zinc-400">Login, segurança da conta, pedidos, entregas, suporte e comunicações essenciais.</p></div>
+            <div className="bg-[#0c0b11] p-5 sm:p-6"><p className="text-xs font-black uppercase tracking-[.16em] text-violet-300">Sem acesso ao conteúdo</p><p className="mt-2 text-sm leading-6 text-zinc-400">Não acessamos Gmail, Drive, contatos, calendário ou outros conteúdos privados da Conta Google.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
     <section className="border-t border-white/[.07] bg-white/[.015] py-14"><StoreFeedbacks feedbacks={signedFeedbacks} /></section>
   </main><SiteFooter /></div>;
 }

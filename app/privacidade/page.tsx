@@ -70,8 +70,9 @@ export default function PrivacyPage() {
         <p>
           Ao escolher <strong>Continuar com Google</strong>, a Cosmic Store usa o
           Google OAuth apenas para autenticar você e facilitar a criação ou o
-          acesso à sua conta. Podemos receber do Google informações básicas de
-          perfil, como nome, e-mail, identificador da Conta Google e foto de
+          acesso à sua conta. Solicitamos somente permissões básicas de
+          autenticação e perfil necessárias ao login. Podemos receber do Google
+          informações como nome, e-mail, identificador da Conta Google e foto de
           perfil, conforme disponibilizado no processo de autenticação.
         </p>
         <p>
@@ -215,9 +216,10 @@ export default function PrivacyPage() {
         <p>
           Para solicitar acesso, correção, exclusão, esclarecimentos sobre seus
           dados ou qualquer outro direito relacionado à privacidade, utilize os
-          canais oficiais de suporte disponibilizados pela Cosmic Store. Podemos
-          solicitar confirmação de identidade para evitar que dados sejam entregues
-          ou alterados por uma pessoa não autorizada.
+          canais oficiais de suporte disponibilizados pela Cosmic Store, inclusive
+          pela Central de suporte em <strong>/suporte</strong>. Podemos solicitar
+          confirmação de identidade para evitar que dados sejam entregues ou
+          alterados por uma pessoa não autorizada.
         </p>
       </section>
 
