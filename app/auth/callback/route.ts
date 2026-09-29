@@ -6,6 +6,7 @@ import { safeInternalPath } from "@/lib/safe-redirect";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const next = safeInternalPath(searchParams.get("next"));
+  const oauthProvider = searchParams.get("provider") === "discord" ? "discord" : searchParams.get("provider") === "google" ? "google" : null;
   const loginErrorUrl = (code: string) => {
     const url = new URL("/login", origin);
     url.searchParams.set("auth_error", code);
@@ -17,21 +18,18 @@ export async function GET(request: Request) {
   const providerErrorCode = searchParams.get("error_code");
   if (providerError || providerErrorCode) {
     const cancelled = providerError === "access_denied" || providerErrorCode === "access_denied";
-    return NextResponse.redirect(loginErrorUrl(cancelled ? "discord_cancelled" : "discord_callback"));
+    return NextResponse.redirect(loginErrorUrl(cancelled ? "oauth_cancelled" : "oauth_callback"));
   }
 
   const code = searchParams.get("code");
-
-  if (!code) {
-    return NextResponse.redirect(loginErrorUrl("discord_callback"));
-  }
+  if (!code) return NextResponse.redirect(loginErrorUrl("oauth_callback"));
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     console.error("[Auth callback] Falha ao trocar código por sessão:", error.message);
-    return NextResponse.redirect(loginErrorUrl("discord_callback"));
+    return NextResponse.redirect(loginErrorUrl("oauth_callback"));
   }
 
   const guildId = process.env.DISCORD_GUILD_ID;
@@ -40,18 +38,16 @@ export async function GET(request: Request) {
   const discordIdentity = data.user?.identities?.find((identity) => identity.provider === "discord");
   const discordId = discordIdentity?.id;
 
-  if (discordId && data.user?.id) {
+  if (oauthProvider === "discord" && discordId && data.user?.id) {
     const admin = createAdminClient();
     const { error: profileError } = await admin
       .from("profiles")
-      .update({ auth_provider: "discord", discord_id: discordId })
+      .update({ discord_id: discordId })
       .eq("id", data.user.id);
-    if (profileError) {
-      console.error("[Discord OAuth] Não foi possível salvar o discord_id:", profileError.message);
-    }
+    if (profileError) console.error("[Discord OAuth] Não foi possível salvar o discord_id:", profileError.message);
   }
 
-  if (guildId && botToken && providerToken && discordId) {
+  if (oauthProvider === "discord" && guildId && botToken && providerToken && discordId) {
     const guildResponse = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`, {
       method: "PUT",
       headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
@@ -63,7 +59,7 @@ export async function GET(request: Request) {
     if (guildResponse && !guildResponse.ok && guildResponse.status !== 204) {
       console.error(`[Discord OAuth] Discord recusou entrada no servidor (${guildResponse.status}):`, (await guildResponse.text()).slice(0, 500));
     }
-  } else if (discordId) {
+  } else if (oauthProvider === "discord" && discordId) {
     console.error("[Discord OAuth] Entrada automática não executada. Confira DISCORD_GUILD_ID, DISCORD_BOT_TOKEN e o escopo guilds.join.");
   }
 
@@ -76,7 +72,7 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     if (onboardingError) {
-      console.error("[Discord OAuth] Não foi possível consultar o onboarding:", onboardingError.message);
+      console.error("[Auth OAuth] Não foi possível consultar o onboarding:", onboardingError.message);
     } else if (profile?.onboarding_completed !== true) {
       destination = `/conta?next=${encodeURIComponent(next)}`;
     }

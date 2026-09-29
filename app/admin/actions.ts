@@ -17,7 +17,7 @@ export type UpdateProductState = {
 };
 
 function safeProductReturnPath(value: FormDataEntryValue | null) {
-  const fallback = "/admin/produtos#estoque-catalogo";
+  const fallback = "/admin/produtos?catalogo=1#catalogo-produtos";
   const safe = safeInternalPath(typeof value === "string" ? value : null, fallback);
   return safe === "/admin/produtos" || safe.startsWith("/admin/produtos?") || safe.startsWith("/admin/produtos#")
     ? safe
@@ -28,7 +28,7 @@ function productReturnWithSuccess(path: string, success = "produto-atualizado") 
   const parsed = new URL(path, "https://cosmic.local");
   parsed.searchParams.set("sucesso", success);
   const query = parsed.searchParams.toString();
-  return `${parsed.pathname}${query ? `?${query}` : ""}${parsed.hash || "#estoque-catalogo"}`;
+  return `${parsed.pathname}${query ? `?${query}` : ""}${parsed.hash || "#catalogo-produtos"}`;
 }
 
 export async function createGame(formData: FormData) {
@@ -213,6 +213,45 @@ export async function updateCategoryImage(formData: FormData) {
     if (game?.slug) revalidatePath(`/${game.slug}`);
   }
   redirect("/admin/catalogo?updated=category-image");
+}
+
+export async function updateProductQuick(input: {
+  productId: string;
+  stock: number;
+  unlimitedStock: boolean;
+  isActive: boolean;
+}) {
+  await requireAdmin();
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const productId = String(input?.productId ?? "").trim();
+  const stock = Number(input?.stock ?? 0);
+
+  if (!uuidRegex.test(productId)) return { error: "Produto inválido." };
+  if (!input.unlimitedStock && (!Number.isSafeInteger(stock) || stock < 0 || stock > 2147483647)) {
+    return { error: "Informe um estoque válido." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("products")
+    .update({
+      stock,
+      unlimited_stock: Boolean(input.unlimitedStock),
+      is_active: Boolean(input.isActive),
+    })
+    .eq("id", productId);
+
+  if (error) {
+    console.error("Erro ao atualizar produto rapidamente:", error.code);
+    return { error: "Não foi possível salvar estoque/status agora." };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/produtos");
+  revalidatePath("/");
+  revalidatePath("/produtos");
+  return { error: null };
 }
 
 export async function saveProductOrder(productIds: string[]) {

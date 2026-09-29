@@ -6,7 +6,7 @@ import { safeInternalPath } from "@/lib/safe-redirect";
 import EditProductForm from "./EditProductForm";
 
 function safeReturnTo(value: string | undefined) {
-  const fallback = "/admin/produtos#estoque-catalogo";
+  const fallback = "/admin/produtos?catalogo=1#catalogo-produtos";
   const safe = safeInternalPath(value, fallback);
   return safe === "/admin/produtos" || safe.startsWith("/admin/produtos?") || safe.startsWith("/admin/produtos#") ? safe : fallback;
 }
@@ -50,7 +50,7 @@ export default async function EditarProdutoPage({
 
         <h1 className="mt-8 text-3xl font-bold">Editar produto: {productResult.data.name}</h1>
         <p className="mt-3 break-all text-sm text-gray-400">ID do produto: {id}</p>
-        <p className="mt-2 text-xs text-zinc-500">Ao salvar e voltar, sua busca, categoria, status e página do catálogo serão preservados.</p>
+        <p className="mt-2 text-xs text-zinc-500">Ao salvar e voltar, a área do catálogo abre novamente e os filtros usados na lista são restaurados no navegador.</p>
 
         <div className="mt-8 rounded-2xl border border-purple-500/20 bg-[#111122] p-5 sm:p-8">
           <EditProductForm product={productResult.data} categories={categories} returnTo={returnTo} />

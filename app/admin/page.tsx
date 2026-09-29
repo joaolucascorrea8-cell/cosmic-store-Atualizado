@@ -30,7 +30,7 @@ export default async function AdminPage() {
     <div className="admin-stats mt-7">
       <Link href="/admin/pedidos?status=pending" className="admin-stat"><span>Comprovantes para analisar</span><strong>{proofs.count ?? "—"}</strong><small>{proofs.count ? "Precisam da sua conferência ↗" : "Nenhum pendente agora"}</small></Link>
       <Link href="/admin/pedidos?status=delivery" className="admin-stat"><span>Aguardando entrega</span><strong>{deliveries.count ?? "—"}</strong><small>{deliveries.count ? "Pagos ou em preparação ↗" : "Fila de entrega vazia"}</small></Link>
-      <Link href="/admin/produtos?status=low#estoque-catalogo" className="admin-stat"><span>Estoque baixo</span><strong>{lowStock.count ?? "—"}</strong><small>Produtos ativos com 1–2 unidades ↗</small></Link>
+      <Link href="/admin/produtos?catalogo=1&status=low#catalogo-produtos" className="admin-stat"><span>Estoque baixo</span><strong>{lowStock.count ?? "—"}</strong><small>Produtos ativos com 1–2 unidades ↗</small></Link>
       <Link href="/admin/produtos" className="admin-stat"><span>Produtos cadastrados</span><strong>{products.count ?? "—"}</strong><small>Gerenciar catálogo ↗</small></Link>
     </div>
 
