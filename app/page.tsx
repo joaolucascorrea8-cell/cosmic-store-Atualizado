@@ -48,6 +48,7 @@ export default async function Home() {
             <h2 id="conta-e-privacidade" className="mt-2 max-w-2xl text-2xl font-black tracking-tight sm:text-3xl">Entre com Google ou Discord de forma simples e transparente.</h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base">A conta da Cosmic Store serve para autenticar você, identificar seus pedidos, acompanhar entregas, receber avisos importantes e acessar o suporte. Ao usar o Google, solicitamos apenas informações básicas de identificação necessárias ao login, como nome, e-mail, identificador da conta e foto de perfil quando disponibilizada.</p>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base">A Cosmic Store não recebe sua senha do Google e não solicita acesso ao conteúdo do Gmail, Google Drive, contatos, calendário, fotos ou documentos da sua Conta Google.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base">A integração com o Google é usada exclusivamente para autenticação e identificação básica da conta. Não utilizamos APIs do Google para gerar imagens, criar conteúdo por inteligência artificial ou executar outros serviços além do login necessário à sua conta na Cosmic Store.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/privacidade" className="btn-secondary">Política de Privacidade ↗</Link>
               <Link href="/termos" className="btn-secondary">Termos de uso ↗</Link>
