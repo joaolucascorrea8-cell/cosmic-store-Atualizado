@@ -1,10 +1,12 @@
 # Cosmic Store
 
+Leia primeiro [ATUALIZACAO.md](./ATUALIZACAO.md) para aplicar esta atualização ao banco já existente e configurar a feature flag do Google.
+
 Versão unificada da loja: interface renovada com catálogo real no Supabase, autenticação, painel administrativo e carrinho persistente.
 
 ## Requisitos
 
-- Node.js 20 ou superior
+- Node.js 20.9 ou superior
 - Um projeto Supabase já configurado
 
 ## Instalação
@@ -14,7 +16,7 @@ Versão unificada da loja: interface renovada com catálogo real no Supabase, au
 3. No terminal, execute:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -38,7 +40,7 @@ Nunca envie `.env.local` para o GitHub. A chave `SUPABASE_SERVICE_ROLE_KEY` deve
 - Página individual de cada produto.
 - Carrinho salvo no navegador, com quantidades.
 - Login por e-mail/senha e Discord através do Supabase Auth.
-- Cadastro por e-mail com escolha de nickname.
+- Cadastro por e-mail com confirmação do endereço digitado e nickname na finalização do perfil.
 - Perfil público com nickname e avatar, preparado para chats e feedbacks.
 - Recuperação e redefinição de senha.
 - Proteção do painel pelas permissões da tabela `admins`.

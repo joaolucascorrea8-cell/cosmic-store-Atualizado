@@ -22,38 +22,66 @@ type DiscordMessage = {
   id: string;
   content: string;
   timestamp: string;
-  author: { id: string; username: string; global_name?: string | null; avatar?: string | null; bot?: boolean };
+  author: {
+    id: string;
+    username: string;
+    global_name?: string | null;
+    avatar?: string | null;
+    bot?: boolean;
+  };
   member?: { nick?: string | null };
   attachments?: DiscordAttachment[];
 };
 
 function envConfig() {
-  const enabled = String(process.env.DISCORD_REVIEWS_IMPORT_ENABLED ?? "false").toLowerCase() === "true";
+  const enabled =
+    String(
+      process.env.DISCORD_REVIEWS_IMPORT_ENABLED ?? "false",
+    ).toLowerCase() === "true";
   const token = process.env.DISCORD_BOT_TOKEN?.trim();
   const channelId = process.env.DISCORD_REVIEWS_CHANNEL_ID?.trim();
-  if (!enabled) throw new Error("Importação do Discord está bloqueada. Ative DISCORD_REVIEWS_IMPORT_ENABLED para usar.");
+  if (!enabled)
+    throw new Error(
+      "Importação do Discord está bloqueada. Ative DISCORD_REVIEWS_IMPORT_ENABLED para usar.",
+    );
   if (!token) throw new Error("DISCORD_BOT_TOKEN não configurado.");
-  if (!channelId) throw new Error("DISCORD_REVIEWS_CHANNEL_ID não configurado.");
+  if (!channelId)
+    throw new Error("DISCORD_REVIEWS_CHANNEL_ID não configurado.");
   return { token, channelId };
 }
 
 async function discordFetch<T>(url: string, token: string): Promise<T> {
-  const response = await fetch(url, { headers: { Authorization: `Bot ${token}`, "User-Agent": "CosmicStoreReviewsImporter/1.0" }, cache: "no-store" });
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bot ${token}`,
+      "User-Agent": "CosmicStoreReviewsImporter/1.0",
+    },
+    cache: "no-store",
+  });
   if (response.status === 429) {
     const body = await response.json().catch(() => ({ retry_after: 1 }));
     const retryAfter = Math.max(1, Number(body.retry_after ?? 1));
-    await new Promise(resolve => setTimeout(resolve, Math.min(retryAfter * 1000, 5000)));
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(retryAfter * 1000, 5000)),
+    );
     return discordFetch<T>(url, token);
   }
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Discord respondeu ${response.status}: ${text.slice(0, 240)}`);
+    throw new Error(
+      `Discord respondeu ${response.status}: ${text.slice(0, 240)}`,
+    );
   }
   return response.json() as Promise<T>;
 }
 
 function displayName(message: DiscordMessage) {
-  return message.member?.nick?.trim() || message.author.global_name?.trim() || message.author.username || "Cliente do Discord";
+  return (
+    message.member?.nick?.trim() ||
+    message.author.global_name?.trim() ||
+    message.author.username ||
+    "Cliente do Discord"
+  );
 }
 
 function avatarUrl(message: DiscordMessage) {
@@ -62,16 +90,25 @@ function avatarUrl(message: DiscordMessage) {
 }
 
 function firstImage(message: DiscordMessage) {
-  return (message.attachments ?? []).find((attachment) => {
-    if (attachment.content_type?.startsWith("image/")) return true;
-    return /\.(png|jpe?g|webp)$/i.test(attachment.filename);
-  }) ?? null;
+  return (
+    (message.attachments ?? []).find((attachment) => {
+      if (attachment.content_type?.startsWith("image/")) return true;
+      return /\.(png|jpe?g|webp)$/i.test(attachment.filename);
+    }) ?? null
+  );
 }
 
-async function fetchDiscordPage(token: string, channelId: string, before?: string | null) {
+async function fetchDiscordPage(
+  token: string,
+  channelId: string,
+  before?: string | null,
+) {
   const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
   if (before) params.set("before", before);
-  return discordFetch<DiscordMessage[]>(`${DISCORD_API}/channels/${channelId}/messages?${params}`, token);
+  return discordFetch<DiscordMessage[]>(
+    `${DISCORD_API}/channels/${channelId}/messages?${params}`,
+    token,
+  );
 }
 
 export async function POST(request: Request) {
@@ -79,11 +116,16 @@ export async function POST(request: Request) {
     await requireAdmin();
     const { token, channelId } = envConfig();
     const body = await request.json().catch(() => ({}));
-    const before = typeof body.before === "string" && body.before ? body.before : null;
+    const before =
+      typeof body.before === "string" && body.before ? body.before : null;
     const mode = body.mode === "scan" ? "scan" : "import";
     const messages = await fetchDiscordPage(token, channelId, before);
-    const eligible = messages.filter((message) => !message.author.bot && message.content.trim().length >= 3);
-    const nextBefore = messages.length ? messages[messages.length - 1].id : null;
+    const eligible = messages.filter(
+      (message) => !message.author.bot && message.content.trim().length >= 3,
+    );
+    const nextBefore = messages.length
+      ? messages[messages.length - 1].id
+      : null;
     const hasMore = messages.length === PAGE_SIZE;
 
     if (mode === "scan") {
@@ -91,18 +133,23 @@ export async function POST(request: Request) {
         ok: true,
         scanned: messages.length,
         eligible: eligible.length,
-        withImage: eligible.filter(message => Boolean(firstImage(message))).length,
+        withImage: eligible.filter((message) => Boolean(firstImage(message)))
+          .length,
         nextBefore,
         hasMore,
       });
     }
 
     const admin = createAdminClient();
-    const ids = eligible.map(message => message.id);
+    const ids = eligible.map((message) => message.id);
     const existingIds = new Set<string>();
     if (ids.length) {
-      const { data: existing } = await admin.from("feedbacks").select("discord_message_id").in("discord_message_id", ids);
-      for (const row of existing ?? []) if (row.discord_message_id) existingIds.add(row.discord_message_id);
+      const { data: existing } = await admin
+        .from("feedbacks")
+        .select("discord_message_id")
+        .in("discord_message_id", ids);
+      for (const row of existing ?? [])
+        if (row.discord_message_id) existingIds.add(row.discord_message_id);
     }
 
     let imported = 0;
@@ -111,7 +158,10 @@ export async function POST(request: Request) {
     const errors: string[] = [];
 
     for (const message of eligible) {
-      if (existingIds.has(message.id)) { skipped += 1; continue; }
+      if (existingIds.has(message.id)) {
+        skipped += 1;
+        continue;
+      }
       const reviewId = crypto.randomUUID();
       let attachmentPath: string | null = null;
       let attachmentName: string | null = null;
@@ -128,7 +178,9 @@ export async function POST(request: Request) {
             images += 1;
           }
         } catch (error) {
-          errors.push(`${message.id}: imagem não importada (${error instanceof Error ? error.message : "erro"})`);
+          errors.push(
+            `${message.id}: imagem não importada (${error instanceof Error ? error.message : "erro"})`,
+          );
           attachmentPath = null;
         }
       }
@@ -156,12 +208,30 @@ export async function POST(request: Request) {
       if (error) {
         skipped += 1;
         errors.push(`${message.id}: ${error.message}`);
-        if (attachmentPath) await admin.storage.from("review-attachments").remove([attachmentPath]);
+        if (attachmentPath)
+          await admin.storage
+            .from("review-attachments")
+            .remove([attachmentPath]);
       } else imported += 1;
     }
 
-    return NextResponse.json({ ok: true, scanned: messages.length, eligible: eligible.length, imported, skipped, images, errors: errors.slice(0, 8), nextBefore, hasMore });
+    return NextResponse.json({
+      ok: true,
+      scanned: messages.length,
+      eligible: eligible.length,
+      imported,
+      skipped,
+      images,
+      errors: errors.slice(0, 8),
+      nextBefore,
+      hasMore,
+    });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Falha na importação." }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Falha na importação.",
+      },
+      { status: 400 },
+    );
   }
 }

@@ -5,7 +5,12 @@ function field(id: string, value: string) {
 }
 
 function normalize(value: string, max: number) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 ]/g, "").toUpperCase().slice(0, max);
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9 ]/g, "")
+    .toUpperCase()
+    .slice(0, max);
 }
 
 function crc16(payload: string) {
@@ -13,7 +18,7 @@ function crc16(payload: string) {
   for (let index = 0; index < payload.length; index += 1) {
     crc ^= payload.charCodeAt(index) << 8;
     for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
       crc &= 0xffff;
     }
   }
@@ -24,7 +29,8 @@ export function createPixPayload(amount: number, orderCode: string) {
   const pixKey = process.env.PIX_KEY?.trim();
   const receiver = process.env.PIX_RECEIVER_NAME?.trim();
   const city = process.env.PIX_RECEIVER_CITY?.trim();
-  if (!pixKey || !receiver || !city) throw new Error("Configuração Pix ausente no servidor.");
+  if (!pixKey || !receiver || !city)
+    throw new Error("Configuração Pix ausente no servidor.");
 
   const merchantAccount = field("00", "BR.GOV.BCB.PIX") + field("01", pixKey);
   const txid = normalize(orderCode, 25).replace(/ /g, "") || "COSMIC";
@@ -42,4 +48,3 @@ export function createPixPayload(amount: number, orderCode: string) {
   ].join("");
   return withoutCrc + crc16(withoutCrc);
 }
-

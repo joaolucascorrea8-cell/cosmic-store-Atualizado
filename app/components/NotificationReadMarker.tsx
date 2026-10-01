@@ -28,12 +28,16 @@ export default function NotificationReadMarker({
         : query.like("link", scope === "support" ? "/suporte%" : "/pedidos%");
       const { data, error } = await query.select("id");
       if (!active || error || !data?.length) return;
-      window.dispatchEvent(new CustomEvent("cosmic-notifications-read", {
-        detail: { scope, amount: data.length },
-      }));
+      window.dispatchEvent(
+        new CustomEvent("cosmic-notifications-read", {
+          detail: { scope, amount: data.length },
+        }),
+      );
     };
     void mark();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [link, scope, userId]);
 
   return null;

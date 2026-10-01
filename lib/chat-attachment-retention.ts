@@ -16,7 +16,10 @@ type AttachmentRow = {
 };
 
 function getRetentionDays() {
-  const raw = Number.parseInt(process.env.CHAT_ATTACHMENT_RETENTION_DAYS ?? "", 10);
+  const raw = Number.parseInt(
+    process.env.CHAT_ATTACHMENT_RETENTION_DAYS ?? "",
+    10,
+  );
   if (!Number.isFinite(raw) || raw < 1) return DEFAULT_RETENTION_DAYS;
   return Math.min(raw, MAX_RETENTION_DAYS);
 }
@@ -34,8 +37,13 @@ async function deleteStoragePaths(paths: string[]) {
   const admin = createAdminClient();
 
   for (const group of chunk(paths, STORAGE_DELETE_BATCH)) {
-    const { error } = await admin.storage.from(CHAT_ATTACHMENT_BUCKET).remove(group);
-    if (error) throw new Error(`Falha ao remover anexos antigos do Storage: ${error.message}`);
+    const { error } = await admin.storage
+      .from(CHAT_ATTACHMENT_BUCKET)
+      .remove(group);
+    if (error)
+      throw new Error(
+        `Falha ao remover anexos antigos do Storage: ${error.message}`,
+      );
   }
 }
 
@@ -48,7 +56,10 @@ async function cleanupOrderAttachments(cutoffIso: string, deletedAt: string) {
     .lt("chat_closed_at", cutoffIso)
     .limit(CONVERSATION_BATCH);
 
-  if (orderError) throw new Error(`Falha ao consultar pedidos antigos: ${orderError.message}`);
+  if (orderError)
+    throw new Error(
+      `Falha ao consultar pedidos antigos: ${orderError.message}`,
+    );
   const orderIds = (conversations ?? []).map((item) => item.id);
   if (!orderIds.length) return 0;
 
@@ -59,18 +70,27 @@ async function cleanupOrderAttachments(cutoffIso: string, deletedAt: string) {
     .not("attachment_path", "is", null)
     .limit(MESSAGE_BATCH);
 
-  if (messageError) throw new Error(`Falha ao consultar anexos de pedidos: ${messageError.message}`);
+  if (messageError)
+    throw new Error(
+      `Falha ao consultar anexos de pedidos: ${messageError.message}`,
+    );
   const messages = (rows ?? []) as AttachmentRow[];
   if (!messages.length) return 0;
 
-  await deleteStoragePaths(messages.flatMap((item) => item.attachment_path ? [item.attachment_path] : []));
+  await deleteStoragePaths(
+    messages.flatMap((item) =>
+      item.attachment_path ? [item.attachment_path] : [],
+    ),
+  );
 
   for (const item of messages) {
     const cleanMessage = item.message?.trim();
     const { error } = await admin
       .from("order_messages")
       .update({
-        message: cleanMessage || "📷 Imagem removida automaticamente após o período de retenção.",
+        message:
+          cleanMessage ||
+          "📷 Imagem removida automaticamente após o período de retenção.",
         attachment_path: null,
         attachment_name: null,
         attachment_type: null,
@@ -79,7 +99,10 @@ async function cleanupOrderAttachments(cutoffIso: string, deletedAt: string) {
       .eq("id", item.id)
       .eq("attachment_path", item.attachment_path);
 
-    if (error) throw new Error(`Falha ao atualizar mensagem de pedido: ${error.message}`);
+    if (error)
+      throw new Error(
+        `Falha ao atualizar mensagem de pedido: ${error.message}`,
+      );
   }
 
   return messages.length;
@@ -94,7 +117,10 @@ async function cleanupSupportAttachments(cutoffIso: string, deletedAt: string) {
     .lt("closed_at", cutoffIso)
     .limit(CONVERSATION_BATCH);
 
-  if (ticketError) throw new Error(`Falha ao consultar atendimentos antigos: ${ticketError.message}`);
+  if (ticketError)
+    throw new Error(
+      `Falha ao consultar atendimentos antigos: ${ticketError.message}`,
+    );
   const ticketIds = (conversations ?? []).map((item) => item.id);
   if (!ticketIds.length) return 0;
 
@@ -105,18 +131,27 @@ async function cleanupSupportAttachments(cutoffIso: string, deletedAt: string) {
     .not("attachment_path", "is", null)
     .limit(MESSAGE_BATCH);
 
-  if (messageError) throw new Error(`Falha ao consultar anexos de suporte: ${messageError.message}`);
+  if (messageError)
+    throw new Error(
+      `Falha ao consultar anexos de suporte: ${messageError.message}`,
+    );
   const messages = (rows ?? []) as AttachmentRow[];
   if (!messages.length) return 0;
 
-  await deleteStoragePaths(messages.flatMap((item) => item.attachment_path ? [item.attachment_path] : []));
+  await deleteStoragePaths(
+    messages.flatMap((item) =>
+      item.attachment_path ? [item.attachment_path] : [],
+    ),
+  );
 
   for (const item of messages) {
     const cleanMessage = item.message?.trim();
     const { error } = await admin
       .from("support_messages")
       .update({
-        message: cleanMessage || "📷 Imagem removida automaticamente após o período de retenção.",
+        message:
+          cleanMessage ||
+          "📷 Imagem removida automaticamente após o período de retenção.",
         attachment_path: null,
         attachment_name: null,
         attachment_type: null,
@@ -125,7 +160,10 @@ async function cleanupSupportAttachments(cutoffIso: string, deletedAt: string) {
       .eq("id", item.id)
       .eq("attachment_path", item.attachment_path);
 
-    if (error) throw new Error(`Falha ao atualizar mensagem de suporte: ${error.message}`);
+    if (error)
+      throw new Error(
+        `Falha ao atualizar mensagem de suporte: ${error.message}`,
+      );
   }
 
   return messages.length;

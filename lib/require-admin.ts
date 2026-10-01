@@ -1,8 +1,9 @@
 import "server-only";
+import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
 
-export async function requireAdmin() {
+export const requireAdmin = cache(async function requireAdmin() {
   const supabase = await createClient();
 
   const {
@@ -20,13 +21,9 @@ export async function requireAdmin() {
     .eq("user_id", user.id)
     .single();
 
-  if (
-    adminError ||
-    !admin ||
-    !["owner", "admin"].includes(admin.role)
-  ) {
+  if (adminError || !admin || !["owner", "admin"].includes(admin.role)) {
     throw new Error("Acesso administrativo negado.");
   }
 
   return user;
-}
+});

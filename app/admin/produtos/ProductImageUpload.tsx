@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   type ChangeEvent,
   type ClipboardEvent,
@@ -14,11 +15,15 @@ const MAX_SIZE = 5 * 1024 * 1024;
 type ProductImageUploadProps = {
   defaultValue?: string | null;
   inputId?: string;
+  onChange?: (url: string) => void;
+  onUploadingChange?: (busy: boolean) => void;
 };
 
 export default function ProductImageUpload({
   defaultValue = "",
   inputId = "product_image_url",
+  onChange,
+  onUploadingChange,
 }: ProductImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState(defaultValue ?? "");
@@ -40,6 +45,7 @@ export default function ProductImageUpload({
     }
 
     setUploading(true);
+    onUploadingChange?.(true);
 
     try {
       const body = new FormData();
@@ -59,14 +65,16 @@ export default function ProductImageUpload({
       }
 
       setImageUrl(result.url);
+      onChange?.(result.url);
     } catch (uploadError) {
       setError(
         uploadError instanceof Error
           ? uploadError.message
-          : "Não foi possível enviar a imagem."
+          : "Não foi possível enviar a imagem.",
       );
     } finally {
       setUploading(false);
+      onUploadingChange?.(false);
     }
   }
 
@@ -78,13 +86,13 @@ export default function ProductImageUpload({
 
   function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
     const imageItem = Array.from(event.clipboardData.items).find((item) =>
-      item.type.startsWith("image/")
+      item.type.startsWith("image/"),
     );
     const file = imageItem?.getAsFile();
 
     if (!file) {
       setError(
-        "Nenhuma imagem foi encontrada. Copie a imagem, clique nesta área e pressione Ctrl + V."
+        "Nenhuma imagem foi encontrada. Copie a imagem, clique nesta área e pressione Ctrl + V.",
       );
       return;
     }
@@ -139,22 +147,26 @@ export default function ProductImageUpload({
         {imageUrl ? (
           <div className="space-y-4">
             <div className="relative mx-auto aspect-square w-full max-w-56 overflow-hidden rounded-xl border border-purple-500/20 bg-black/20">
-              {/* A URL é criada pelo bucket público do próprio Supabase. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
+                fill
+                sizes="224px"
                 src={imageUrl}
                 alt="Prévia da imagem do produto"
-                className="h-full w-full object-contain"
+                className="object-contain"
               />
             </div>
             <p className="text-sm text-purple-200">
-              {uploading ? "Enviando imagem..." : "Clique para substituir a imagem"}
+              {uploading
+                ? "Enviando imagem..."
+                : "Clique para substituir a imagem"}
             </p>
           </div>
         ) : (
           <div className="py-6">
             <p className="font-semibold text-purple-200">
-              {uploading ? "Enviando imagem..." : "Clique, arraste ou cole uma imagem"}
+              {uploading
+                ? "Enviando imagem..."
+                : "Clique, arraste ou cole uma imagem"}
             </p>
             <p className="mt-2 text-sm text-gray-400">
               Para colar: copie a imagem, clique aqui e pressione Ctrl + V.
@@ -179,6 +191,7 @@ export default function ProductImageUpload({
             disabled={uploading}
             onClick={() => {
               setImageUrl("");
+              onChange?.("");
               setError(null);
             }}
             className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"

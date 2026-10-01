@@ -30,3 +30,6 @@ export function comboMaxQuantity(items: ComboNestedItem[] | null | undefined) {
   }
   return Math.max(0, Math.min(99, max));
 }
+
+export const ACTIVE_COMBO_WINDOW_FILTER =
+  "and(or(starts_at.is.null,starts_at.lte.now),or(ends_at.is.null,ends_at.gt.now))";

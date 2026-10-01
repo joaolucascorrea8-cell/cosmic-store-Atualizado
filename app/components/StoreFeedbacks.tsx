@@ -16,7 +16,10 @@ type StoreFeedbacksProps = {
   showMoreLink?: boolean;
 };
 
-export default function StoreFeedbacks({ feedbacks, showMoreLink = true }: StoreFeedbacksProps) {
+export default function StoreFeedbacks({
+  feedbacks,
+  showMoreLink = true,
+}: StoreFeedbacksProps) {
   if (!feedbacks.length) return null;
 
   return (
@@ -25,10 +28,12 @@ export default function StoreFeedbacks({ feedbacks, showMoreLink = true }: Store
         <div>
           <p className="eyebrow">AVALIAÇÕES REAIS</p>
           <h2 className="section-title">Quem compra, recomenda</h2>
-          <p className="section-description">Experiências de clientes que já compraram na Cosmic Store.</p>
+          <p className="section-description">
+            Experiências de clientes que já compraram na Cosmic Store.
+          </p>
         </div>
         {showMoreLink && (
-          <Link href="/avaliacoes" className="section-link">
+          <Link href="/avaliacoes" className="section-link hidden md:block">
             Ver mais avaliações ↗
           </Link>
         )}

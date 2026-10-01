@@ -13,9 +13,7 @@ export function isAllowedProductImageUrl(value: string) {
   if (value === "") return true;
 
   if (
-    /^\/images\/products\/[a-zA-Z0-9_-]+\.(png|jpg|jpeg|webp)$/i.test(
-      value
-    )
+    /^\/images\/products\/[a-zA-Z0-9_-]+\.(png|jpg|jpeg|webp)$/i.test(value)
   ) {
     return true;
   }

@@ -6,7 +6,7 @@ export default function ConfirmDeleteButton() {
       type="submit"
       onClick={(event) => {
         const confirmed = window.confirm(
-          "Tem certeza de que deseja excluir este produto? Esta ação não pode ser desfeita."
+          "Tem certeza de que deseja excluir este produto? Esta ação não pode ser desfeita.",
         );
 
         if (!confirmed) {

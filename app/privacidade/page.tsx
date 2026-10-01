@@ -1,3 +1,9 @@
+export const metadata = {
+  title: "Política de Privacidade",
+  description:
+    "Saiba como a Cosmic Store trata os dados de conta, login, pedidos e avaliações.",
+  alternates: { canonical: "/privacidade" },
+};
 import LegalPage from "@/app/components/LegalPage";
 
 export default function PrivacyPage() {
@@ -36,8 +42,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             Comunicação e comunidade: mensagens de suporte ou pedido,
-            notificações, avaliações, imagens enviadas voluntariamente e denúncias
-            relacionadas ao uso da plataforma.
+            notificações, avaliações, imagens enviadas voluntariamente e
+            denúncias relacionadas ao uso da plataforma.
           </li>
           <li>
             Dados técnicos: registros essenciais de acesso, sessão, segurança,
@@ -59,52 +65,54 @@ export default function PrivacyPage() {
         </p>
         <p>
           Quando o e-mail da conta também é utilizado para comunicações sobre o
-          pedido, ele pode receber mensagens relacionadas à compra, confirmação de
-          pagamento, entrega, recuperação de acesso e outros avisos necessários ao
-          funcionamento da conta.
+          pedido, ele pode receber mensagens relacionadas à compra, confirmação
+          de pagamento, entrega, recuperação de acesso e outros avisos
+          necessários ao funcionamento da conta.
         </p>
       </section>
 
       <section>
         <h2>3. Login com Google</h2>
         <p>
-          Ao escolher <strong>Continuar com Google</strong>, a Cosmic Store usa o
-          Google OAuth apenas para autenticar você e facilitar a criação ou o
+          Ao escolher <strong>Continuar com Google</strong>, a Cosmic Store usa
+          o Google OAuth apenas para autenticar você e facilitar a criação ou o
           acesso à sua conta. Podemos receber do Google informações básicas de
           perfil, como nome, e-mail, identificador da Conta Google e foto de
           perfil, conforme disponibilizado no processo de autenticação.
         </p>
         <p>
-          A Cosmic Store <strong>não recebe nem armazena sua senha do Google</strong>
-          e não solicita acesso ao conteúdo do Gmail, Google Drive, contatos,
+          A Cosmic Store{" "}
+          <strong>não recebe nem armazena sua senha do Google</strong>e não
+          solicita acesso ao conteúdo do Gmail, Google Drive, contatos,
           calendário, fotos, documentos ou outros serviços da sua Conta Google.
         </p>
         <p>
           Os dados recebidos do Google são utilizados somente para fornecer e
-          melhorar funcionalidades voltadas ao usuário, especialmente autenticação,
-          identificação da conta, preenchimento básico do perfil, segurança e
-          comunicações necessárias sobre a conta ou pedidos. Esses dados não são
-          vendidos, não são fornecidos a corretores de dados e não são utilizados
-          para publicidade direcionada, avaliação de crédito ou treinamento de
-          modelos de inteligência artificial.
+          melhorar funcionalidades voltadas ao usuário, especialmente
+          autenticação, identificação da conta, preenchimento básico do perfil,
+          segurança e comunicações necessárias sobre a conta ou pedidos. Esses
+          dados não são vendidos, não são fornecidos a corretores de dados e não
+          são utilizados para publicidade direcionada, avaliação de crédito ou
+          treinamento de modelos de inteligência artificial.
         </p>
         <p>
-          A integração com o Google é utilizada exclusivamente para login por OAuth
-          e identificação básica da conta. A Cosmic Store não utiliza APIs do Google
-          para gerar imagens, criar conteúdo por inteligência artificial, analisar
-          conteúdo íntimo ou realizar qualquer outra finalidade além da autenticação
-          necessária ao acesso da conta.
+          A integração com o Google é utilizada exclusivamente para login por
+          OAuth e identificação básica da conta. A Cosmic Store não utiliza APIs
+          do Google para gerar imagens, criar conteúdo por inteligência
+          artificial, analisar conteúdo íntimo ou realizar qualquer outra
+          finalidade além da autenticação necessária ao acesso da conta.
         </p>
       </section>
 
       <section>
         <h2>4. Bases e finalidades do tratamento</h2>
         <p>
-          Conforme aplicável, o tratamento pode ocorrer para execução de contrato
-          ou procedimentos relacionados à compra, cumprimento de obrigação legal,
-          exercício regular de direitos, proteção contra fraude e segurança da
-          plataforma, atendimento de interesses legítimos compatíveis com a
-          operação da loja e, quando necessário, mediante consentimento do titular.
+          Conforme aplicável, o tratamento pode ocorrer para execução de
+          contrato ou procedimentos relacionados à compra, cumprimento de
+          obrigação legal, exercício regular de direitos, proteção contra fraude
+          e segurança da plataforma, atendimento de interesses legítimos
+          compatíveis com a operação da loja e, quando necessário, mediante
+          consentimento do titular.
         </p>
       </section>
 
@@ -112,44 +120,45 @@ export default function PrivacyPage() {
         <h2>5. Serviços e fornecedores utilizados</h2>
         <p>
           Para operar a Cosmic Store, alguns dados podem ser processados por
-          fornecedores necessários ao serviço, como Supabase para banco de dados,
-          autenticação e armazenamento; Vercel para hospedagem e execução da loja;
-          Google para autenticação OAuth e serviços relacionados à conta Google;
-          Discord para autenticação e integrações escolhidas pelo usuário; e
-          provedores de e-mail utilizados para comunicações transacionais.
+          fornecedores necessários ao serviço, como Supabase para banco de
+          dados, autenticação e armazenamento; Vercel para hospedagem e execução
+          da loja; Google para autenticação OAuth e serviços relacionados à
+          conta Google; Discord para autenticação e integrações escolhidas pelo
+          usuário; e provedores de e-mail utilizados para comunicações
+          transacionais.
         </p>
         <p>
-          Esses fornecedores podem processar dados em outros países conforme suas
-          próprias políticas, contratos e mecanismos de proteção aplicáveis. A
-          Cosmic Store procura limitar o compartilhamento ao que é necessário para
-          cada serviço funcionar.
+          Esses fornecedores podem processar dados em outros países conforme
+          suas próprias políticas, contratos e mecanismos de proteção
+          aplicáveis. A Cosmic Store procura limitar o compartilhamento ao que é
+          necessário para cada serviço funcionar.
         </p>
       </section>
 
       <section>
         <h2>6. Compartilhamento de dados</h2>
         <p>
-          A Cosmic Store não vende dados pessoais. O compartilhamento ocorre apenas
-          quando necessário com prestadores que ajudam a operar a loja, para
-          cumprimento de obrigação legal, proteção de direitos ou prevenção de
-          fraude e abuso.
+          A Cosmic Store não vende dados pessoais. O compartilhamento ocorre
+          apenas quando necessário com prestadores que ajudam a operar a loja,
+          para cumprimento de obrigação legal, proteção de direitos ou prevenção
+          de fraude e abuso.
         </p>
         <p>
-          Avaliações publicadas podem exibir o nickname ou nome público escolhido,
-          nota, comentário, data e, quando o próprio cliente enviar, imagem da
-          entrega. Informações privadas da conta não são exibidas publicamente como
-          parte da avaliação.
+          Avaliações publicadas podem exibir o nickname ou nome público
+          escolhido, nota, comentário, data e, quando o próprio cliente enviar,
+          imagem da entrega. Informações privadas da conta não são exibidas
+          publicamente como parte da avaliação.
         </p>
       </section>
 
       <section>
         <h2>7. Armazenamento, retenção e exclusão</h2>
         <p>
-          Os dados são mantidos pelo tempo necessário para cumprir as finalidades
-          descritas nesta política, prestar suporte, entregar produtos, proteger a
-          loja contra fraude, manter registros de transações e atender obrigações
-          legais. Os períodos podem variar conforme o tipo de informação e a
-          necessidade operacional ou jurídica.
+          Os dados são mantidos pelo tempo necessário para cumprir as
+          finalidades descritas nesta política, prestar suporte, entregar
+          produtos, proteger a loja contra fraude, manter registros de
+          transações e atender obrigações legais. Os períodos podem variar
+          conforme o tipo de informação e a necessidade operacional ou jurídica.
         </p>
         <p>
           Anexos de chats e outros arquivos operacionais podem ser removidos de
@@ -160,9 +169,9 @@ export default function PrivacyPage() {
         </p>
         <p>
           Quando os dados deixarem de ser necessários, poderão ser excluídos ou
-          anonimizados. O usuário também pode solicitar a exclusão de dados ou da
-          conta pelos canais de suporte, observadas as hipóteses em que a retenção
-          seja necessária ou permitida por lei.
+          anonimizados. O usuário também pode solicitar a exclusão de dados ou
+          da conta pelos canais de suporte, observadas as hipóteses em que a
+          retenção seja necessária ou permitida por lei.
         </p>
       </section>
 
@@ -171,21 +180,21 @@ export default function PrivacyPage() {
         <p>
           O usuário pode remover a autorização concedida à Cosmic Store pelas
           configurações de segurança da própria Conta Google. A revogação impede
-          novos usos daquela autorização, mas não elimina automaticamente dados que
-          já precisem ser mantidos pela Cosmic Store por motivos de conta, pedido,
-          segurança ou obrigação legal. Para solicitar exclusão dos dados mantidos
-          pela loja, utilize nossos canais de suporte.
+          novos usos daquela autorização, mas não elimina automaticamente dados
+          que já precisem ser mantidos pela Cosmic Store por motivos de conta,
+          pedido, segurança ou obrigação legal. Para solicitar exclusão dos
+          dados mantidos pela loja, utilize nossos canais de suporte.
         </p>
       </section>
 
       <section>
         <h2>9. Segurança</h2>
         <p>
-          Aplicamos medidas destinadas a proteger os dados, incluindo controle de
-          acesso, autenticação, conexões protegidas, políticas de banco de dados e
-          restrição de credenciais administrativas. Apesar dessas medidas, nenhum
-          serviço conectado à internet pode garantir segurança absoluta contra todos
-          os tipos de incidente.
+          Aplicamos medidas destinadas a proteger os dados, incluindo controle
+          de acesso, autenticação, conexões protegidas, políticas de banco de
+          dados e restrição de credenciais administrativas. Apesar dessas
+          medidas, nenhum serviço conectado à internet pode garantir segurança
+          absoluta contra todos os tipos de incidente.
         </p>
       </section>
 
@@ -194,9 +203,9 @@ export default function PrivacyPage() {
         <p>
           Nos termos da legislação aplicável, inclusive a LGPD quando cabível, o
           titular pode solicitar confirmação e acesso aos dados, correção,
-          informações sobre compartilhamento, anonimização, bloqueio ou eliminação
-          quando aplicável, portabilidade nos limites técnicos e legais, revogação
-          de consentimento e outras medidas previstas em lei.
+          informações sobre compartilhamento, anonimização, bloqueio ou
+          eliminação quando aplicável, portabilidade nos limites técnicos e
+          legais, revogação de consentimento e outras medidas previstas em lei.
         </p>
         <p>
           Alguns registros poderão ser preservados mesmo após uma solicitação de
@@ -209,10 +218,10 @@ export default function PrivacyPage() {
         <h2>11. Cookies, sessão e armazenamento local</h2>
         <p>
           Utilizamos cookies e armazenamento local essenciais para autenticação,
-          manutenção da sessão, segurança, carrinho e funcionamento de recursos da
-          loja. Sem esses mecanismos, algumas funcionalidades podem não operar
-          corretamente. Caso sejam adicionadas ferramentas não essenciais no
-          futuro, as informações e controles correspondentes deverão ser
+          manutenção da sessão, segurança, carrinho e funcionamento de recursos
+          da loja. Sem esses mecanismos, algumas funcionalidades podem não
+          operar corretamente. Caso sejam adicionadas ferramentas não essenciais
+          no futuro, as informações e controles correspondentes deverão ser
           apresentados de forma adequada.
         </p>
       </section>
@@ -223,18 +232,18 @@ export default function PrivacyPage() {
           Para solicitar acesso, correção, exclusão, esclarecimentos sobre seus
           dados ou qualquer outro direito relacionado à privacidade, utilize os
           canais oficiais de suporte disponibilizados pela Cosmic Store. Podemos
-          solicitar confirmação de identidade para evitar que dados sejam entregues
-          ou alterados por uma pessoa não autorizada.
+          solicitar confirmação de identidade para evitar que dados sejam
+          entregues ou alterados por uma pessoa não autorizada.
         </p>
       </section>
 
       <section>
         <h2>13. Atualizações desta política</h2>
         <p>
-          Esta política poderá ser atualizada quando houver mudanças relevantes na
-          Cosmic Store, nos fornecedores utilizados ou na forma de tratamento de
-          dados. A versão publicada nesta página será a versão aplicável e deverá
-          permanecer acessível aos usuários pelo próprio site.
+          Esta política poderá ser atualizada quando houver mudanças relevantes
+          na Cosmic Store, nos fornecedores utilizados ou na forma de tratamento
+          de dados. A versão publicada nesta página será a versão aplicável e
+          deverá permanecer acessível aos usuários pelo próprio site.
         </p>
       </section>
     </LegalPage>

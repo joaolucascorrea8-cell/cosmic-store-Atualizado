@@ -4,13 +4,21 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AdminNotificationReadMarker({ userId }: { userId: string }) {
+export default function AdminNotificationReadMarker({
+  userId,
+}: {
+  userId: string;
+}) {
   const pathname = usePathname();
 
   useEffect(() => {
     const orderDetail = pathname.match(/^\/admin\/pedidos\/[^/]+$/);
     const supportDetail = pathname.match(/^\/admin\/suporte\/[^/]+$/);
-    const scope: "orders" | "support" | null = orderDetail ? "orders" : supportDetail ? "support" : null;
+    const scope: "orders" | "support" | null = orderDetail
+      ? "orders"
+      : supportDetail
+        ? "support"
+        : null;
     if (!scope) return;
 
     let active = true;
@@ -23,12 +31,16 @@ export default function AdminNotificationReadMarker({ userId }: { userId: string
       .select("id")
       .then(({ data, error }) => {
         if (!active || error || !data?.length) return;
-        window.dispatchEvent(new CustomEvent("cosmic-notifications-read", {
-          detail: { scope, amount: data.length },
-        }));
+        window.dispatchEvent(
+          new CustomEvent("cosmic-notifications-read", {
+            detail: { scope, amount: data.length },
+          }),
+        );
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [pathname, userId]);
 
   return null;

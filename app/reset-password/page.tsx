@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -16,36 +16,38 @@ export default function ResetPasswordPage() {
   const [capsLock, setCapsLock] = useState(false);
 
   useEffect(() => {
-  const supabase = createClient();
-  let active = true;
+    const supabase = createClient();
+    let active = true;
 
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange((event) => {
-    if (!active) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (!active) return;
 
-    if (event === "PASSWORD_RECOVERY") {
-      setAuthorized(true);
-      setMessage("");
+      if (event === "PASSWORD_RECOVERY") {
+        setAuthorized(true);
+        setMessage("");
+        setChecking(false);
+      }
+    });
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      const hasSession = Boolean(data.session);
+      setAuthorized(hasSession);
       setChecking(false);
-    }
-  });
+      if (!hasSession) {
+        setMessage(
+          "Abra esta página pelo link de recuperação enviado ao seu e-mail.",
+        );
+      }
+    });
 
-  void supabase.auth.getSession().then(({ data }) => {
-    if (!active) return;
-    const hasSession = Boolean(data.session);
-    setAuthorized(hasSession);
-    setChecking(false);
-    if (!hasSession) {
-      setMessage("Abra esta página pelo link de recuperação enviado ao seu e-mail.");
-    }
-  });
-
-  return () => {
-    active = false;
-    subscription.unsubscribe();
-  };
-}, []);
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   async function changePassword(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -81,16 +83,18 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#080812] px-4 text-white">
+    <main
+      id="conteudo-principal"
+      tabIndex={-1}
+      className="flex min-h-screen items-center justify-center bg-[#080812] px-4 text-white"
+    >
       <div className="w-full max-w-md rounded-2xl border border-purple-500/20 bg-[#111122] p-8">
         <h1 className="mb-3 text-2xl font-bold text-purple-400">
           Recuperar senha
         </h1>
 
         {checking ? (
-          <p className="text-gray-400">
-            Verificando o link de recuperação...
-          </p>
+          <p className="text-gray-400">Verificando o link de recuperação...</p>
         ) : success ? (
           <div>
             <p className="mb-5 text-green-400">{message}</p>
@@ -104,9 +108,7 @@ export default function ResetPasswordPage() {
           </div>
         ) : authorized ? (
           <form onSubmit={changePassword}>
-            <p className="mb-5 text-gray-400">
-              Digite sua nova senha.
-            </p>
+            <p className="mb-5 text-gray-400">Digite sua nova senha.</p>
 
             <input
               type={showPasswords ? "text" : "password"}
@@ -137,10 +139,18 @@ export default function ResetPasswordPage() {
             />
 
             <div className="mb-4 flex items-center justify-between gap-3 text-xs">
-              <button type="button" onClick={() => setShowPasswords((value) => !value)} className="font-bold text-violet-300 hover:text-white">
+              <button
+                type="button"
+                onClick={() => setShowPasswords((value) => !value)}
+                className="font-bold text-violet-300 hover:text-white"
+              >
                 {showPasswords ? "Ocultar senhas" : "Mostrar senhas"}
               </button>
-              {capsLock && <span className="font-bold text-amber-300">Caps Lock ativado</span>}
+              {capsLock && (
+                <span className="font-bold text-amber-300">
+                  Caps Lock ativado
+                </span>
+              )}
             </div>
 
             <button
@@ -151,9 +161,7 @@ export default function ResetPasswordPage() {
               {loading ? "Alterando..." : "Alterar senha"}
             </button>
 
-            {message && (
-              <p className="mt-4 text-sm text-red-400">{message}</p>
-            )}
+            {message && <p className="mt-4 text-sm text-red-400">{message}</p>}
           </form>
         ) : (
           <p className="text-red-400">{message}</p>

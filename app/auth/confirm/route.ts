@@ -9,7 +9,10 @@ function safeAuthNext(value: string | null, fallback: string) {
 
   try {
     const parsed = new URL(value);
-    return safeInternalPath(`${parsed.pathname}${parsed.search}${parsed.hash}`, fallback);
+    return safeInternalPath(
+      `${parsed.pathname}${parsed.search}${parsed.hash}`,
+      fallback,
+    );
   } catch {
     return fallback;
   }
@@ -21,17 +24,26 @@ export async function GET(request: Request) {
   const type = url.searchParams.get("type") as EmailOtpType | null;
 
   if (!tokenHash || !type) {
-    return NextResponse.redirect(new URL("/login?auth_error=confirm_expired", url.origin));
+    return NextResponse.redirect(
+      new URL("/login?auth_error=confirm_expired", url.origin),
+    );
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+  const { error } = await supabase.auth.verifyOtp({
+    token_hash: tokenHash,
+    type,
+  });
 
   if (error) {
     if (type === "recovery") {
-      return NextResponse.redirect(new URL("/forgot-password?error=expired", url.origin));
+      return NextResponse.redirect(
+        new URL("/forgot-password?error=expired", url.origin),
+      );
     }
-    return NextResponse.redirect(new URL("/login?auth_error=confirm_expired", url.origin));
+    return NextResponse.redirect(
+      new URL("/login?auth_error=confirm_expired", url.origin),
+    );
   }
 
   if (type === "recovery") {

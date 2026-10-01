@@ -5,6 +5,11 @@ import CheckoutContent from "./CheckoutContent";
 export const dynamic = "force-dynamic";
 
 export default function CheckoutPage() {
-  return <div className="min-h-screen"><SiteHeader /><CheckoutContent /><SiteFooter /></div>;
+  return (
+    <div className="min-h-screen">
+      <SiteHeader />
+      <CheckoutContent />
+      <SiteFooter />
+    </div>
+  );
 }
-

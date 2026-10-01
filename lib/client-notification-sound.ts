@@ -1,3 +1,4 @@
+import { readStorage, writeStorage } from "./client-storage";
 const VOLUME_KEY = "cosmic-notification-volume";
 
 export const DEFAULT_NOTIFICATION_VOLUME = 1;
@@ -6,7 +7,10 @@ let audioContext: AudioContext | null = null;
 
 function getAudioContext() {
   if (typeof window === "undefined") return null;
-  const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
   if (!AudioContextClass) return null;
   audioContext ??= new AudioContextClass();
   return audioContext;
@@ -14,13 +18,15 @@ function getAudioContext() {
 
 export function getStoredNotificationVolume() {
   if (typeof window === "undefined") return DEFAULT_NOTIFICATION_VOLUME;
-  const saved = Number(window.localStorage.getItem(VOLUME_KEY));
-  return Number.isFinite(saved) && saved > 0 && saved <= 1 ? saved : DEFAULT_NOTIFICATION_VOLUME;
+  const saved = Number(readStorage(VOLUME_KEY));
+  return Number.isFinite(saved) && saved > 0 && saved <= 1
+    ? saved
+    : DEFAULT_NOTIFICATION_VOLUME;
 }
 
 export function setStoredNotificationVolume(volume: number) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(VOLUME_KEY, String(Math.max(0, Math.min(1, volume))));
+  writeStorage(VOLUME_KEY, String(Math.max(0, Math.min(1, volume))));
 }
 
 export async function unlockNotificationAudio() {
@@ -54,11 +60,12 @@ export function playNotificationTone(
   master.gain.setValueAtTime(Math.min(1.15, Math.max(0.55, volume * 1.1)), now);
   master.connect(compressor);
 
-  const notes = variant === "admin"
-    ? [659.25, 880, 1174.66, 1318.51]
-    : variant === "preview"
-      ? [783.99, 1046.5, 1318.51]
-      : [587.33, 783.99, 1046.5, 1174.66];
+  const notes =
+    variant === "admin"
+      ? [659.25, 880, 1174.66, 1318.51]
+      : variant === "preview"
+        ? [783.99, 1046.5, 1318.51]
+        : [587.33, 783.99, 1046.5, 1174.66];
 
   notes.forEach((frequency, index) => {
     const start = now + index * 0.105;
@@ -80,7 +87,7 @@ export function playNotificationTone(
   // Um segundo toque curto deixa o aviso perceptível mesmo em caixas de som pequenas.
   const accent = context.createOscillator();
   const accentGain = context.createGain();
-  const accentStart = now + (variant === "preview" ? 0.30 : 0.43);
+  const accentStart = now + (variant === "preview" ? 0.3 : 0.43);
   accent.type = "triangle";
   accent.frequency.setValueAtTime(1567.98, accentStart);
   accentGain.gain.setValueAtTime(0.0001, accentStart);
@@ -91,7 +98,11 @@ export function playNotificationTone(
   accent.start(accentStart);
   accent.stop(accentStart + 0.18);
 
-  if (typeof navigator !== "undefined" && "vibrate" in navigator && variant !== "preview") {
+  if (
+    typeof navigator !== "undefined" &&
+    "vibrate" in navigator &&
+    variant !== "preview"
+  ) {
     navigator.vibrate?.([70, 35, 70]);
   }
   return true;

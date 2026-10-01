@@ -48,25 +48,25 @@ export async function POST(request: Request) {
     if (!(image instanceof File)) {
       return NextResponse.json(
         { error: "Selecione uma imagem." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (
       !PRODUCT_IMAGE_TYPES.includes(
-        image.type as (typeof PRODUCT_IMAGE_TYPES)[number]
+        image.type as (typeof PRODUCT_IMAGE_TYPES)[number],
       )
     ) {
       return NextResponse.json(
         { error: "Use uma imagem PNG, JPG, JPEG ou WEBP." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (image.size === 0 || image.size > PRODUCT_IMAGE_MAX_BYTES) {
       return NextResponse.json(
         { error: "A imagem deve ter no máximo 5 MB." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     if (!matchesFileSignature(bytes, image.type)) {
       return NextResponse.json(
         { error: "O conteúdo do arquivo não corresponde a uma imagem válida." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       console.error("Erro ao enviar imagem de produto:", error.message);
       return NextResponse.json(
         { error: "Não foi possível enviar a imagem ao Supabase." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { error: "Você precisa estar conectado como administrador." },
-      { status: 403 }
+      { status: 403 },
     );
   }
 }

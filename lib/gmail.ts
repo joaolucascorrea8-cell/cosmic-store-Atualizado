@@ -87,10 +87,17 @@ function buildMessage({
   ].join("\r\n");
 }
 
-function waitForResponse(socket: tls.TLSSocket, timeoutMs = 20_000): Promise<SmtpResponse> {
+function waitForResponse(
+  socket: tls.TLSSocket,
+  timeoutMs = 20_000,
+): Promise<SmtpResponse> {
   return new Promise((resolve, reject) => {
     let buffer = "";
-    const timer = setTimeout(() => finish(new Error("Tempo esgotado aguardando resposta do Gmail SMTP.")), timeoutMs);
+    const timer = setTimeout(
+      () =>
+        finish(new Error("Tempo esgotado aguardando resposta do Gmail SMTP.")),
+      timeoutMs,
+    );
 
     const onData = (chunk: Buffer) => {
       buffer += chunk.toString("utf8");
@@ -102,7 +109,8 @@ function waitForResponse(socket: tls.TLSSocket, timeoutMs = 20_000): Promise<Smt
       finish(null, { code: Number(match[1]), raw: buffer });
     };
     const onError = (error: Error) => finish(error);
-    const onClose = () => finish(new Error("A conexão SMTP foi encerrada antes da resposta."));
+    const onClose = () =>
+      finish(new Error("A conexão SMTP foi encerrada antes da resposta."));
 
     function cleanup() {
       clearTimeout(timer);
@@ -123,13 +131,19 @@ function waitForResponse(socket: tls.TLSSocket, timeoutMs = 20_000): Promise<Smt
   });
 }
 
-async function command(socket: tls.TLSSocket, value: string, expected: number | number[]) {
+async function command(
+  socket: tls.TLSSocket,
+  value: string,
+  expected: number | number[],
+) {
   const responsePromise = waitForResponse(socket);
   socket.write(`${value}\r\n`);
   const response = await responsePromise;
   const accepted = Array.isArray(expected) ? expected : [expected];
   if (!accepted.includes(response.code)) {
-    throw new Error(`Gmail SMTP recusou o comando (${response.code}): ${response.raw.slice(0, 500)}`);
+    throw new Error(
+      `Gmail SMTP recusou o comando (${response.code}): ${response.raw.slice(0, 500)}`,
+    );
   }
   return response;
 }
@@ -159,29 +173,47 @@ export async function sendGmailEmail({
     servername: "smtp.gmail.com",
     rejectUnauthorized: true,
   });
-  socket.setTimeout(25_000, () => socket.destroy(new Error("Tempo esgotado na conexão SMTP.")));
+  socket.setTimeout(25_000, () =>
+    socket.destroy(new Error("Tempo esgotado na conexão SMTP.")),
+  );
 
   try {
     const greetingPromise = waitForResponse(socket);
     await once(socket, "secureConnect");
     const greeting = await greetingPromise;
-    if (greeting.code !== 220) throw new Error(`Gmail SMTP não iniciou corretamente: ${greeting.raw.slice(0, 500)}`);
+    if (greeting.code !== 220)
+      throw new Error(
+        `Gmail SMTP não iniciou corretamente: ${greeting.raw.slice(0, 500)}`,
+      );
 
     await command(socket, "EHLO cosmic-store", 250);
     await command(socket, "AUTH LOGIN", 334);
     await command(socket, Buffer.from(user, "utf8").toString("base64"), 334);
-    await command(socket, Buffer.from(appPassword, "utf8").toString("base64"), 235);
+    await command(
+      socket,
+      Buffer.from(appPassword, "utf8").toString("base64"),
+      235,
+    );
     await command(socket, `MAIL FROM:<${sanitizeAddress(user)}>`, 250);
     await command(socket, `RCPT TO:<${sanitizeAddress(to)}>`, [250, 251]);
     await command(socket, "DATA", 354);
 
-    const message = buildMessage({ from: user, fromName, to, subject, html, attachment });
+    const message = buildMessage({
+      from: user,
+      fromName,
+      to,
+      subject,
+      html,
+      attachment,
+    });
     const dotStuffed = message.replace(/(^|\r\n)\./g, "$1..");
     const resultPromise = waitForResponse(socket, 30_000);
     socket.write(`${dotStuffed}\r\n.\r\n`);
     const result = await resultPromise;
     if (result.code !== 250) {
-      throw new Error(`Gmail SMTP recusou o e-mail (${result.code}): ${result.raw.slice(0, 500)}`);
+      throw new Error(
+        `Gmail SMTP recusou o e-mail (${result.code}): ${result.raw.slice(0, 500)}`,
+      );
     }
 
     try {

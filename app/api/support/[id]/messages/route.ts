@@ -1,37 +1,75 @@
+import { UUID_PATTERN } from "@/lib/catalog";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { removeChatAttachment, uploadChatAttachment, validateChatAttachment, withSignedChatAttachments } from "@/lib/chat-attachments";
-import { createAdminNotifications, notifyAdminDiscord, notifyCustomer, type NotificationAttachment } from "@/lib/notifications";
+import {
+  removeChatAttachment,
+  uploadChatAttachment,
+  validateChatAttachment,
+  withSignedChatAttachments,
+} from "@/lib/chat-attachments";
+import {
+  createAdminNotifications,
+  notifyAdminDiscord,
+  notifyCustomer,
+  type NotificationAttachment,
+} from "@/lib/notifications";
 
 async function getAccess(ticketId: string, userId: string) {
   const admin = createAdminClient();
   const [{ data: ticket }, { data: adminRole }] = await Promise.all([
-    admin.from("support_tickets").select("user_id,subject,status").eq("id", ticketId).maybeSingle(),
+    admin
+      .from("support_tickets")
+      .select("user_id,subject,status")
+      .eq("id", ticketId)
+      .maybeSingle(),
     admin.from("admins").select("role").eq("user_id", userId).maybeSingle(),
   ]);
-  const isAdmin = Boolean(adminRole && ["owner", "admin"].includes(adminRole.role));
+  const isAdmin = Boolean(
+    adminRole && ["owner", "admin"].includes(adminRole.role),
+  );
   if (!ticket || (!isAdmin && ticket.user_id !== userId)) return null;
   return { admin, ticket, isAdmin };
 }
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
+  if (!UUID_PATTERN.test(id))
+    return NextResponse.json({ error: "Conversa inválida." }, { status: 400 });
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
 
   const access = await getAccess(id, user.id);
-  if (!access) return NextResponse.json({ error: "Atendimento não encontrado." }, { status: 404 });
+  if (!access)
+    return NextResponse.json(
+      { error: "Atendimento não encontrado." },
+      { status: 404 },
+    );
 
   const { data, error } = await access.admin
     .from("support_messages")
-    .select("id,user_id,message,created_at,attachment_path,attachment_name,attachment_type,profiles(nickname)")
+    .select(
+      "id,user_id,message,created_at,attachment_path,attachment_name,attachment_type,profiles(nickname)",
+    )
     .eq("ticket_id", id)
     .order("created_at");
-  if (error) return NextResponse.json({ error: "Não foi possível carregar a conversa." }, { status: 500 });
+  if (error)
+    return NextResponse.json(
+      { error: "Não foi possível carregar a conversa." },
+      { status: 500 },
+    );
   const messages = await withSignedChatAttachments(data ?? []);
-  return NextResponse.json({ messages });
+  return NextResponse.json(
+    { messages, canSend: access.ticket.status !== "closed" },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 async function parseRequest(request: Request) {
@@ -45,26 +83,56 @@ async function parseRequest(request: Request) {
       file: rawFile instanceof File && rawFile.size > 0 ? rawFile : null,
     };
   }
-  const body = await request.json().catch(() => null) as { message?: unknown } | null;
-  return { message: typeof body?.message === "string" ? body.message.trim() : "", file: null as File | null };
+  const body = (await request.json().catch(() => null)) as {
+    message?: unknown;
+  } | null;
+  return {
+    message: typeof body?.message === "string" ? body.message.trim() : "",
+    file: null as File | null,
+  };
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
+  if (!UUID_PATTERN.test(id))
+    return NextResponse.json({ error: "Conversa inválida." }, { status: 400 });
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
 
   const { message, file } = await parseRequest(request);
-  if (message.length > 1500) return NextResponse.json({ error: "A mensagem pode ter no máximo 1500 caracteres." }, { status: 400 });
+  if (message.length > 1500)
+    return NextResponse.json(
+      { error: "A mensagem pode ter no máximo 1500 caracteres." },
+      { status: 400 },
+    );
   const checkedFile = validateChatAttachment(file);
-  if (!checkedFile.ok) return NextResponse.json({ error: checkedFile.error }, { status: 400 });
-  if (!message && !file) return NextResponse.json({ error: "Digite uma mensagem ou selecione uma imagem." }, { status: 400 });
+  if (!checkedFile.ok)
+    return NextResponse.json({ error: checkedFile.error }, { status: 400 });
+  if (!message && !file)
+    return NextResponse.json(
+      { error: "Digite uma mensagem ou selecione uma imagem." },
+      { status: 400 },
+    );
 
   const access = await getAccess(id, user.id);
-  if (!access) return NextResponse.json({ error: "Atendimento não encontrado." }, { status: 404 });
+  if (!access)
+    return NextResponse.json(
+      { error: "Atendimento não encontrado." },
+      { status: 404 },
+    );
   const { admin, ticket, isAdmin } = access;
-  if (ticket.status === "closed") return NextResponse.json({ error: "Este atendimento está encerrado." }, { status: 403 });
+  if (ticket.status === "closed")
+    return NextResponse.json(
+      { error: "Este atendimento está encerrado." },
+      { status: 403 },
+    );
 
   let uploaded: Awaited<ReturnType<typeof uploadChatAttachment>> | null = null;
   try {
@@ -80,19 +148,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (error) throw new Error(error.message);
   } catch (error) {
     if (uploaded?.path) await removeChatAttachment(uploaded.path);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível enviar." }, { status: 400 });
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Não foi possível enviar.",
+      },
+      { status: 400 },
+    );
   }
 
-  await admin.from("support_tickets").update({
-    status: isAdmin ? "answered" : "open",
-    updated_at: new Date().toISOString(),
-  }).eq("id", id);
+  await admin
+    .from("support_tickets")
+    .update({
+      status: isAdmin ? "answered" : "open",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .neq("status", "closed");
 
-  const notificationAttachment: NotificationAttachment | undefined = uploaded ? {
-    filename: uploaded.name,
-    contentType: uploaded.type,
-    bytes: uploaded.bytes,
-  } : undefined;
+  const notificationAttachment: NotificationAttachment | undefined = uploaded
+    ? {
+        filename: uploaded.name,
+        contentType: uploaded.type,
+        bytes: uploaded.bytes,
+      }
+    : undefined;
 
   if (isAdmin) {
     await notifyCustomer(
@@ -101,12 +181,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       `A equipe respondeu: ${ticket.subject}`,
       `/suporte/${id}`,
       notificationAttachment,
-    );
+    ).catch((error) => console.error("Aviso de resposta pendente:", error));
   } else {
-    const title = uploaded ? "Cliente enviou uma imagem no suporte" : "Nova mensagem no suporte";
+    const title = uploaded
+      ? "Cliente enviou uma imagem no suporte"
+      : "Nova mensagem no suporte";
     await Promise.allSettled([
-      createAdminNotifications(title, `Nova resposta em: ${ticket.subject}`, `/admin/suporte/${id}`, user.id),
-      notifyAdminDiscord(`🛟 Nova mensagem no suporte: **${ticket.subject}**${uploaded ? " com imagem" : ""}`),
+      createAdminNotifications(
+        title,
+        `Nova resposta em: ${ticket.subject}`,
+        `/admin/suporte/${id}`,
+        user.id,
+      ),
+      notifyAdminDiscord(
+        `🛟 Nova mensagem no suporte: **${ticket.subject}**${uploaded ? " com imagem" : ""}`,
+      ),
     ]);
   }
 

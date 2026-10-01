@@ -13,7 +13,10 @@ function isAuthorized(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "CRON_SECRET não configurado." }, { status: 503 });
+    return NextResponse.json(
+      { error: "CRON_SECRET não configurado." },
+      { status: 503 },
+    );
   }
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
@@ -24,6 +27,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     console.error("[chat-attachment-retention]", error);
-    return NextResponse.json({ error: "Falha ao limpar anexos antigos." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Falha ao limpar anexos antigos." },
+      { status: 500 },
+    );
   }
 }

@@ -1,3 +1,4 @@
+import { localDate } from "@/lib/catalog";
 type ReviewCardProps = {
   review: {
     id: string;
@@ -11,14 +12,21 @@ type ReviewCardProps = {
   compact?: boolean;
 };
 
-export default function ReviewCard({ review, compact = false }: ReviewCardProps) {
+export default function ReviewCard({
+  review,
+  compact = false,
+}: ReviewCardProps) {
   const isDiscord = review.source === "discord";
 
   return (
-    <article className={`surface card-hover rounded-3xl ${compact ? "p-5" : "p-6"}`}>
+    <article
+      className={`surface card-hover rounded-3xl ${compact ? "p-5" : "p-6"}`}
+    >
       <div className="text-amber-300" aria-label={`${review.rating} estrelas`}>
         {"★".repeat(review.rating)}
-        <span className="text-zinc-700">{"★".repeat(Math.max(0, 5 - review.rating))}</span>
+        <span className="text-zinc-700">
+          {"★".repeat(Math.max(0, 5 - review.rating))}
+        </span>
       </div>
 
       <p className={`${compact ? "mt-4" : "mt-5"} leading-7 text-zinc-300`}>
@@ -40,15 +48,19 @@ export default function ReviewCard({ review, compact = false }: ReviewCardProps)
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <strong className="text-zinc-100">{review.author_nickname}</strong>
           <span
-            className={isDiscord
-              ? "rounded-full border border-indigo-400/15 bg-indigo-500/10 px-2.5 py-1 font-bold text-indigo-200"
-              : "rounded-full border border-emerald-400/15 bg-emerald-500/10 px-2.5 py-1 font-bold text-emerald-200"}
+            className={
+              isDiscord
+                ? "rounded-full border border-indigo-400/15 bg-indigo-500/10 px-2.5 py-1 font-bold text-indigo-200"
+                : "rounded-full border border-emerald-400/15 bg-emerald-500/10 px-2.5 py-1 font-bold text-emerald-200"
+            }
           >
-            {isDiscord ? "✓ Compra verificada • Discord" : "✓ Compra verificada"}
+            {isDiscord
+              ? "✓ Compra verificada • Discord"
+              : "✓ Compra verificada"}
           </span>
         </div>
         <p className="mt-2 text-[10px] text-zinc-600">
-          {new Date(review.created_at).toLocaleDateString("pt-BR")}
+          {localDate(review.created_at, false)}
         </p>
       </div>
     </article>
