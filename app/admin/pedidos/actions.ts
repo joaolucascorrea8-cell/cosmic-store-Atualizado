@@ -38,12 +38,20 @@ export async function updateOrderStatus(formData: FormData) {
     p_expected_status: expected,
     p_reason: rejectionReason,
   });
-  if (error)
-    throw new Error(
-      error.code === "P0001"
-        ? error.message
-        : "Não foi possível atualizar o pedido. Confira a atualização SQL.",
-    );
+  if (error) {
+  console.error("Falha em transition_store_order:", {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+  });
+
+  throw new Error(
+    error.code === "P0001"
+      ? error.message
+      : "Não foi possível atualizar o pedido. Confira a atualização SQL.",
+  );
+}
   if (!result?.changed) return;
   const order = result.order as { user_id: string; order_code: string };
 
