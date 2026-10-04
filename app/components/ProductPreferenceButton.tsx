@@ -61,7 +61,11 @@ export default function ProductPreferenceButton({
       >
         <Icon
           name={kind === "favorite" ? "heart" : "bell"}
-          className={`h-4 w-4 ${enabled ? "fill-violet-400/20" : ""}`}
+          className={
+            kind === "favorite"
+              ? `h-5 w-5 shrink-0 text-[#ff3333] ${enabled ? "fill-current" : "fill-none"}`
+              : `h-4 w-4 ${enabled ? "fill-violet-400/20" : ""}`
+          }
         />
         {!compact && (pending ? "Salvando…" : label)}
       </button>
