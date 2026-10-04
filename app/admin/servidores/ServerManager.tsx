@@ -162,6 +162,25 @@ function ServerEditor({
           </div>
         </div>
         <div>
+          <label htmlFor={`${prefix}-availability`} className="admin-label">
+            Estado do servidor
+          </label>
+          <select
+            id={`${prefix}-availability`}
+            name="availability"
+            defaultValue={server?.availability ?? "available"}
+            className="admin-input"
+          >
+            <option value="available">Disponível</option>
+            <option value="maintenance">Em manutenção</option>
+            <option value="unavailable">Temporariamente indisponível</option>
+          </select>
+          <p className="mt-1 text-xs text-zinc-500">
+            Este estado é definido pela equipe. Não mede a lotação ao vivo.
+            Enquanto indisponível, o botão de entrada fica desativado.
+          </p>
+        </div>
+        <div>
           <p className="admin-label">Capa (opcional)</p>
           <ProductImageUpload
             key={imageKey}

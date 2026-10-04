@@ -10,6 +10,45 @@ import SiteFooter from "@/app/components/SiteFooter";
 
 const faqs = [
   {
+    id: "favoritos",
+    question: "Como salvo favoritos e recebo um aviso de estoque?",
+    answer: (
+      <p>
+        Toque no coração do produto para guardar na sua conta. Quando ele
+        estiver esgotado, use “Avise quando voltar”. O aviso aparece nas
+        notificações do site uma vez por solicitação e não reserva o item. Você
+        pode cancelar em Minha conta → Favoritos e reposição.
+      </p>
+    ),
+  },
+  {
+    id: "cupons",
+    question: "Como uso um cupom?",
+    answer: (
+      <p>
+        No checkout, digite o código e clique em Aplicar antes de gerar o Pix.
+        Confira o desconto no resumo. Vale um cupom por pedido, conforme
+        validade, compra mínima, itens elegíveis e limites definidos para o
+        código. O uso conta quando o pedido é criado e é liberado se a equipe
+        cancelar o pedido. Não é possível adicionar um cupom a um Pix já gerado.
+      </p>
+    ),
+  },
+  {
+    id: "prazos",
+    question: "Qual é o prazo e o horário de atendimento?",
+    answer: (
+      <p>
+        O prazo aparece no produto e no resumo antes de gerar o Pix. Ele é
+        contado em horas corridas após a confirmação do pagamento; em compras
+        com vários itens, vale o maior prazo. A data prevista fica no pedido. Os
+        horários de atendimento, quando definidos pela equipe, aparecem no
+        produto e no checkout, no horário de Brasília. Você pode comprar e
+        enviar mensagens fora do horário.
+      </p>
+    ),
+  },
+  {
     id: "servidores",
     question: "Como entro em um servidor ou peço outro jogo?",
     answer: (

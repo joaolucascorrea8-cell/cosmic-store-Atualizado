@@ -73,3 +73,23 @@ export function sanitizeCart(raw: unknown): CartItem[] {
   }
   return items;
 }
+
+export function mergeRepurchase(current: CartItem[], incoming: CartItem[]) {
+  let added = 0;
+  const items = [...current];
+  for (const product of sanitizeCart(incoming)) {
+    const index = items.findIndex((item) => cartKey(item) === cartKey(product));
+    const previous = index >= 0 ? items[index].quantity : 0;
+    const quantity = Math.min(
+      maxQuantity(product),
+      previous + product.quantity,
+    );
+    if (index < 0 && items.length >= 40) continue;
+    if (quantity < 1) continue;
+    const merged = { ...product, quantity };
+    if (index >= 0) items[index] = merged;
+    else items.push(merged);
+    added += Math.max(0, quantity - previous);
+  }
+  return { items, added };
+}

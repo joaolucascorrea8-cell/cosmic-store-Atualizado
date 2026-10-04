@@ -40,6 +40,7 @@ export default function SiteFooter() {
         <div>
           <h2 className="footer-title">Sua conta</h2>
           <nav className="footer-links">
+            <Link href="/conta/favoritos">Favoritos e reposição</Link>
             <Link href="/pedidos">Acompanhar pedidos</Link>
             <Link href="/suporte">Central de suporte</Link>
             <Link href="/notificacoes">Notificações</Link>
@@ -59,7 +60,7 @@ export default function SiteFooter() {
         <div className="shell flex flex-wrap items-center justify-between gap-2 py-5 text-xs text-zinc-500">
           <span>© 2026 Cosmic Store. Todos os direitos reservados.</span>
           <span>
-            Entrega estimada em até 24 horas após confirmação do pagamento.
+            Confira o prazo de entrega no produto e no resumo do pedido.
           </span>
         </div>
       </div>

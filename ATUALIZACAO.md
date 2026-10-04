@@ -1,3 +1,107 @@
+# Cosmic Store — favoritos, cupons e admin mais prático
+
+Entrega de 04/10/2026. Esta versão foi feita em uma nova cópia de `cosmic-store-servidores-atualizada.zip`, a entrega mais recente disponível, que já continha os servidores e a atualização automática das páginas. Os ZIPs anteriores e o arquivo original enviado foram preservados.
+
+## Como atualizar a loja que já está funcionando
+
+1. Extraia o ZIP. Copie o conteúdo da pasta `cosmic-store` para a pasta do seu projeto conectado ao GitHub, substituindo os arquivos correspondentes. Preserve sua pasta `.git`, seu `.env.local` e as variáveis da Vercel.
+2. **Antes de publicar o código, execute no SQL Editor do Supabase o arquivo inteiro:**
+
+   `supabase/migrations/202610040002_customer_tools.sql`
+
+   Ele depende da atualização anterior `202610040001_servers_live_pages.sql`. Se você já aplicou a atualização dos servidores, execute somente o novo arquivo `002`. Se pulou aquela entrega, aplique primeiro `001`, depois `002`. Não reaplique todas as migrações antigas em um banco já funcionando. O novo arquivo é transacional e pode ser reaplicado sem apagar contas, produtos, pedidos, cupons ou favoritos.
+3. No terminal do projeto, execute:
+
+   ```bash
+   npm ci
+   npm run check
+   npm run build
+   ```
+
+4. Depois envie ao GitHub usando o fluxo habitual:
+
+   ```bash
+   git add .
+   git commit -m "Adiciona favoritos cupons e melhorias no admin"
+   git push
+   ```
+
+   Se o Git informar `fetch first`, integre o remoto com `git pull --rebase origin main`. Havendo conflito, resolva os arquivos antes de continuar o rebase e enviar. Não use envio forçado para contornar o conflito.
+5. Após o deploy, abra **Admin → Atendimento e entrega**, confira o prazo e salve os horários reais da equipe. O prazo padrão inicial continua em 24 horas e os horários começam ocultos. Não foram cadastrados cupons ou servidores fictícios no banco de produção.
+6. Confira um produto, salve um favorito, crie um cupom de teste e verifique o resumo antes de gerar um pedido. As verificações desta entrega usaram banco local e integrações simuladas; seu ambiente real precisa receber o SQL e o novo deploy.
+
+A loja permanece em português e BRL/Pix. As integrações, o domínio oficial, a verificação Google/Search Console e o botão Google oculto foram preservados. Nenhuma nova variável de ambiente ou dependência foi adicionada. Mantenha `NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED=false` enquanto aguarda a aprovação.
+
+## O que foi acrescentado e onde usar
+
+### Produtos e modelos de descrição
+
+A loja já tinha **Duplicar** no catálogo administrativo. Essa função foi reaproveitada: o novo item continua como rascunho, com estoque zero e identificador próprio. A cópia agora carrega também o prazo específico do produto, se existir.
+
+Em **Admin → Jogos e categorias → Gerenciar categorias**, abra a categoria e preencha **Modelo de descrição da categoria**. Há sugestões para item digital, fruta permanente, fruta física e gamepass. Personalize antes de salvar. `{{produto}}` e `{{jogo}}` são substituídos pelos nomes no editor.
+
+No cadastro/edição do produto, escolha a categoria e clique em **Usar modelo da categoria**. Se já houver uma descrição, o editor pede confirmação para substituí-la. Salvar um modelo não altera descrições já publicadas.
+
+### Central de pendências
+
+A visão geral do admin ganhou filas com atalhos diretos para conferir pagamentos, preparar entregas, responder suporte, atender pedidos de servidor e revisar problemas relatados. As filas mostram até quatro itens e um link para a lista completa; os números consideram todos os registros. Entregas com prazo ultrapassado recebem destaque.
+
+### Favoritos e reposição
+
+O coração nos produtos salva a seleção na conta. **Minha conta → Favoritos e reposição** concentra os itens e avisos solicitados, sem acrescentar outro item ao menu público principal.
+
+Em um produto esgotado, **Avise quando voltar** registra um pedido de aviso. Quando o estoque voltar e o produto/jogo estiver publicado, o banco cria uma notificação no site para quem solicitou e desativa aquele aviso. A operação é atômica e não envia notificações repetidas a cada edição. Um novo aviso exige nova solicitação. Não há envio de e-mail em massa ou reserva de estoque. É possível cancelar o aviso na conta.
+
+As preferências são privadas por usuário. Produtos que forem ocultados aparecem como indisponíveis na seleção, com opção de remover a preferência. Excluir o produto remove suas preferências associadas.
+
+### Servidores
+
+Os servidores públicos agora ficam agrupados pelo nome do jogo. Buscas continuam disponíveis. No admin, **Estado do servidor** permite escolher Disponível, Em manutenção ou Temporariamente indisponível. O estado é manual e não representa lotação monitorada. A manutenção mantém o cartão visível e desativa o link de entrada; Oculto retira o cartão da lista.
+
+**Reportar problema** exige login. O usuário escolhe o motivo e pode explicar o ocorrido. A equipe recebe notificação interna e acompanha os avisos em **Admin → Servidores → Problemas relatados**, com paginação. Um usuário não gera vários avisos abertos para o mesmo servidor; há limite de cinco novos relatos por dia. Depois de conferir/corrigir, a equipe marca como resolvido.
+
+### Atendimento e prazo de entrega
+
+**Admin → Atendimento e entrega** configura o prazo padrão, horários por dia e um aviso opcional. Os horários usam Brasília; não bloqueiam compras fora do atendimento.
+
+O prazo pode ser definido em três níveis: produto → jogo → padrão da loja. Campo vazio no produto ou jogo utiliza o próximo nível. São aceitas de 1 a 720 horas corridas após a confirmação do pagamento. Em um carrinho com vários itens ou combos, vale o maior prazo dos produtos envolvidos. O horário de atendimento não pausa essa contagem.
+
+O resumo do checkout consulta o prazo antes do Pix. Ao criar o pedido, o prazo fica salvo. Alterações posteriores não mudam pedidos existentes; a confirmação do pagamento calcula a data prevista usando o prazo salvo. Pedidos antigos mantêm o fluxo anterior. Termos e reembolso foram alinhados ao prazo registrado, preservando os direitos e regras restantes.
+
+### Cupons
+
+Em **Admin → Cupons**, crie um código, escolha percentual (até 99%) ou valor fixo em reais, compra mínima, limite total, limite por cliente, início/fim opcionais e status ativo. Os horários de validade são informados em Brasília (UTC−3).
+
+Pode valer para todos os produtos, produtos de um jogo ou um produto específico. Cupons de jogo/produto não incluem combos. Nos cupons gerais, você escolhe se combos também participam. O desconto afeta apenas os itens elegíveis; a compra mínima considera o subtotal inteiro. O desconto não ultrapassa o valor elegível e preserva o total mínimo de R$ 0,01.
+
+No checkout, o cliente informa o código e clica em Aplicar. O desconto aparece no resumo, no Pix, nos detalhes do pedido do cliente/admin e nos e-mails de confirmação/entrega. É permitido um cupom por pedido. Não é possível aplicar cupom a um Pix já criado.
+
+O banco recalcula valores e limita usos dentro da transação de criação do pedido. O uso conta ao gerar o pedido, mesmo antes do pagamento, e é liberado se a equipe cancelar o pedido. Pedidos aguardando pagamento não expiram automaticamente. Repetir o mesmo envio não cria outro pedido nem consome outro uso. Editar/pausar/expirar o cupom não altera os valores de pedidos já criados.
+
+### Extras
+
+- **Compartilhar produto:** usa o compartilhamento do aparelho, quando disponível, ou copia o link.
+- **Comprar novamente:** aparece nos pedidos entregues/cancelados, consulta os produtos e combos atuais, ajusta quantidades ao estoque e adiciona ao carrinho sem apagar os itens que já estavam lá. Preços atuais são utilizados e cupons antigos não são reaplicados. Itens indisponíveis são informados ao cliente.
+- A Central de Ajuda e a Política de Privacidade explicam os novos recursos.
+- Atualizações automáticas também cobrem favoritos e as novas áreas administrativas, preservando campos em edição.
+
+## Verificações desta entrega
+
+- `npm run check`: lint e TypeScript aprovados, 41 testes passando.
+- `npm run build`: build de produção aprovado.
+- Navegador: 30 combinações de tela/largura (1440 e 390 px) e 11 fluxos completos, sem erros JavaScript observados e sem transbordamento horizontal nos casos conferidos.
+- SQL real em PostgreSQL local (PGlite): limites e idempotência de cupons, desconto por item elegível, prazos congelados, privacidade, reposição única, relatos e reaplicação da migração.
+- `npm audit --omit=dev`: zero vulnerabilidades reportadas.
+- `npm audit` completo: permanecem 5 alertas altos na cadeia de desenvolvimento `braces → micromatch → fast-glob → @next/eslint-plugin-next → eslint-config-next`. A sugestão automática seria reduzir `eslint-config-next` para 14.2.35; essa alteração incompatível com a stack atual não foi aplicada. Os arquivos de dependências foram preservados.
+
+O ZIP contém todo o código, assets, migrações e testes. Não contém `.next`, `node_modules`, credenciais, dados de teste do navegador ou histórico Git. As integrações de produção (Supabase, OAuth, Storage, SMTP, Discord e Pix real) não foram acionadas por esta execução.
+
+---
+
+## Histórico da entrega anterior: servidores e atualização automática
+
+As instruções abaixo pertencem à entrega anterior. Para instalar esta versão, siga primeiro o procedimento no início deste documento.
+
 # Cosmic Store — atualização completa
 
 A atualização de 04/10/2026 foi feita sobre uma cópia do ZIP mais recente enviado, cosmic-store-completa - Copia(20261004-132051).zip. A versão anterior foi reconstruída sobre uma cópia do ZIP original. O arquivo original foi preservado. O projeto mantém a estrutura Next.js App Router, TypeScript e Supabase, com a identidade da Cosmic Store e as integrações existentes.

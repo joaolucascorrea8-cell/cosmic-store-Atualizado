@@ -16,10 +16,10 @@ export default function RefundPage() {
       <section>
         <h2>1. Prazo de entrega garantido</h2>
         <p>
-          A entrega será realizada em até 24 horas contadas da confirmação
-          manual do pagamento. Se esse prazo terminar sem entrega por
-          responsabilidade da Cosmic Store, o pedido se tornará automaticamente
-          elegível ao reembolso integral.
+          A entrega seguirá o prazo informado antes da compra e registrado no
+          pedido, contado da confirmação manual do pagamento. Se esse prazo
+          terminar sem entrega por responsabilidade da Cosmic Store, o pedido se
+          tornará automaticamente elegível ao reembolso integral.
         </p>
         <p>
           A elegibilidade automática não significa movimentação bancária
@@ -34,8 +34,9 @@ export default function RefundPage() {
           <li>Produto indisponível depois da confirmação do pagamento.</li>
           <li>Impossibilidade de entrega atribuível à Cosmic Store.</li>
           <li>
-            Entrega não concluída no prazo de 24 horas, salvo impedimento
-            causado pelo cliente ou evento externo devidamente informado.
+            Entrega não concluída no prazo registrado no pedido, salvo
+            impedimento causado pelo cliente ou evento externo devidamente
+            informado.
           </li>
           <li>Pagamento confirmado em duplicidade.</li>
           <li>Outras situações exigidas pela legislação aplicável.</li>

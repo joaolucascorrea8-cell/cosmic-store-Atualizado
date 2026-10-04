@@ -5,6 +5,14 @@ export type LivePageConfig = {
 };
 const catalog = { scopes: ["catalog", "reviews"], tables: [], pollMs: 30000 };
 export function livePageConfig(pathname: string): LivePageConfig | null {
+  if (pathname === "/conta/favoritos")
+    return {
+      scopes: ["catalog"],
+      tables: ["customer_product_preferences"],
+      pollMs: 15000,
+    };
+  if (pathname === "/admin/cupons" || pathname === "/admin/atendimento")
+    return { scopes: ["admin", "catalog"], tables: [], pollMs: 15000 };
   if (pathname === "/servidores")
     return { scopes: ["servers"], tables: [], pollMs: 30000 };
   if (pathname === "/admin/servidores")

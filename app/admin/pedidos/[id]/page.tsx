@@ -1,3 +1,4 @@
+import OrderDiscount from "@/app/components/OrderDiscount";
 import CopyButton from "@/app/components/CopyButton";
 import { localDate, UUID_PATTERN } from "@/lib/catalog";
 import { requireAdmin } from "@/lib/require-admin";
@@ -199,6 +200,11 @@ export default async function AdminOrderPage({
             )}
           </div>
           <div className="my-5 border-t border-white/10" />
+          <OrderDiscount
+            subtotal={order.subtotal}
+            discount={order.discount_total}
+            code={order.coupon_code}
+          />
           <div className="flex justify-between text-xl">
             <strong>Total</strong>
             <strong>

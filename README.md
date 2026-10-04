@@ -1,3 +1,9 @@
+# Atualização: favoritos, cupons e atendimento
+
+A entrega mais recente acrescenta modelos de descrição por categoria, central de pendências, favoritos/avisos de reposição, relatos e agrupamento de servidores, horários/prazos configuráveis e cupons no checkout. Inclui também compartilhar produto e comprar novamente pelo histórico.
+
+**Instalação:** veja `ATUALIZACAO.md`. Em uma loja já atualizada com servidores, execute somente a nova migração `202610040002_customer_tools.sql` antes do deploy. `VERIFICACOES.md` registra os testes e limites da validação.
+
 # Cosmic Store
 
 Leia primeiro [ATUALIZACAO.md](./ATUALIZACAO.md) para aplicar esta atualização ao banco já existente e configurar a feature flag do Google.

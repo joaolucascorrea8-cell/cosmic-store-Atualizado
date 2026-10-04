@@ -1,3 +1,19 @@
+# Verificações — evolução de 04/10/2026
+
+Base: `cosmic-store-servidores-atualizada.zip`. Original preservado. Não houve deploy nem alteração do Supabase real.
+
+- Lint e TypeScript aprovados.
+- 41 testes automatizados passando (30 anteriores + 11 novos).
+- Build Next.js 16.3.8 aprovado com configuração local de teste.
+- PostgreSQL/PGlite executou as migrações e regras de negócio reais. Testes incluem transações, RLS, acesso às funções, limites, cancelamento e idempotência de cupons, prazos por produto/jogo, notificações únicas de reposição e isolamento por usuário.
+- Navegador: 30 casos de páginas/larguras, desktop 1440 px e mobile 390 px; 11 fluxos exercitados, zero erros JavaScript observados.
+- Fluxos: favoritar/remover; solicitar/cancelar reposição; agrupar servidores/reportar problema; central de pendências/resolver relato; salvar horários/prazo; modelo/duplicação em rascunho; criar/editar cupom; checkout/Pix com desconto e exibição no pedido; recompra com preço atual; restrição do admin; login exigido nos favoritos e Google oculto.
+- Imagens da interface conferidas visualmente após renderização.
+- A interface usou autenticação e respostas Supabase simuladas em ambiente isolado. Não testa a configuração real de OAuth, Supabase Realtime hospedado, SMTP, Storage ou Discord; não houve Pix real.
+- Produção: `npm audit --omit=dev` reportou 0 vulnerabilidades. Auditoria completa: 5 alertas altos na cadeia de lint, com `braces` como origem. O fix forçado sugeria downgrade de `eslint-config-next` para 14.2.35; não foi aplicado. Nenhuma dependência foi acrescentada ou alterada.
+
+## Histórico das verificações anteriores
+
 # Verificações — servidores e atualização das páginas (04/10/2026)
 
 Base: cópia de `cosmic-store-completa - Copia(20261004-132051).zip`. O ZIP original não foi modificado.

@@ -1,3 +1,4 @@
+import { readDeliveryHours } from "./store-service";
 import { parsePrice, slugify, UUID_PATTERN } from "./catalog";
 export type ProductValues = {
   name: string;
@@ -9,6 +10,7 @@ export type ProductValues = {
   unlimited_stock: boolean;
   is_active: boolean;
   image_url: string | null;
+  delivery_hours: number | null;
 };
 export function readProductForm(
   form: FormData,
@@ -43,10 +45,17 @@ export function readProductForm(
   if (text("description").length > 2000)
     return { error: "A descrição pode ter até 2000 caracteres." };
   if (text("image_url").length > 500) return { error: "Imagem inválida." };
+  const deliveryHours = readDeliveryHours(form.get("delivery_hours"));
+  if (deliveryHours === "invalid")
+    return {
+      error:
+        "O prazo deve ser de 1 a 720 horas, ou vazio para usar o prazo do jogo/loja.",
+    };
   return {
     error: null,
     values: {
       name,
+      delivery_hours: deliveryHours,
       slug,
       category_id,
       price,

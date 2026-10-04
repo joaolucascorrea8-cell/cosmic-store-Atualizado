@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveProduct, type ProductEditorState } from "../actions";
 import { money, parsePrice, slugify } from "@/lib/catalog";
+import { applyDescriptionTemplate } from "@/lib/description-templates";
 import ProductImageUpload from "./ProductImageUpload";
 type Product = {
   id?: string;
@@ -11,13 +12,19 @@ type Product = {
   slug: string;
   category_id: string;
   description: string | null;
+  delivery_hours?: number | null;
   price: number;
   stock: number;
   unlimited_stock: boolean;
   image_url: string | null;
   is_active: boolean;
 };
-type Category = { id: string; name: string; game_id: string };
+type Category = {
+  id: string;
+  name: string;
+  game_id: string;
+  description_template?: string;
+};
 type Game = { id: string; name: string };
 const initial: ProductEditorState = { error: null, success: null };
 export default function ProductEditor({
@@ -65,6 +72,12 @@ export default function ProductEditor({
       duplicate ? slugify(product?.name ?? "") : (product?.slug ?? ""),
     ),
     [dirty, setDirty] = useState(false);
+  const [deliveryHours, setDeliveryHours] = useState(
+    String(product?.delivery_hours ?? ""),
+  );
+  const template = categories.find(
+    (c) => c.id === category,
+  )?.description_template;
   const saveAction = useRef("stay");
   useEffect(() => {
     if (!state.success) return;
@@ -78,6 +91,7 @@ export default function ProductEditor({
         setUnlimited(false);
         setActive(false);
         setDescription("");
+        setDeliveryHours("");
         setImage("");
         setImageKey((key) => key + 1);
         setCustomSlug(false);
@@ -221,9 +235,53 @@ export default function ProductEditor({
           </div>
         </div>
         <div>
+          <label htmlFor="editor-delivery" className="admin-label">
+            Prazo de entrega em horas (opcional)
+          </label>
+          <input
+            id="editor-delivery"
+            name="delivery_hours"
+            type="number"
+            min={1}
+            max={720}
+            value={deliveryHours}
+            onChange={(e) => setDeliveryHours(e.target.value)}
+            className="admin-input"
+            placeholder="Usar o prazo do jogo ou da loja"
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            Horas corridas após a confirmação do pagamento.
+          </p>
+        </div>
+        <div>
           <label htmlFor="editor-description" className="admin-label">
             O que o cliente recebe
           </label>
+          {template && (
+            <button
+              type="button"
+              className="admin-small-button mb-2"
+              onClick={() => {
+                if (
+                  description &&
+                  !window.confirm(
+                    "Substituir a descrição atual pelo modelo desta categoria?",
+                  )
+                )
+                  return;
+                setDescription(
+                  applyDescriptionTemplate(
+                    template,
+                    name,
+                    games.find((g) => g.id === game)?.name ?? "",
+                  ),
+                );
+                setDirty(true);
+              }}
+            >
+              Usar modelo da categoria
+            </button>
+          )}
           <textarea
             id="editor-description"
             name="description"

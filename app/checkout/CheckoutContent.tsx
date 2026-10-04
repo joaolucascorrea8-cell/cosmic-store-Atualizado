@@ -1,4 +1,7 @@
 "use client";
+import { couponCode, type CheckoutQuote } from "@/lib/coupons";
+import ServiceHours from "@/app/components/ServiceHours";
+import { deliveryText, type ServiceSettings } from "@/lib/store-service";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -15,10 +18,15 @@ type CreatedOrder = {
   total: number;
   pix_payload: string;
   game_nickname?: string;
+  subtotal?: number;
+  discount_total?: number;
+  coupon_code?: string | null;
+  delivery_hours?: number | null;
 };
 type Draft = {
   token?: string;
   signature?: string;
+  fingerprint?: string;
   nickname?: string;
   orderId?: string;
 };
@@ -28,7 +36,13 @@ function saveDraft(draft: Draft) {
     sessionStorage.setItem(draftKey, JSON.stringify(draft));
   } catch {}
 }
-export default function CheckoutContent() {
+export default function CheckoutContent({
+  service,
+  serviceNow,
+}: {
+  service: ServiceSettings | null;
+  serviceNow: number;
+}) {
   const router = useRouter(),
     { items, cartLoaded, clearCart } = useCart();
   const [gameNickname, setGameNickname] = useState(""),
@@ -40,6 +54,84 @@ export default function CheckoutContent() {
     [copied, setCopied] = useState(false),
     [initialized, setInitialized] = useState(false);
   const [orderSignature, setOrderSignature] = useState("");
+  const [couponInput, setCouponInput] = useState("");
+  const [quote, setQuote] = useState<{
+    signature: string;
+    data: CheckoutQuote;
+  } | null>(null);
+  const [quoteError, setQuoteError] = useState("");
+  const [quoting, setQuoting] = useState(false);
+  const quoteRequest = useRef(0);
+  const currentSignature = cartSignature(items);
+  const currentQuote =
+    quote?.signature === currentSignature ? quote.data : null;
+  async function applyCoupon() {
+    const requestId = ++quoteRequest.current;
+    setQuoting(true);
+    setQuoteError("");
+    try {
+      const response = await fetch("/api/checkout/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, couponCode: couponCode(couponInput) }),
+      });
+      const data = await response.json();
+      if (requestId !== quoteRequest.current) return;
+      if (response.status === 401) {
+        router.push("/login?next=/checkout");
+        return;
+      }
+      if (!response.ok) {
+        setQuote(null);
+        throw new Error(data.error ?? "Não foi possível aplicar o cupom.");
+      }
+      setQuote({ signature: currentSignature, data: data.quote });
+      setCouponInput(data.quote.code ?? "");
+    } catch (caught) {
+      if (requestId === quoteRequest.current)
+        setQuoteError(
+          caught instanceof Error ? caught.message : "Confira sua conexão.",
+        );
+    } finally {
+      if (requestId === quoteRequest.current) setQuoting(false);
+    }
+  }
+  useEffect(() => {
+    if (!cartLoaded || !initialized || order || !items.length) return;
+    let cancelled = false;
+    const requestId = ++quoteRequest.current;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setQuote(null);
+        setQuoteError("");
+        setCouponInput("");
+        setQuoting(true);
+      }
+    });
+    void fetch("/api/checkout/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (cancelled || requestId !== quoteRequest.current) return;
+        if (response.ok)
+          setQuote({ signature: cartSignature(items), data: data.quote });
+        else if (response.status !== 401)
+          setQuoteError(data.error ?? "Não foi possível conferir o resumo.");
+      })
+      .catch(() => {
+        if (!cancelled && requestId === quoteRequest.current)
+          setQuoteError("Confira sua conexão para atualizar o resumo.");
+      })
+      .finally(() => {
+        if (!cancelled && requestId === quoteRequest.current) setQuoting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [items, initialized, cartLoaded, order]);
   const busy = useRef(false),
     draft = useRef<Draft>({});
   const total = items.reduce(
@@ -108,20 +200,32 @@ export default function CheckoutContent() {
     }
   }, [gameNickname, initialized, order]);
   async function createOrder() {
-    if (busy.current || !items.length || gameNickname.trim().length < 2) return;
+    if (
+      busy.current ||
+      quoting ||
+      !items.length ||
+      gameNickname.trim().length < 2
+    )
+      return;
+    if (couponCode(couponInput) !== (currentQuote?.code ?? "")) {
+      setQuoteError("Aplique o cupom ou remova o código antes de continuar.");
+      return;
+    }
     busy.current = true;
     setLoading(true);
     setError("");
     try {
       const signature = cartSignature(items),
-        fingerprint = signature + gameNickname.trim();
+        baseSignature = signature + gameNickname.trim(),
+        fingerprint = JSON.stringify([baseSignature, currentQuote?.code ?? ""]);
       const token =
-        draft.current.signature === fingerprint && draft.current.token
+        draft.current.fingerprint === fingerprint && draft.current.token
           ? draft.current.token
           : crypto.randomUUID();
       draft.current = {
         token,
-        signature: fingerprint,
+        signature: baseSignature,
+        fingerprint,
         nickname: gameNickname.trim(),
       };
       saveDraft(draft.current);
@@ -131,6 +235,8 @@ export default function CheckoutContent() {
         body: JSON.stringify({
           gameNickname: gameNickname.trim(),
           checkoutToken: token,
+          couponCode: currentQuote?.code ?? "",
+          expectedTotal: currentQuote?.total ?? total,
           items: items.map(({ id, quantity, kind, price }) => ({
             id,
             quantity,
@@ -153,7 +259,7 @@ export default function CheckoutContent() {
       draft.current = { ...draft.current, orderId: data.order.id };
       saveDraft(draft.current);
       setOrder(data.order);
-      setOrderSignature(fingerprint);
+      setOrderSignature(baseSignature);
       setQrCode(data.qrCode);
     } catch (caught) {
       setError(
@@ -311,10 +417,75 @@ export default function CheckoutContent() {
           </section>
           <aside className="checkout-summary">
             <h2 className="text-lg font-black">Resumo</h2>
+            <div className="mt-5">
+              <label htmlFor="coupon-code" className="admin-label">
+                Tem um cupom?
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="coupon-code"
+                  value={couponInput}
+                  maxLength={30}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  disabled={loading || quoting}
+                  className="admin-input min-w-0 uppercase"
+                  placeholder="Código de desconto"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  disabled={loading || quoting || !items.length}
+                  onClick={() => void applyCoupon()}
+                  className="btn-secondary shrink-0"
+                >
+                  {quoting ? "…" : "Aplicar"}
+                </button>
+              </div>
+              {currentQuote?.code && (
+                <button
+                  type="button"
+                  disabled={loading || quoting}
+                  className="mt-2 text-xs text-zinc-400 underline"
+                  onClick={() => {
+                    quoteRequest.current++;
+                    setCouponInput("");
+                    setQuote((value) =>
+                      value
+                        ? {
+                            ...value,
+                            data: {
+                              ...value.data,
+                              discount: 0,
+                              total: value.data.subtotal,
+                              code: null,
+                            },
+                          }
+                        : null,
+                    );
+                    setQuoteError("");
+                  }}
+                >
+                  Remover cupom
+                </button>
+              )}
+              {quoteError && (
+                <p role="alert" className="mt-2 text-xs text-red-300">
+                  {quoteError}
+                </p>
+              )}
+            </div>
             <div className="mt-5 flex justify-between text-sm text-zinc-400">
               <span>Subtotal</span>
               <span>{money(total)}</span>
             </div>
+            {currentQuote && currentQuote.discount > 0 && (
+              <div className="mt-3 flex justify-between gap-3 text-sm text-emerald-300">
+                <span className="break-all">Cupom {currentQuote.code}</span>
+                <strong className="shrink-0">
+                  − {money(currentQuote.discount)}
+                </strong>
+              </div>
+            )}
             <div className="mt-3 flex justify-between text-sm text-zinc-400">
               <span>Forma de pagamento</span>
               <span>Pix</span>
@@ -322,18 +493,31 @@ export default function CheckoutContent() {
             <div className="my-5 border-t border-white/10" />
             <div className="flex items-end justify-between">
               <span>Total</span>
-              <strong className="text-2xl font-black">{money(total)}</strong>
+              <strong className="text-2xl font-black">
+                {money(currentQuote?.total ?? total)}
+              </strong>
             </div>
             <button
               type="button"
               disabled={
-                loading || gameNickname.trim().length < 2 || !items.length
+                loading ||
+                quoting ||
+                gameNickname.trim().length < 2 ||
+                !items.length
               }
               onClick={() => void createOrder()}
               className="btn-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Preparando seu pedido…" : "Continuar para o Pix →"}
             </button>
+            {currentQuote && (
+              <p className="mt-4 text-xs leading-6 text-violet-200">
+                {deliveryText(currentQuote.delivery_hours)}
+              </p>
+            )}
+            {service && (
+              <ServiceHours settings={service} initialTime={serviceNow} />
+            )}
             <p className="mt-4 text-xs leading-5 text-zinc-500">
               Ao continuar, você cria um pedido. Nenhum pagamento é realizado
               automaticamente.
@@ -357,6 +541,17 @@ export default function CheckoutContent() {
             <strong className="mt-5 block text-3xl font-black">
               {money(Number(order.total))}
             </strong>
+            {Number(order.discount_total) > 0 && (
+              <p className="mt-2 text-xs text-emerald-300">
+                Cupom {order.coupon_code}: −{" "}
+                {money(Number(order.discount_total))}
+              </p>
+            )}
+            {order.delivery_hours && (
+              <p className="mt-3 text-xs text-zinc-400">
+                {deliveryText(order.delivery_hours)}
+              </p>
+            )}
             <p className="mt-2 text-xs text-zinc-400">
               Confirme o nome do recebedor e o valor no seu banco.
             </p>

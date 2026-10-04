@@ -1,5 +1,6 @@
 "use server";
 
+import { readDeliveryHours } from "@/lib/store-service";
 import { readProductForm } from "@/lib/product-form";
 import { parsePrice, UUID_PATTERN } from "@/lib/catalog";
 import { removeUnusedProductImage } from "@/lib/product-image-cleanup";
@@ -494,6 +495,9 @@ export async function updateGameDetails(formData: FormData) {
   const slug = String(formData.get("slug") ?? "")
     .trim()
     .toLowerCase();
+  const deliveryHours = readDeliveryHours(formData.get("delivery_hours"));
+  if (deliveryHours === "invalid")
+    throw new Error("Informe um prazo de 1 a 720 horas, ou deixe vazio.");
   const visibility = String(formData.get("is_active") ?? "");
   if (!["true", "false"].includes(visibility))
     throw new Error("Selecione uma visibilidade válida.");
@@ -515,7 +519,7 @@ export async function updateGameDetails(formData: FormData) {
   if (!before) throw new Error("Jogo não encontrado.");
   const { error } = await admin
     .from("games")
-    .update({ name, slug, is_active: isActive })
+    .update({ name, slug, is_active: isActive, delivery_hours: deliveryHours })
     .eq("id", id);
   if (error)
     throw new Error(
@@ -547,9 +551,14 @@ export async function updateCategoryDetails(formData: FormData) {
   )
     throw new Error("Dados da categoria inválidos.");
   const admin = createAdminClient();
+  const descriptionTemplate = String(
+    formData.get("description_template") ?? "",
+  ).trim();
+  if (descriptionTemplate.length > 2000)
+    throw new Error("O modelo pode ter até 2000 caracteres.");
   const { error } = await admin
     .from("categories")
-    .update({ name, slug })
+    .update({ name, slug, description_template: descriptionTemplate })
     .eq("id", id);
   if (error)
     throw new Error(

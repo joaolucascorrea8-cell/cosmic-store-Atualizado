@@ -39,6 +39,9 @@ export async function saveGameServer(
   const imageUrl = String(form.get("image_url") ?? "").trim();
   const orderText = String(form.get("display_order") ?? "").trim();
   const active = form.get("is_active") === "true";
+  const availability = String(form.get("availability") ?? "available");
+  if (!["available", "maintenance", "unavailable"].includes(availability))
+    return { error: "Selecione um estado válido para o servidor." };
   if (id && !UUID_PATTERN.test(id)) return { error: "Servidor inválido." };
   if (
     gameName.length < 2 ||
@@ -95,6 +98,7 @@ export async function saveGameServer(
     description,
     image_url: imageUrl || null,
     is_active: active,
+    availability,
     display_order: displayOrder,
   };
   const query = id
@@ -145,4 +149,22 @@ export async function deleteGameServer(
   await removeUnusedProductImage(data.image_url);
   invalidate();
   return { error: null, success: "Servidor excluído." };
+}
+
+export async function resolveServerReport(
+  _state: ServerAdminState,
+  form: FormData,
+): Promise<ServerAdminState> {
+  await requireAdmin();
+  const id = String(form.get("id") ?? "");
+  if (!UUID_PATTERN.test(id)) return { error: "Aviso inválido." };
+  const { error } = await createAdminClient()
+    .from("server_reports")
+    .update({ status: "resolved", resolved_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "open");
+  if (error) return { error: "Não foi possível resolver este aviso." };
+  invalidate();
+  revalidatePath("/admin");
+  return { error: null, success: "Aviso resolvido." };
 }

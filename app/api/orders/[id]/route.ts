@@ -17,7 +17,9 @@ export async function GET(
     return NextResponse.json({ error: "Entre na sua conta." }, { status: 401 });
   const { data: order, error } = await client
     .from("orders")
-    .select("id,order_code,status,total,pix_payload,game_nickname")
+    .select(
+      "id,order_code,status,total,pix_payload,game_nickname,subtotal,discount_total,coupon_code,delivery_hours",
+    )
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();

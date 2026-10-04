@@ -1,3 +1,4 @@
+import { couponCode } from "@/lib/coupons";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
@@ -93,6 +94,8 @@ export async function POST(request: Request) {
     items?: RequestedItem[];
     gameNickname?: unknown;
     checkoutToken?: unknown;
+    couponCode?: unknown;
+    expectedTotal?: unknown;
   } | null;
   const nickname =
     typeof body?.gameNickname === "string" ? body.gameNickname.trim() : "";
@@ -118,7 +121,9 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const existing = await admin
     .from("orders")
-    .select("id,order_code,status,total,pix_payload")
+    .select(
+      "id,order_code,status,total,pix_payload,subtotal,discount_total,coupon_code,delivery_hours",
+    )
     .eq("user_id", user.id)
     .eq("checkout_token", token)
     .maybeSingle();
@@ -308,7 +313,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const total =
+  let total =
     Math.round(
       itemRows.reduce((sum, item) => sum + item.unit_price * item.quantity, 0) *
         100,
@@ -319,11 +324,48 @@ export async function POST(request: Request) {
       { status: 400 },
     );
 
+  const code = couponCode(body?.couponCode);
+  if (code.length > 30)
+    return NextResponse.json({ error: "Cupom inválido." }, { status: 400 });
+  const rpcItems = itemRows.map((item) => ({
+    id: item.combo_id ?? item.product_id,
+    kind: item.combo_id ? "combo" : "product",
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+  }));
+  const quote = await admin.rpc("quote_store_checkout", {
+    p_user_id: user.id,
+    p_items: rpcItems,
+    p_code: code,
+  });
+  if (quote.error || !quote.data)
+    return NextResponse.json(
+      {
+        error:
+          quote.error?.code === "P0001"
+            ? quote.error.message
+            : "Não foi possível conferir os valores. Tente novamente.",
+      },
+      { status: 409 },
+    );
+  total = Number(quote.data.total);
+  if (
+    code &&
+    (typeof body?.expectedTotal !== "number" ||
+      Math.round(body.expectedTotal * 100) !== Math.round(total * 100))
+  )
+    return NextResponse.json(
+      {
+        error:
+          "O desconto mudou. Aplique o cupom novamente para conferir o valor.",
+      },
+      { status: 409 },
+    );
   const orderCode = `COSMIC-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
   try {
     const pixPayload = createPixPayload(total, orderCode);
     const { data: result, error: orderError } = await admin.rpc(
-      "create_store_order",
+      "create_store_order_with_coupon",
       {
         p_user_id: user.id,
         p_checkout_token: token,
@@ -331,6 +373,7 @@ export async function POST(request: Request) {
         p_order_code: orderCode,
         p_pix_payload: pixPayload,
         p_expected_total: total,
+        p_code: code,
         p_items: itemRows.map((item) => ({
           id: item.combo_id ?? item.product_id,
           kind: item.combo_id ? "combo" : "product",

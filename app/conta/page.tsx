@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import SiteHeader from "@/app/components/SiteHeader";
 import SiteFooter from "@/app/components/SiteFooter";
@@ -68,6 +69,11 @@ export default async function AccountPage({
               : "Só falta escolher como você quer aparecer na Cosmic Store. Depois disso você volta automaticamente para onde estava."}
           </p>
 
+          {onboardingCompleted && (
+            <Link href="/conta/favoritos" className="btn-secondary mt-5">
+              Favoritos e avisos de reposição →
+            </Link>
+          )}
           <ProfileForm
             userId={user.id}
             email={user.email ?? "E-mail não disponibilizado"}

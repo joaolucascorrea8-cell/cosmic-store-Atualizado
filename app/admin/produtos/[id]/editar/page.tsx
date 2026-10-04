@@ -32,13 +32,13 @@ export default async function EditarProdutoPage({
     supabase
       .from("products")
       .select(
-        "id,name,slug,category_id,description,price,stock,unlimited_stock,image_url,is_active",
+        "id,name,slug,category_id,description,price,stock,unlimited_stock,image_url,is_active,delivery_hours",
       )
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("categories")
-      .select("id,name,game_id,display_order")
+      .select("id,name,game_id,description_template,display_order")
       .order("display_order", { ascending: true })
       .order("name"),
     supabase

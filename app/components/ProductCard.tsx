@@ -1,3 +1,4 @@
+import ProductPreferenceButton from "./ProductPreferenceButton";
 import Image from "next/image";
 import Link from "next/link";
 import AddToCartButton from "@/app/components/AddToCartButton";
@@ -16,7 +17,7 @@ type Product = {
 export default function ProductCard({ produto }: { produto: Product }) {
   const soldOut = !produto.unlimited_stock && Number(produto.stock ?? 0) <= 0;
   return (
-    <article className="product-tile group flex min-w-0 flex-col overflow-hidden">
+    <article className="product-tile group relative flex min-w-0 flex-col overflow-hidden">
       <Link
         href={`/produto/${produto.slug}`}
         className="product-tile-image relative block aspect-square overflow-hidden"
@@ -35,6 +36,9 @@ export default function ProductCard({ produto }: { produto: Product }) {
           {soldOut ? "Esgotado" : "Disponível"}
         </span>
       </Link>
+      <div className="absolute right-2 top-2 z-10">
+        <ProductPreferenceButton id={produto.id} compact />
+      </div>
       <div className="flex flex-1 flex-col p-4">
         <Link
           href={`/produto/${produto.slug}`}

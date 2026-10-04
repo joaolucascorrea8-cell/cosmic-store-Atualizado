@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   cartKey,
+  mergeRepurchase,
   maxQuantity,
   sanitizeCart,
   type CartItem as StoredItem,
@@ -31,6 +32,7 @@ type CartContextType = {
   removeFromCart: (key: string) => void;
   updateQuantity: (key: string, quantity: number) => void;
   clearCart: () => void;
+  addItemsToCart: (incoming: CartItem[]) => number;
   totalItems: number;
 };
 const CartContext = createContext<CartContextType | null>(null);
@@ -121,6 +123,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         items,
         cartLoaded,
         addToCart,
+        addItemsToCart: (incoming) => {
+          if (!cartLoaded) return 0;
+          const result = mergeRepurchase(items, incoming);
+          setItems(result.items);
+          return result.added;
+        },
         removeFromCart,
         updateQuantity,
         clearCart: () => setItems([]),

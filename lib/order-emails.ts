@@ -19,6 +19,9 @@ type OrderEmailRow = {
   status: string;
   game_nickname: string;
   total: number | string;
+  subtotal: number | string | null;
+  discount_total: number | string;
+  coupon_code: string | null;
   payment_email_sent_at: string | null;
   delivery_email_sent_at: string | null;
   order_items: OrderItem[] | null;
@@ -99,6 +102,7 @@ function baseTemplate({
                   </table>
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:12px;">
                     ${productRows(items)}
+                    ${Number(order.discount_total) > 0 ? `<tr><td style="padding-top:12px;color:#a1a1aa;">Subtotal</td><td style="text-align:right;padding-top:12px;">${money(order.subtotal ?? Number(order.total) + Number(order.discount_total))}</td></tr><tr><td style="padding-top:8px;color:#86efac;">Cupom ${escapeHtml(order.coupon_code)}</td><td style="text-align:right;padding-top:8px;color:#86efac;">− ${money(order.discount_total)}</td></tr>` : ""}
                     <tr><td style="padding:14px 0 0;font-size:17px;font-weight:800;color:#ffffff;">Total</td><td style="padding:14px 0 0;text-align:right;font-size:17px;font-weight:900;color:#c4b5fd;">${money(order.total)}</td></tr>
                   </table>
                 </div>
@@ -125,7 +129,7 @@ async function getOrder(orderId: string) {
   const { data, error } = await admin
     .from("orders")
     .select(
-      "id,user_id,order_code,status,game_nickname,total,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity),profiles(nickname)",
+      "id,user_id,order_code,status,game_nickname,total,subtotal,discount_total,coupon_code,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity),profiles(nickname)",
     )
     .eq("id", orderId)
     .maybeSingle();

@@ -47,11 +47,12 @@ export default function TermsPage() {
         </p>
       </section>
       <section>
-        <h2>4. Entrega em até 24 horas</h2>
+        <h2>4. Prazo de entrega</h2>
         <p>
-          Após a confirmação do pagamento, a Cosmic Store realizará a entrega em
-          até 24 horas. O prazo e sua data-limite ficam disponíveis na página do
-          pedido.
+          O prazo de entrega é informado antes da compra e contado em horas
+          corridas após a confirmação do pagamento. O prazo e sua data-limite
+          ficam disponíveis na página do pedido. Alterações posteriores nas
+          configurações da loja não alteram o prazo de pedidos já criados.
         </p>
         <p>
           O prazo poderá ficar suspenso enquanto houver impedimento causado por

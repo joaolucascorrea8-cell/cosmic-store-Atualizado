@@ -11,6 +11,7 @@ type Product = {
   slug: string;
   category_id: string;
   description: string | null;
+  delivery_hours: number | null;
   price: number;
   stock: number;
   unlimited_stock: boolean;
@@ -22,6 +23,7 @@ type Category = {
   id: string;
   name: string;
   game_id: string;
+  description_template: string;
   display_order: number;
 };
 type Game = { id: string; name: string; display_order: number };
@@ -49,7 +51,7 @@ export default async function AdminProducts({
         client
           .from("products")
           .select(
-            "id,name,slug,description,category_id,price,stock,unlimited_stock,is_active,image_url,display_order",
+            "id,name,slug,description,category_id,price,stock,unlimited_stock,is_active,image_url,delivery_hours,display_order",
           )
           .order("display_order", { ascending: true })
           .order("name", { ascending: true })
@@ -58,7 +60,7 @@ export default async function AdminProducts({
       allRows(
         client
           .from("categories")
-          .select("id,name,game_id,display_order")
+          .select("id,name,game_id,description_template,display_order")
           .order("display_order", { ascending: true })
           .order("name")
           .order("id"),

@@ -1,3 +1,6 @@
+import OrderDiscount from "@/app/components/OrderDiscount";
+import RepurchaseButton from "./RepurchaseButton";
+import { deliveryText } from "@/lib/store-service";
 import Link from "next/link";
 import CopyButton from "@/app/components/CopyButton";
 import { localDate, UUID_PATTERN } from "@/lib/catalog";
@@ -33,7 +36,7 @@ export default async function OrderPage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id,order_code,status,total,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity)",
+      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity)",
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -128,6 +131,11 @@ export default async function OrderPage({
           </div>
 
           <OrderProgress status={order.status} />
+          {order.delivery_hours && (
+            <p className="mt-3 text-xs text-zinc-400">
+              {deliveryText(order.delivery_hours)}
+            </p>
+          )}
 
           <section className="mt-8 rounded-2xl border border-white/10 bg-[#121017] p-6">
             <div className="flex justify-between">
@@ -154,6 +162,11 @@ export default async function OrderPage({
               ))}
             </div>
             <div className="my-5 border-t border-white/10" />
+            <OrderDiscount
+              subtotal={order.subtotal}
+              discount={order.discount_total}
+              code={order.coupon_code}
+            />
             <div className="flex justify-between text-xl">
               <strong>Total</strong>
               <strong>
@@ -165,6 +178,9 @@ export default async function OrderPage({
             </div>
           </section>
 
+          {["delivered", "cancelled"].includes(order.status) && (
+            <RepurchaseButton orderId={id} />
+          )}
           {order.status === "awaiting_payment" && (
             <section className="mt-5 rounded-xl border border-violet-400/20 bg-violet-500/10 p-5">
               <h2 className="font-bold">Falta concluir o pagamento</h2>

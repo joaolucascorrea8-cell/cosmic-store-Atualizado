@@ -1,3 +1,8 @@
+import ProductPreferenceButton from "@/app/components/ProductPreferenceButton";
+import ShareProduct from "@/app/components/ShareProduct";
+import ServiceHours from "@/app/components/ServiceHours";
+import { getStoreService, getRequestTime } from "@/lib/store-service-server";
+import { deliveryText } from "@/lib/store-service";
 import { cache } from "react";
 import type { Metadata } from "next";
 import ProductCard from "@/app/components/ProductCard";
@@ -16,7 +21,7 @@ const getProduct = cache(async (slug: string) => {
   const { data: product, error } = await client
     .from("products")
     .select(
-      "id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,category_id",
+      "id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,category_id,delivery_hours",
     )
     .eq("slug", slug)
     .eq("is_active", true)
@@ -31,7 +36,7 @@ const getProduct = cache(async (slug: string) => {
   if (!category) return null;
   const { data: game } = await client
     .from("games")
-    .select("name,slug")
+    .select("name,slug,delivery_hours")
     .eq("id", category.game_id)
     .eq("is_active", true)
     .maybeSingle();
@@ -89,6 +94,11 @@ export default async function ProductDetail({
       .limit(4),
   ]);
   const signedFeedbacks = await withSignedReviewAttachments(feedbacks ?? []);
+  const service = await getStoreService();
+  const estimatedHours =
+    product.delivery_hours ??
+    product.game.delivery_hours ??
+    service?.delivery_hours;
   const soldOut = !product.unlimited_stock && product.stock <= 0;
   const site =
     process.env.NEXT_PUBLIC_SITE_URL || "https://cosmic-store-blush.vercel.app";
@@ -185,10 +195,31 @@ export default async function ProductDetail({
               <div className="mt-6">
                 <AddToCartButton produto={product} />
               </div>
+              {soldOut && (
+                <ProductPreferenceButton id={product.id} kind="restock" />
+              )}
+              <ProductPreferenceButton id={product.id} />
               <Link href="/carrinho" className="btn-secondary mt-3 w-full">
                 Ir para o carrinho →
               </Link>
             </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs leading-6 text-zinc-400">
+                {estimatedHours
+                  ? deliveryText(estimatedHours)
+                  : "Consulte a equipe para combinar o prazo."}
+              </p>
+              <ShareProduct
+                name={product.name}
+                path={`/produto/${product.slug}`}
+              />
+            </div>
+            {service && (
+              <ServiceHours
+                settings={service}
+                initialTime={await getRequestTime()}
+              />
+            )}
             <div className="mt-5 rounded-xl border border-white/[.075] p-4 text-xs leading-6 text-zinc-400">
               <strong className="block text-sm text-white">
                 Como funciona?

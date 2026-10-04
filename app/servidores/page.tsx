@@ -19,7 +19,7 @@ export default async function ServersPage() {
     client
       .from("game_servers")
       .select(
-        "id,game_name,name,join_url,description,image_url,is_active,display_order,updated_at",
+        "id,game_name,name,join_url,description,image_url,is_active,availability,display_order,updated_at",
       )
       .eq("is_active", true)
       .order("display_order")

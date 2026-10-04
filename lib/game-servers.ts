@@ -6,6 +6,7 @@ export type GameServer = {
   description: string;
   image_url: string | null;
   is_active: boolean;
+  availability?: "available" | "maintenance" | "unavailable";
   display_order: number;
   updated_at: string;
 };
@@ -41,3 +42,9 @@ export function serverRequestFields(game: string, message: string) {
     return { error: "Explique seu pedido, com 5 a 1.200 caracteres." } as const;
   return { gameName, message: details, error: null } as const;
 }
+
+export const serverAvailability = {
+  available: "Disponível",
+  maintenance: "Em manutenção",
+  unavailable: "Temporariamente indisponível",
+};

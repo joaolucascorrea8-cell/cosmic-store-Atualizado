@@ -1,3 +1,4 @@
+import DescriptionTemplateField from "./DescriptionTemplateField";
 import Image from "next/image";
 import CatalogFilter from "./CatalogFilter";
 import { allRows } from "@/lib/query-pages";
@@ -26,11 +27,13 @@ type Game = {
   slug: string;
   image_url: string | null;
   is_active: boolean;
+  delivery_hours: number | null;
   display_order: number;
 };
 type Category = {
   id: string;
   game_id: string;
+  description_template: string;
   name: string;
   slug: string;
   image_url: string | null;
@@ -53,12 +56,14 @@ export default async function CatalogAdmin({
   const [gameResult, categoryResult, productResult] = await Promise.all([
     client
       .from("games")
-      .select("id,name,slug,image_url,is_active,display_order")
+      .select("id,name,slug,image_url,is_active,delivery_hours,display_order")
       .order("display_order", { ascending: true })
       .order("name"),
     client
       .from("categories")
-      .select("id,game_id,name,slug,image_url,display_order")
+      .select(
+        "id,game_id,name,slug,image_url,description_template,display_order",
+      )
       .order("display_order", { ascending: true })
       .order("name"),
     allRows(client.from("products").select("category_id").order("id")),
@@ -302,6 +307,24 @@ export default async function CatalogAdmin({
                                 <option value="false">Oculto</option>
                               </select>
                             </div>
+                            <div>
+                              <label
+                                className="admin-label"
+                                htmlFor={`game-delivery-${game.id}`}
+                              >
+                                Prazo de entrega em horas
+                              </label>
+                              <input
+                                id={`game-delivery-${game.id}`}
+                                name="delivery_hours"
+                                type="number"
+                                min={1}
+                                max={720}
+                                defaultValue={game.delivery_hours ?? ""}
+                                placeholder="Usar o prazo padrão da loja"
+                                className="admin-input"
+                              />
+                            </div>
                             <PendingButton className="admin-small-button w-full">
                               Salvar dados
                             </PendingButton>
@@ -494,6 +517,11 @@ export default async function CatalogAdmin({
                                 required
                               />
                             </div>
+                            <DescriptionTemplateField
+                              key={`${category.id}-${category.description_template}`}
+                              id={category.id}
+                              initial={category.description_template}
+                            />
                             <PendingButton className="admin-small-button w-full">
                               Salvar dados
                             </PendingButton>

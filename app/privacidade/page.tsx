@@ -56,6 +56,15 @@ export default function PrivacyPage() {
       <section>
         <h2>2. Como usamos os dados</h2>
         <p>
+          Se você escolher salvar favoritos ou solicitar avisos de reposição,
+          guardamos sua seleção vinculada à conta. O aviso de reposição é
+          enviado nas notificações do site, uma vez por solicitação, quando o
+          produto volta a ficar disponível. Você pode cancelar o aviso e remover
+          favoritos na sua conta. Relatos de problemas em servidores são usados
+          pela equipe para revisar os links. Os pedidos registram o cupom
+          aplicado e o desconto para conferir os valores e limites de uso.
+        </p>
+        <p>
           Utilizamos os dados para autenticar usuários, criar e manter contas,
           processar compras, conferir pagamentos, realizar entregas, permitir o
           acompanhamento de pedidos, responder solicitações, enviar avisos

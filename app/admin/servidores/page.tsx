@@ -1,3 +1,4 @@
+import ResolveReport from "./ResolveReport";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -5,15 +6,24 @@ import { allRows } from "@/lib/query-pages";
 import type { GameServer } from "@/lib/game-servers";
 import ServerManager from "./ServerManager";
 export const dynamic = "force-dynamic";
-export default async function AdminServersPage() {
+export default async function AdminServersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ relatos?: string }>;
+}) {
+  const query = await searchParams;
+  const reportPage = Math.max(
+    1,
+    Math.min(100000, Number.parseInt(query.relatos ?? "1", 10) || 1),
+  );
   await requireAdmin();
   const client = createAdminClient();
-  const [servers, games, requests] = await Promise.all([
+  const [servers, games, requests, reports] = await Promise.all([
     allRows(
       client
         .from("game_servers")
         .select(
-          "id,game_name,name,join_url,description,image_url,is_active,display_order,updated_at",
+          "id,game_name,name,join_url,description,image_url,is_active,availability,display_order,updated_at",
         )
         .order("display_order")
         .order("created_at")
@@ -27,6 +37,15 @@ export default async function AdminServersPage() {
       .neq("status", "closed")
       .order("updated_at", { ascending: false })
       .limit(5),
+    client
+      .from("server_reports")
+      .select("id,reason,details,created_at,game_servers(game_name,name)", {
+        count: "exact",
+      })
+      .eq("status", "open")
+      .order("created_at")
+      .order("id")
+      .range((reportPage - 1) * 20, reportPage * 20 - 1),
   ]);
   const rows = (servers.data ?? []) as GameServer[];
   return (
@@ -103,6 +122,76 @@ export default async function AdminServersPage() {
             <p className="py-3 text-sm text-zinc-500">
               Nenhuma solicitação em aberto.
             </p>
+          )}
+        </div>
+      </section>
+      <section id="relatos" className="admin-panel mt-6">
+        <h2 className="text-lg font-black">
+          Problemas relatados{" "}
+          <span className="text-zinc-500">({reports.count ?? "—"})</span>
+        </h2>
+        <p className="mt-2 text-xs text-zinc-400">
+          Confira o link ou estado do servidor antes de resolver o aviso.
+        </p>
+        {reports.error ? (
+          <p role="alert" className="admin-error mt-3">
+            Não foi possível carregar os avisos. Confira o novo SQL.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {reports.data?.map((report) => {
+              const server = (
+                Array.isArray(report.game_servers)
+                  ? report.game_servers[0]
+                  : report.game_servers
+              ) as { game_name: string; name: string } | null;
+              return (
+                <div
+                  key={report.id}
+                  className="rounded-xl border border-white/10 p-4"
+                >
+                  <strong className="block text-sm">
+                    {server?.game_name} · {server?.name}
+                  </strong>
+                  <p className="mt-1 text-xs text-amber-200">
+                    {
+                      {
+                        invalid_link: "Link inválido",
+                        cannot_join: "Não consegue entrar",
+                        other: "Outro problema",
+                      }[report.reason as string]
+                    }
+                  </p>
+                  <p className="my-3 whitespace-pre-line break-words text-sm text-zinc-400">
+                    {report.details}
+                  </p>
+                  <ResolveReport id={report.id} />
+                </div>
+              );
+            })}
+            {!reports.data?.length && (
+              <p className="text-sm text-zinc-500">
+                Nenhum aviso pendente nesta página.
+              </p>
+            )}
+          </div>
+        )}
+        <div className="mt-4 flex gap-3">
+          {reportPage > 1 && (
+            <Link
+              href={`/admin/servidores?relatos=${reportPage - 1}#relatos`}
+              className="admin-small-button"
+            >
+              ← Anterior
+            </Link>
+          )}
+          {(reports.count ?? 0) > reportPage * 20 && (
+            <Link
+              href={`/admin/servidores?relatos=${reportPage + 1}#relatos`}
+              className="admin-small-button"
+            >
+              Próxima →
+            </Link>
           )}
         </div>
       </section>

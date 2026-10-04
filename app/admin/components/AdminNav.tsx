@@ -11,6 +11,8 @@ const items: [string, string, IconName][] = [
   ["/admin/catalogo", "Jogos e categorias", "gamepad"],
   ["/admin/servidores", "Servidores", "gamepad"],
   ["/admin/suporte", "Suporte", "chat"],
+  ["/admin/atendimento", "Atendimento e entrega", "clock"],
+  ["/admin/cupons", "Cupons", "tag"],
   ["/admin/comunidade", "Comunidade", "user"],
   ["/admin/avaliacoes", "Avaliações", "star"],
 ];

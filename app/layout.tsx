@@ -1,3 +1,4 @@
+import { ProductPreferencesProvider } from "@/app/context/ProductPreferences";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -65,9 +66,11 @@ export default function RootLayout({
           Ir para o conteúdo
         </a>
         <CartProvider>
-          <LivePageRefresh />
-          {children}
-          <FloatingChatServer />
+          <ProductPreferencesProvider>
+            <LivePageRefresh />
+            {children}
+            <FloatingChatServer />
+          </ProductPreferencesProvider>
         </CartProvider>
       </body>
     </html>

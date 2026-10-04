@@ -86,6 +86,7 @@ export default function AccountMenu({
         {[
           ["/conta", "Meu perfil"],
           ["/pedidos", "Meus pedidos"],
+          ["/conta/favoritos", "Favoritos e reposição"],
           ["/suporte", "Suporte"],
           ["/notificacoes", "Notificações"],
           ...(isAdmin ? [["/admin", "Painel administrativo"]] : []),

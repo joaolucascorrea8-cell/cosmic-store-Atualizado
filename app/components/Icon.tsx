@@ -1,5 +1,7 @@
 import type { SVGProps } from "react";
 const paths = {
+  heart:
+    "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z",
   gamepad:
     "M6 8h12l3 9a2 2 0 0 1-3 2l-3-3H9l-3 3a2 2 0 0 1-3-2L6 8ZM7 10v4m-2-2h4m6-1h.01m3 2h.01",
   arrow: "M5 12h14m-6-6 6 6-6 6",

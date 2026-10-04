@@ -1,3 +1,4 @@
+import PendingHub from "./components/PendingHub";
 import { money, localDate } from "@/lib/catalog";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/require-admin";
@@ -51,6 +52,7 @@ export default async function AdminPage() {
         </Link>
       </div>
 
+      <PendingHub />
       {summaryResult.error && (
         <p role="alert" className="admin-error mt-5">
           Não foi possível carregar os indicadores. Confira a atualização SQL.
