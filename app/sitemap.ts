@@ -8,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/produtos",
     "/combos",
     "/jogos",
+    "/servidores",
     "/avaliacoes",
     "/ajuda",
     "/termos",

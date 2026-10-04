@@ -10,7 +10,7 @@ import {
   setFeaturedProduct,
   updateProductQuick,
 } from "../actions";
-import { matchesProductName } from "@/lib/catalog";
+import { matchesProductName, parsePrice } from "@/lib/catalog";
 import Icon from "@/app/components/Icon";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 export type ManagedProduct = {
@@ -46,13 +46,37 @@ function QuickProduct({
     [unlimited, setUnlimited] = useState(product.unlimited_stock),
     [active, setActive] = useState(product.is_active),
     [busy, start] = useTransition();
+  const cleanSnapshot = useRef(product);
   const dirty =
     price !== Number(product.price).toFixed(2).replace(".", ",") ||
     stock !== String(product.stock) ||
     unlimited !== product.unlimited_stock ||
     active !== product.is_active;
+  useEffect(() => {
+    const previous = cleanSnapshot.current;
+    cleanSnapshot.current = product;
+    if (
+      price !== Number(previous.price).toFixed(2).replace(".", ",") ||
+      stock !== String(previous.stock) ||
+      unlimited !== previous.unlimited_stock ||
+      active !== previous.is_active
+    )
+      return;
+    queueMicrotask(() => {
+      setPrice(Number(product.price).toFixed(2).replace(".", ","));
+      setStock(String(product.stock));
+      setUnlimited(product.unlimited_stock);
+      setActive(product.is_active);
+    });
+    // The last server values are compared before accepting new server props.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product]);
   return (
-    <div className="admin-product-actions">
+    <div
+      className="admin-product-actions"
+      data-live-dirty={dirty}
+      data-live-busy={busy}
+    >
       <label className="text-[10px] text-zinc-500">
         Preço
         <input
@@ -109,7 +133,12 @@ function QuickProduct({
                 result.error ?? `Alterações de ${product.name} salvas.`,
                 Boolean(result.error),
               );
-              if (!result.error) router.refresh();
+              if (!result.error) {
+                const normalized = parsePrice(price);
+                if (normalized !== null) setPrice(normalized.toFixed(2).replace(".", ","));
+                setStock(String(Number(stock)));
+                router.refresh();
+              }
             } catch {
               onResult("Não foi possível salvar. Tente novamente.", true);
             }
@@ -154,8 +183,10 @@ export default function ProductOrderManager({
     [failed, setFailed] = useState(false),
     [pending, start] = useTransition();
   const drag = useRef<string | null>(null);
-  const baseOrder = products.map((p) => p.id).join(","),
-    dirty = rows.map((p) => p.id).join(",") !== baseOrder;
+  const [baseOrder, setBaseOrder] = useState(
+    products.map((p) => p.id).join(","),
+  );
+  const dirty = rows.map((p) => p.id).join(",") !== baseOrder;
   useEffect(() => {
     queueMicrotask(() => {
       try {
@@ -194,6 +225,7 @@ export default function ProductOrderManager({
   useEffect(() => {
     queueMicrotask(() =>
       setRows((current) => {
+        if (current.map((p) => p.id).join(",") === baseOrder) return products;
         const lookup = new Map(products.map((p) => [p.id, p]));
         return [
           ...current
@@ -203,7 +235,8 @@ export default function ProductOrderManager({
         ];
       }),
     );
-  }, [products]);
+    queueMicrotask(() => setBaseOrder(products.map((p) => p.id).join(",")));
+  }, [products, baseOrder]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -247,7 +280,7 @@ export default function ProductOrderManager({
   const updateFilters = (change: Partial<Filters>) =>
     setFilters((current) => ({ ...current, ...change }));
   return (
-    <div>
+    <div data-live-dirty={dirty} data-live-busy={pending}>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <label>
           <span className="admin-label">Buscar produto</span>

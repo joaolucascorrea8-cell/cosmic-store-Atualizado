@@ -144,7 +144,7 @@ export default function ComboBuilder({
   const previewProducts = selectedProducts.slice(0, 4);
 
   return (
-    <form action={action} onChange={() => setDirty(true)} className="space-y-6">
+    <form action={action} data-live-dirty={dirty} data-live-busy={pending || uploading} onChange={() => setDirty(true)} className="space-y-6">
       <input type="hidden" name="combo_id" value={combo?.id ?? ""} />
       <fieldset disabled={pending} className="min-w-0 space-y-6">
         <section className="rounded-2xl border border-white/10 bg-white/[.02] p-4 sm:p-5">

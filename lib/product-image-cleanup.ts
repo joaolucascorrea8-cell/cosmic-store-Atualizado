@@ -13,6 +13,7 @@ export async function removeUnusedProductImage(url: string | null | undefined) {
     ["games", "image_url"],
     ["categories", "image_url"],
     ["combos", "image_url"],
+    ["game_servers", "image_url"],
     ["campaigns", "banner_url"],
   ]) {
     const { count, error } = await client

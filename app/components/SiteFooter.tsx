@@ -25,6 +25,7 @@ export default function SiteFooter() {
           <nav className="footer-links">
             <Link href="/produtos">Todos os produtos</Link>
             <Link href="/jogos">Jogos</Link>
+            <Link href="/servidores">Servidores</Link>
             <Link href="/chat">Comunidade</Link>
             <a
               href={discordUrl}

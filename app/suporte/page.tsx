@@ -100,7 +100,7 @@ export default async function SupportPage() {
                             )}
                           </div>
                           <p className="mt-1 text-xs text-zinc-500">
-                            Atualizado em {localDate(ticket.updated_at)}
+                            {ticket.category === "server_request" ? "Pedido de servidor VIP · " : ""}Atualizado em {localDate(ticket.updated_at)}
                           </p>
                         </div>
                         <span

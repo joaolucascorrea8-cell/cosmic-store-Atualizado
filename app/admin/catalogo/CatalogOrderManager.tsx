@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState, useTransition } from "react";
+import {
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { saveCategoryOrder, saveGameOrder } from "../actions";
 
 type GameItem = {
@@ -53,19 +59,82 @@ export default function CatalogOrderManager({ games, categories }: Props) {
     () => new Map(categories.map((category) => [category.id, category])),
     [categories],
   );
-  const [gameIds, setGameIds] = useState(() => games.map((game) => game.id));
   const [selectedGameId, setSelectedGameId] = useState(
     () => games[0]?.id ?? "",
   );
-  const [categoryIdsByGame, setCategoryIdsByGame] = useState<
-    Record<string, string[]>
-  >(() => {
+  const [orderState, setOrderState] = useState(() => {
     const grouped: Record<string, string[]> = {};
     for (const game of games) grouped[game.id] = [];
     for (const category of categories)
       (grouped[category.game_id] ??= []).push(category.id);
-    return grouped;
+    return {
+      gameIds: games.map((game) => game.id),
+      categoryIdsByGame: grouped,
+      baselineGames: games.map((game) => game.id).join(","),
+      baselineCategories: Object.fromEntries(
+        Object.entries(grouped).map(([id, ids]) => [id, ids.join(",")]),
+      ),
+    };
   });
+  const { gameIds, categoryIdsByGame } = orderState;
+  const setGameIds = (next: SetStateAction<string[]>) =>
+    setOrderState((current) => ({
+      ...current,
+      gameIds: typeof next === "function" ? next(current.gameIds) : next,
+    }));
+  const setCategoryIdsByGame = (
+    next: SetStateAction<Record<string, string[]>>,
+  ) =>
+    setOrderState((current) => ({
+      ...current,
+      categoryIdsByGame:
+        typeof next === "function" ? next(current.categoryIdsByGame) : next,
+    }));
+  const dirty =
+    gameIds.join(",") !== orderState.baselineGames ||
+    Object.entries(categoryIdsByGame).some(
+      ([id, ids]) =>
+        ids.join(",") !== (orderState.baselineCategories[id] ?? ""),
+    );
+  useEffect(() => {
+    queueMicrotask(() => {
+      const ids = games.map((game) => game.id);
+      const grouped: Record<string, string[]> = {};
+      for (const game of games) grouped[game.id] = [];
+      for (const category of categories)
+        (grouped[category.game_id] ??= []).push(category.id);
+      setOrderState((current) => ({
+        gameIds:
+          current.gameIds.join(",") === current.baselineGames
+            ? ids
+            : [
+                ...current.gameIds.filter((id) => ids.includes(id)),
+                ...ids.filter((id) => !current.gameIds.includes(id)),
+              ],
+        categoryIdsByGame: Object.fromEntries(
+          Object.entries(grouped).map(([id, incoming]) => {
+            const local = current.categoryIdsByGame[id] ?? [];
+            return [
+              id,
+              local.join(",") === (current.baselineCategories[id] ?? "")
+                ? incoming
+                : [
+                    ...local.filter((item) => incoming.includes(item)),
+                    ...incoming.filter((item) => !local.includes(item)),
+                  ],
+            ];
+          }),
+        ),
+        baselineGames: ids.join(","),
+        baselineCategories: Object.fromEntries(
+          Object.entries(grouped).map(([id, items]) => [id, items.join(",")]),
+        ),
+      }));
+      setSelectedGameId((current) =>
+        ids.includes(current) ? current : (ids[0] ?? ""),
+      );
+    });
+  }, [games, categories]);
   const [gameMessage, setGameMessage] = useState<string | null>(null);
   const [categoryMessage, setCategoryMessage] = useState<string | null>(null);
   const [draggedGameId, setDraggedGameId] = useState<string | null>(null);
@@ -131,7 +200,11 @@ export default function CatalogOrderManager({ games, categories }: Props) {
   }
 
   return (
-    <div className="mt-5 grid gap-5 xl:grid-cols-2">
+    <div
+      className="mt-5 grid gap-5 xl:grid-cols-2"
+      data-live-dirty={dirty}
+      data-live-busy={isSavingGames || isSavingCategories}
+    >
       <div className="rounded-xl border border-white/10 bg-black/15 p-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

@@ -2,6 +2,8 @@
 
 Leia primeiro [ATUALIZACAO.md](./ATUALIZACAO.md) para aplicar esta atualização ao banco já existente e configurar a feature flag do Google.
 
+Atualização de 04/10/2026: servidores VIP, pedidos com nome de jogo livre e atualização automática das páginas. A loja permanece em português e reais.
+
 Versão unificada da loja: interface renovada com catálogo real no Supabase, autenticação, painel administrativo e carrinho persistente.
 
 ## Requisitos

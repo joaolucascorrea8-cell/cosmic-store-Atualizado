@@ -10,6 +10,30 @@ import SiteFooter from "@/app/components/SiteFooter";
 
 const faqs = [
   {
+    id: "servidores",
+    question: "Como entro em um servidor ou peço outro jogo?",
+    answer: (
+      <div className="space-y-3">
+        <p>
+          Abra{" "}
+          <Link href="/servidores" className="font-bold text-violet-300">
+            Servidores
+          </Link>
+          , escolha o jogo e clique em Entrar no servidor. O link abre em uma
+          nova aba; o acesso depende das permissões do jogo e da
+          disponibilidade.
+        </p>
+        <p>
+          Para pedir um servidor VIP, entre na sua conta e clique em Pedir
+          servidor. Escreva o nome do jogo, mesmo que ele ainda não esteja no
+          catálogo, e explique seu pedido. A equipe responde pela conversa em
+          Meus atendimentos. A solicitação não gera uma compra nem garante a
+          criação do servidor.
+        </p>
+      </div>
+    ),
+  },
+  {
     id: "entrega",
     question: "Como funciona a entrega?",
     answer: (

@@ -25,18 +25,20 @@ export default async function AdminSupport({
     status?: string;
     ordem?: string;
     pagina?: string;
+    categoria?: string;
   }>;
 }) {
   const params = await searchParams,
     user = await requireAdmin();
   const supabase = await createClient();
   const { data: listing, error } = await createAdminClient().rpc(
-    "list_store_support",
+    "list_store_support_filtered",
     {
       p_query: (params.q ?? "").trim().slice(0, 100),
       p_status: params.status ?? "",
       p_sort: params.ordem ?? "priority",
       p_page: pageNumber(params.pagina),
+      p_category: params.categoria ?? "",
     },
   );
   const ticketRows = listing?.rows;
@@ -83,7 +85,7 @@ export default async function AdminSupport({
           </Link>
         </div>
 
-        <form className="catalog-toolbar mt-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_160px_160px_auto]">
+        <form className="catalog-toolbar mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_150px_160px_150px_auto]">
           <input
             name="q"
             defaultValue={params.q}
@@ -101,6 +103,20 @@ export default async function AdminSupport({
             <option value="open">Aguardando equipe</option>
             <option value="answered">Respondidos</option>
             <option value="closed">Encerrados</option>
+          </select>
+          <select
+            name="categoria"
+            defaultValue={params.categoria ?? ""}
+            aria-label="Tipo de atendimento"
+            className="admin-input"
+          >
+            <option value="">Todos os assuntos</option>
+            <option value="server_request">Pedidos de servidor</option>
+            <option value="order">Pedidos</option>
+            <option value="payment">Pagamentos</option>
+            <option value="account">Contas</option>
+            <option value="product">Produtos</option>
+            <option value="other">Outros</option>
           </select>
           <select
             name="ordem"
@@ -148,6 +164,9 @@ export default async function AdminSupport({
                     </div>
                     <p className="mt-1 text-xs text-zinc-500">
                       {profile?.nickname ?? "Cliente"}
+                      {ticket.category === "server_request"
+                        ? " · Pedido de servidor VIP"
+                        : ""}
                     </p>
                   </div>
                   <span
@@ -200,6 +219,11 @@ export default async function AdminSupport({
                     <td className="p-4">
                       <span className="inline-flex flex-wrap items-center gap-2">
                         {ticket.subject}
+                        {ticket.category === "server_request" && (
+                          <span className="rounded-full bg-violet-500/10 px-2 py-1 text-[10px] font-bold text-violet-300">
+                            Servidor VIP
+                          </span>
+                        )}
                         {unreadCount > 0 && (
                           <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-black text-white">
                             {unreadCount} nova{unreadCount === 1 ? "" : "s"}

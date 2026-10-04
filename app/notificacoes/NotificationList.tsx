@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type NotificationItem = {
@@ -27,11 +27,47 @@ export default function NotificationList({
   userId: string;
 }) {
   const [items, setItems] = useState(initial);
+  const [syncError, setSyncError] = useState(false);
+  const generation = useRef(0);
+  const fetching = useRef(false);
   const unread = useMemo(
     () => items.filter((item) => !item.read_at).length,
     [items],
   );
 
+  const refresh = useCallback(async () => {
+    if (
+      fetching.current ||
+      document.visibilityState !== "visible" ||
+      !navigator.onLine
+    )
+      return;
+    fetching.current = true;
+    const token = generation.current;
+    try {
+      const { data, error } = await createClient()
+        .from("notifications")
+        .select("id,title,body,link,read_at,created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) {
+        setSyncError(true);
+        return;
+      }
+      setSyncError(false);
+      if (token !== generation.current) return;
+      setItems((current) =>
+        JSON.stringify(current) === JSON.stringify(data ?? [])
+          ? current
+          : (data ?? []),
+      );
+    } catch {
+      setSyncError(true);
+    } finally {
+      fetching.current = false;
+    }
+  }, [userId]);
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
@@ -39,25 +75,32 @@ export default function NotificationList({
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "notifications",
           filter: `user_id=eq.${userId}`,
         },
-        (event) => {
-          const next = event.new as NotificationItem;
-          setItems((current) =>
-            current.some((item) => item.id === next.id)
-              ? current
-              : [next, ...current],
-          );
-        },
+        () => void refresh(),
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void refresh();
+      });
+    queueMicrotask(() => void refresh());
+    const timer = window.setInterval(() => void refresh(), 10000);
+    const sync = () => void refresh();
+    window.addEventListener("focus", sync);
+    window.addEventListener("online", sync);
+    window.addEventListener("cosmic-notifications-read", sync);
+    document.addEventListener("visibilitychange", sync);
     return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("online", sync);
+      window.removeEventListener("cosmic-notifications-read", sync);
+      document.removeEventListener("visibilitychange", sync);
       void supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, refresh]);
 
   async function read(item: NotificationItem) {
     if (item.read_at) return;
@@ -67,6 +110,7 @@ export default function NotificationList({
       .update({ read_at: now })
       .eq("id", item.id);
     if (!error) {
+      generation.current++;
       setItems((current) =>
         current.map((entry) =>
           entry.id === item.id ? { ...entry, read_at: now } : entry,
@@ -88,6 +132,7 @@ export default function NotificationList({
       .eq("user_id", userId)
       .is("read_at", null);
     if (!error) {
+      generation.current++;
       setItems((current) =>
         current.map((item) => ({ ...item, read_at: item.read_at ?? now })),
       );
@@ -99,6 +144,12 @@ export default function NotificationList({
 
   return (
     <>
+      {syncError && (
+        <p role="status" className="mt-4 text-xs text-amber-200">
+          Não foi possível atualizar as notificações agora. Vamos tentar
+          novamente automaticamente.
+        </p>
+      )}
       {unread > 0 && (
         <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
           <p className="text-sm text-zinc-300">

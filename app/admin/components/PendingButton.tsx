@@ -16,6 +16,7 @@ export default function PendingButton({
     <button
       type="submit"
       disabled={pending || disabled}
+      data-live-busy={pending}
       aria-disabled={pending || disabled}
       onClick={(event) => {
         if (confirm && !window.confirm(confirm)) event.preventDefault();

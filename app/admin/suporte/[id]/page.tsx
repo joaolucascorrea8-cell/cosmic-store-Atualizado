@@ -20,7 +20,9 @@ export default async function AdminTicket({
   const [{ data: ticket }, { data: messages }] = await Promise.all([
     admin
       .from("support_tickets")
-      .select("id,subject,category,status,created_at,profiles(nickname)")
+      .select(
+        "id,subject,category,requested_game,status,created_at,profiles(nickname)",
+      )
       .eq("id", id)
       .maybeSingle(),
     admin
@@ -52,6 +54,18 @@ export default async function AdminTicket({
               Suporte • {profile?.nickname ?? "Cliente"}
             </p>
             <h1 className="mt-2 text-3xl font-black">{ticket.subject}</h1>
+            {ticket.category === "server_request" && (
+              <div className="mt-3 rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 text-sm text-zinc-300">
+                <strong>Pedido de servidor VIP</strong> ·{" "}
+                {ticket.requested_game}
+                <Link
+                  href="/admin/servidores"
+                  className="mt-2 block font-bold text-violet-300"
+                >
+                  Gerenciar servidores →
+                </Link>
+              </div>
+            )}
           </div>
           <form action={updateTicketStatus}>
             <input type="hidden" name="id" value={ticket.id} />

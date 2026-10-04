@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { CartProvider } from "@/app/context/CartContext";
 import FloatingChatServer from "@/app/components/FloatingChatServer";
+import LivePageRefresh from "@/app/components/LivePageRefresh";
 const geistSans = localFont({
   src: "../public/fonts/geist-latin.woff2",
   display: "swap",
@@ -64,6 +65,7 @@ export default function RootLayout({
           Ir para o conteúdo
         </a>
         <CartProvider>
+          <LivePageRefresh />
           {children}
           <FloatingChatServer />
         </CartProvider>

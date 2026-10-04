@@ -75,6 +75,9 @@ export default function HeaderMobileMenu({
         <Link href="/combos" onClick={closeMenu} className={linkClass}>
           Combos
         </Link>
+        <Link href="/servidores" onClick={closeMenu} className={linkClass}>
+          Servidores
+        </Link>
         <Link href="/suporte" onClick={closeMenu} className={linkClass}>
           Suporte
         </Link>

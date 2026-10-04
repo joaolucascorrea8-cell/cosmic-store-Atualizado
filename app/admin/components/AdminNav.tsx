@@ -9,6 +9,7 @@ const items: [string, string, IconName][] = [
   ["/admin/produtos", "Produtos", "tag"],
   ["/admin/combos", "Combos", "grid"],
   ["/admin/catalogo", "Jogos e categorias", "gamepad"],
+  ["/admin/servidores", "Servidores", "gamepad"],
   ["/admin/suporte", "Suporte", "chat"],
   ["/admin/comunidade", "Comunidade", "user"],
   ["/admin/avaliacoes", "Avaliações", "star"],

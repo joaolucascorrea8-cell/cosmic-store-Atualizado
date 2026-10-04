@@ -12,6 +12,7 @@ export default function ConfirmRemoveButton({
     <button
       type="submit"
       disabled={disabled || pending}
+      data-live-busy={pending}
       onClick={(event) => {
         if (
           !window.confirm(`Excluir ${name}? Esta ação não pode ser desfeita.`)

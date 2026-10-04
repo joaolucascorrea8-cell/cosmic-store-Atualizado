@@ -100,6 +100,8 @@ export default function ProductEditor({
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <form
         action={action}
+        data-live-dirty={dirty}
+        data-live-busy={pending || uploading}
         onChange={() => setDirty(true)}
         onSubmit={(e) => {
           if (uploading || pending) e.preventDefault();

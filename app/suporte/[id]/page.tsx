@@ -23,7 +23,7 @@ export default async function TicketPage({
   const [{ data: ticket }, { data: messages }] = await Promise.all([
     supabase
       .from("support_tickets")
-      .select("id,subject,category,status,created_at")
+      .select("id,subject,category,requested_game,status,created_at")
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle(),
@@ -57,6 +57,12 @@ export default async function TicketPage({
             <div>
               <p className="eyebrow">Atendimento particular</p>
               <h1 className="mt-2 text-3xl font-black">{ticket.subject}</h1>
+              {ticket.category === "server_request" && (
+                <p className="mt-3 text-sm text-violet-300">
+                  Solicitação de servidor VIP para {ticket.requested_game}. A
+                  resposta da equipe aparece nesta conversa.
+                </p>
+              )}
               <p className="mt-2 text-sm text-zinc-500">
                 Aberto em {localDate(ticket.created_at)}
               </p>
