@@ -258,7 +258,7 @@ export default function CouponManager({
                 <small className="text-zinc-400">
                   {c.kind === "percent" ? `${c.amount}%` : money(c.amount)} ·{" "}
                   {c.is_active ? "Ativo" : "Pausado"} · {c.uses ?? 0}
-                  {c.max_uses ? `/${c.max_uses}` : ""} usos
+                  {c.max_uses ? `/${c.max_uses}` : ""} usos reservados · {c.paid_uses ?? 0} pagos · {c.pending_uses ?? 0} pendentes
                 </small>
               </span>
               <span className="text-xs text-violet-300">Editar ⌄</span>

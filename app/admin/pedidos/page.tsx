@@ -1,3 +1,4 @@
+import { workAssignments } from "@/lib/admin-work";
 import { requireAdmin } from "@/lib/require-admin";
 import { localDate, pageNumber } from "@/lib/catalog";
 import Pagination from "@/app/components/Pagination";
@@ -61,6 +62,10 @@ export default async function AdminOrdersPage({
       delivery: 0,
       delivered: 0,
     };
+  const assigned = await workAssignments(
+    "order",
+    orders.map((o) => o.id),
+  );
   const unreadResult = user
     ? await supabase
         .from("notifications")
@@ -215,6 +220,9 @@ export default async function AdminOrdersPage({
                   <div>
                     <span className="block text-xs text-zinc-500">Cliente</span>
                     {profile?.nickname ?? "Cliente"}
+                    <small className="mt-1 block font-normal text-zinc-500">
+                      {assigned.get(order.id) ?? "Sem responsável"}
+                    </small>
                   </div>
                   <div>
                     <span className="block text-xs text-zinc-500">
@@ -277,7 +285,12 @@ export default async function AdminOrdersPage({
                         {localDate(order.created_at)}
                       </span>
                     </td>
-                    <td className="p-4">{profile?.nickname ?? "Cliente"}</td>
+                    <td className="p-4">
+                      {profile?.nickname ?? "Cliente"}
+                      <small className="mt-1 block font-normal text-zinc-500">
+                        {assigned.get(order.id) ?? "Sem responsável"}
+                      </small>
+                    </td>
                     <td className="p-4">{order.game_nickname}</td>
                     <td className="p-4 font-bold">
                       {Number(order.total).toLocaleString("pt-BR", {

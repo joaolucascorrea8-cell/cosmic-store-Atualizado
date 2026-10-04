@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
 
-export function createAdminClient() {
+export function createAdminClient(actorId?: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secretKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY;
@@ -12,6 +12,7 @@ export function createAdminClient() {
   }
 
   return createClient(url, secretKey, {
+    global: actorId ? { headers: { "x-cosmic-actor": actorId } } : undefined,
     auth: {
       autoRefreshToken: false,
       persistSession: false,

@@ -1,3 +1,4 @@
+import WorkPanel from "@/app/admin/components/WorkPanel";
 import PendingButton from "@/app/admin/components/PendingButton";
 import { UUID_PATTERN } from "@/lib/catalog";
 import Link from "next/link";
@@ -84,6 +85,7 @@ export default async function AdminTicket({
             </PendingButton>
           </form>
         </div>
+        <WorkPanel id={id} kind="support" />
         <SupportChat
           ticketId={ticket.id}
           userId={user.id}

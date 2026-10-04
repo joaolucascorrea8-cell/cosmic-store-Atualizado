@@ -12,6 +12,7 @@ type Product = {
   category_id: string;
   description: string | null;
   delivery_hours: number | null;
+  low_stock_threshold: number;
   price: number;
   stock: number;
   unlimited_stock: boolean;
@@ -51,7 +52,7 @@ export default async function AdminProducts({
         client
           .from("products")
           .select(
-            "id,name,slug,description,category_id,price,stock,unlimited_stock,is_active,image_url,delivery_hours,display_order",
+            "id,name,slug,description,category_id,price,stock,unlimited_stock,is_active,image_url,delivery_hours,delivery_instructions,robux_quantity,pricing_locked,pricing_rate,ops_version,low_stock_threshold,display_order",
           )
           .order("display_order", { ascending: true })
           .order("name", { ascending: true })
@@ -99,7 +100,7 @@ export default async function AdminProducts({
   );
   const lowStockCount = products.filter(
     (product) =>
-      !product.unlimited_stock && product.stock > 0 && product.stock <= 2,
+      !product.unlimited_stock && product.stock > 0 && product.stock <= product.low_stock_threshold,
   ).length;
   const outCount = products.filter(
     (product) => !product.unlimited_stock && product.stock < 1,
@@ -122,6 +123,7 @@ export default async function AdminProducts({
         <div>
           <p className="eyebrow">GESTÃO DE ITENS</p>
           <h1 className="admin-title">Produtos</h1>
+      <div className="mt-4 flex flex-wrap gap-2"><Link className="admin-small-button" href="/admin/produtos/precos">Reajustar pelo Robux</Link><Link className="admin-small-button" href="/admin/produtos/importar">Importar planilha</Link><Link className="admin-small-button" href="/admin/historico">Histórico de alterações</Link></div>
           <p className="admin-description">
             Vitrine, ordem, estoque e status agora ficam juntos. Abra somente a
             área que precisar.

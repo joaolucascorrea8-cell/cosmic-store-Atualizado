@@ -11,6 +11,7 @@ export function livePageConfig(pathname: string): LivePageConfig | null {
       tables: ["customer_product_preferences"],
       pollMs: 15000,
     };
+  if (["/admin/relatorios", "/admin/historico", "/admin/diagnostico"].includes(pathname)) return {scopes:["admin", "catalog"],tables:[],pollMs:30000};
   if (pathname === "/admin/cupons" || pathname === "/admin/atendimento")
     return { scopes: ["admin", "catalog"], tables: [], pollMs: 15000 };
   if (pathname === "/servidores")

@@ -1,3 +1,4 @@
+import {cleanIssueMessage} from "./store-issues";
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -209,11 +210,7 @@ export async function notifyCustomer(
       status: result.status === "fulfilled" ? "sent" : "failed",
       error_message:
         result.status === "rejected"
-          ? String(
-              result.reason instanceof Error
-                ? result.reason.message
-                : result.reason,
-            ).slice(0, 500)
+          ? cleanIssueMessage(result.reason).slice(0,500)
           : null,
     })),
   );

@@ -15,6 +15,8 @@ export type Coupon = {
   include_combos: boolean;
   updated_at: string;
   uses?: number;
+  paid_uses?: number;
+  pending_uses?: number;
 };
 export type CheckoutQuote = {
   subtotal: number;

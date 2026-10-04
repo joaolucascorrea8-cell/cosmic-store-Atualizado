@@ -1,3 +1,5 @@
+import DeliveryInstructions from "@/app/components/DeliveryInstructions";
+import WorkPanel from "@/app/admin/components/WorkPanel";
 import OrderDiscount from "@/app/components/OrderDiscount";
 import CopyButton from "@/app/components/CopyButton";
 import { localDate, UUID_PATTERN } from "@/lib/catalog";
@@ -37,6 +39,7 @@ const actionLabels: Record<string, string> = {
   "status:proof_rejected": "Comprovante recusado",
   "status:cancelled": "Pedido cancelado",
   "status:delivered": "Pedido marcado como entregue",
+  "auto:unpaid_closed": "Encerrado automaticamente sem comprovante",
   "chat:open": "Atendimento reaberto",
   "chat:close": "Atendimento encerrado",
 };
@@ -53,7 +56,7 @@ export default async function AdminOrderPage({
   const { data: order } = await admin
     .from("orders")
     .select(
-      "*,order_items(product_name,unit_price,quantity),profiles(nickname)",
+      "*,order_items(product_name,unit_price,quantity,delivery_instructions),profiles(nickname)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -322,6 +325,8 @@ export default async function AdminOrderPage({
             </div>
           </section>
         )}
+        <WorkPanel id={id} kind="order" />
+        <DeliveryInstructions items={order.order_items ?? []} />
         {chatAvailable && (
           <>
             <section className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#111122] p-5">

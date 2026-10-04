@@ -1,3 +1,4 @@
+import { workAssignments } from "@/lib/admin-work";
 import { requireAdmin } from "@/lib/require-admin";
 import { pageNumber, localDate } from "@/lib/catalog";
 import Pagination from "@/app/components/Pagination";
@@ -53,6 +54,10 @@ export default async function AdminSupport({
   const unread = unreadResult.data;
 
   const tickets = (ticketRows ?? []) as TicketRow[];
+  const assigned = await workAssignments(
+    "support",
+    tickets.map((t) => t.id),
+  );
   const unreadByTicket = new Map<string, number>();
   (unread ?? []).forEach((notification) => {
     if (!notification.link) return;
@@ -164,6 +169,9 @@ export default async function AdminSupport({
                     </div>
                     <p className="mt-1 text-xs text-zinc-500">
                       {profile?.nickname ?? "Cliente"}
+                      <small className="mt-1 block font-normal text-zinc-500">
+                        {assigned.get(ticket.id) ?? "Sem responsável"}
+                      </small>
                       {ticket.category === "server_request"
                         ? " · Pedido de servidor VIP"
                         : ""}
@@ -215,6 +223,9 @@ export default async function AdminSupport({
                   >
                     <td className="p-4 font-bold">
                       {profile?.nickname ?? "Cliente"}
+                      <small className="mt-1 block font-normal text-zinc-500">
+                        {assigned.get(ticket.id) ?? "Sem responsável"}
+                      </small>
                     </td>
                     <td className="p-4">
                       <span className="inline-flex flex-wrap items-center gap-2">

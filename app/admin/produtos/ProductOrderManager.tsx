@@ -23,6 +23,7 @@ export type ManagedProduct = {
   display_order: number;
   price: number;
   stock: number;
+  low_stock_threshold?: number;
   unlimited_stock: boolean;
 };
 type Category = { id: string; label: string; game_id?: string };
@@ -260,7 +261,7 @@ export default function ProductOrderManager({
         (filters.status === "low" &&
           !p.unlimited_stock &&
           p.stock > 0 &&
-          p.stock <= 2)),
+          p.stock <= (p.low_stock_threshold ?? 2))),
   );
   const result = (value: string, error = false) => {
     setMessage(value);

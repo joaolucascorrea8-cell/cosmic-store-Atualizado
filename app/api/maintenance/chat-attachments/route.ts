@@ -1,3 +1,5 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { recordStoreIssue } from "@/lib/store-issues";
 import { NextRequest, NextResponse } from "next/server";
 
 import { cleanupExpiredChatAttachments } from "@/lib/chat-attachment-retention";
@@ -22,14 +24,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 
+  let closedOrders = 0,
+    cleanup = null;
+  let failed = false;
   try {
-    const result = await cleanupExpiredChatAttachments();
-    return NextResponse.json({ ok: true, ...result });
+    const { data, error } = await createAdminClient().rpc("ops_expire_orders");
+    if (error)
+      throw new Error(
+        error.code === "P0001"
+          ? error.message
+          : `Rotina de pedidos: ${error.code}`,
+      );
+    closedOrders = data ?? 0;
   } catch (error) {
-    console.error("[chat-attachment-retention]", error);
-    return NextResponse.json(
-      { error: "Falha ao limpar anexos antigos." },
-      { status: 500 },
-    );
+    failed = true;
+    await recordStoreIssue("cron", error, "/api/maintenance/chat-attachments");
   }
+  try {
+    cleanup = await cleanupExpiredChatAttachments();
+  } catch (error) {
+    failed = true;
+    await recordStoreIssue("cron", error, "/api/maintenance/chat-attachments");
+  }
+  return NextResponse.json(
+    { ok: !failed, closedOrders, cleanup },
+    { status: failed ? 500 : 200 },
+  );
 }

@@ -32,7 +32,7 @@ export default async function EditarProdutoPage({
     supabase
       .from("products")
       .select(
-        "id,name,slug,category_id,description,price,stock,unlimited_stock,image_url,is_active,delivery_hours",
+        "id,name,slug,category_id,description,price,stock,unlimited_stock,image_url,is_active,delivery_hours,delivery_instructions,robux_quantity,pricing_locked,pricing_rate,ops_version,low_stock_threshold",
       )
       .eq("id", id)
       .maybeSingle(),

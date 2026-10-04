@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { saveProduct, type ProductEditorState } from "../actions";
 import { money, parsePrice, slugify } from "@/lib/catalog";
 import { applyDescriptionTemplate } from "@/lib/description-templates";
+import { robuxPrice, readRobuxRate } from "@/lib/robux-pricing";
 import ProductImageUpload from "./ProductImageUpload";
 type Product = {
   id?: string;
@@ -13,6 +14,12 @@ type Product = {
   category_id: string;
   description: string | null;
   delivery_hours?: number | null;
+  delivery_instructions?: string;
+  robux_quantity?: number | null;
+  pricing_locked?: boolean;
+  pricing_rate?: number | null;
+  ops_version?: number;
+  low_stock_threshold?: number;
   price: number;
   stock: number;
   unlimited_stock: boolean;
@@ -75,6 +82,18 @@ export default function ProductEditor({
   const [deliveryHours, setDeliveryHours] = useState(
     String(product?.delivery_hours ?? ""),
   );
+  const [instructions, setInstructions] = useState(
+    product?.delivery_instructions ?? "",
+  );
+  const [robux, setRobux] = useState(String(product?.robux_quantity ?? ""));
+  const [baseRate, setBaseRate] = useState(String(product?.pricing_rate ?? ""));
+  const [revision, setRevision] = useState(product?.ops_version ?? 0);
+  const [calcRate, setCalcRate] = useState("34,00");
+  const [locked, setLocked] = useState(product?.pricing_locked ?? false);
+  const [lowStock, setLowStock] = useState(
+    String(product?.low_stock_threshold ?? 2),
+  );
+  const [calcError, setCalcError] = useState("");
   const template = categories.find(
     (c) => c.id === category,
   )?.description_template;
@@ -92,11 +111,23 @@ export default function ProductEditor({
         setActive(false);
         setDescription("");
         setDeliveryHours("");
+        setBaseRate("");
+        setRevision(0);
+        setInstructions("");
+        setRobux("");
+        setLocked(false);
+        setLowStock("2");
+        setCalcError("");
         setImage("");
         setImageKey((key) => key + 1);
         setCustomSlug(false);
         setSlug("");
-      } else if (state.id) setCurrentId(state.id);
+      } else if (state.id) {
+        setCurrentId(state.id);
+        setRevision((old) => state.revision ?? old);
+        if (state.locked !== undefined) setLocked(state.locked);
+        if (state.rate !== undefined) setBaseRate(String(state.rate ?? ""));
+      }
     });
   }, [state]);
   useEffect(() => {
@@ -123,6 +154,8 @@ export default function ProductEditor({
         className="space-y-5"
       >
         <input type="hidden" name="product_id" value={currentId} />
+        <input type="hidden" name="ops_version" value={revision} />
+        <input type="hidden" name="pricing_rate" value={baseRate} />
         <input type="hidden" name="return_to" value={returnTo} />
         <input type="hidden" name="slug" value={effectiveSlug} />
         <input type="hidden" name="auto_slug" value={String(!customSlug)} />
@@ -194,7 +227,10 @@ export default function ProductEditor({
               name="price"
               inputMode="decimal"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                if (currentId) setLocked(true);
+              }}
               required
               className="admin-input"
               placeholder="170,00"
@@ -253,6 +289,113 @@ export default function ProductEditor({
             Horas corridas após a confirmação do pagamento.
           </p>
         </div>
+
+        <details className="rounded-xl border border-white/10 p-4">
+          <summary className="cursor-pointer font-bold">
+            Preço por Robux e estoque
+          </summary>
+          <p className="mt-3 text-xs text-zinc-400">
+            A cotação acompanha a tabela do bot, incluindo os itens abaixo de
+            1K. Reajustes por categoria ficam em Produtos → Preços por Robux.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="admin-label">
+              Quantidade de Robux (opcional)
+              <input
+                name="robux_quantity"
+                type="number"
+                min="1"
+                max="1000000"
+                className="admin-input mt-2"
+                value={robux}
+                onChange={(e) => setRobux(e.target.value)}
+              />
+            </label>
+            <label className="admin-label">
+              Cotação de 1K para calcular (R$)
+              <input
+                className="admin-input mt-2"
+                inputMode="decimal"
+                value={calcRate}
+                onChange={(e) => setCalcRate(e.target.value)}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            className="admin-small-button mt-3"
+            onClick={() => {
+              const rate = readRobuxRate(calcRate);
+              try {
+                if (!rate) throw new Error("Confira a cotação.");
+                const amount = robuxPrice(Number(robux), rate);
+                if (
+                  price &&
+                  !confirm("Substituir o preço pelo valor calculado?")
+                )
+                  return;
+                setPrice(amount.toFixed(2).replace(".", ","));
+                setBaseRate(String(rate));
+                if (currentId) setLocked(true);
+                setDirty(true);
+                setCalcError("");
+              } catch (e) {
+                setCalcError(
+                  e instanceof Error ? e.message : "Confira os valores.",
+                );
+              }
+            }}
+          >
+            Usar preço calculado
+          </button>
+          {calcError && (
+            <p role="alert" className="admin-error mt-3">
+              {calcError}
+            </p>
+          )}
+          <input type="hidden" name="pricing_locked" value={String(locked)} />
+          <label className="mt-4 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={locked}
+              onChange={(e) => setLocked(e.target.checked)}
+            />
+            Proteger este produto dos reajustes por categoria
+          </label>
+          <p className="mt-2 text-xs text-zinc-400">
+            Alterar o preço de um produto existente ativa essa proteção. Salve
+            primeiro e, se desejar voltar aos reajustes, desmarque a proteção e
+            salve novamente.
+          </p>
+          <label className="admin-label mt-4 block">
+            Avisar estoque baixo a partir de
+            <input
+              name="low_stock_threshold"
+              type="number"
+              min="0"
+              max="100000"
+              className="admin-input mt-2"
+              value={lowStock}
+              onChange={(e) => setLowStock(e.target.value)}
+            />
+          </label>
+        </details>
+        <label className="admin-label block">
+          Instruções de entrega deste produto
+          <textarea
+            name="delivery_instructions"
+            maxLength={2000}
+            rows={4}
+            className="admin-input mt-2"
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            placeholder="Servidor para entrar, requisitos e como receber o item."
+          />
+          <span className="mt-2 block text-xs font-normal text-zinc-400">
+            Vazio usa as instruções do jogo. A orientação fica registrada nos
+            novos pedidos.
+          </span>
+        </label>
         <div>
           <label htmlFor="editor-description" className="admin-label">
             O que o cliente recebe

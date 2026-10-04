@@ -44,7 +44,7 @@ function productReturnWithSuccess(
 
 export async function createGame(formData: FormData) {
   // Verificar a autorização antes de usar a chave administrativa.
-  await requireAdmin();
+  const actor = await requireAdmin();
 
   const name = formData.get("name");
   const slug = formData.get("slug");
@@ -70,7 +70,7 @@ export async function createGame(formData: FormData) {
     throw new Error("Envie uma imagem válida para o jogo.");
   }
 
-  const supabase = createAdminClient();
+  const supabase = createAdminClient(actor.id);
   const { data: lastGame, error: orderError } = await supabase
     .from("games")
     .select("display_order")
@@ -104,7 +104,7 @@ export async function createGame(formData: FormData) {
 }
 
 export async function createCategory(formData: FormData) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const gameId = String(formData.get("game_id") ?? "").trim();
   const name = String(formData.get("category_name") ?? "").trim();
   const slug = String(formData.get("category_slug") ?? "")
@@ -122,7 +122,7 @@ export async function createCategory(formData: FormData) {
   if (imageUrl.length > 500 || !isAllowedProductImageUrl(imageUrl)) {
     throw new Error("Envie uma imagem válida para a categoria.");
   }
-  const supabase = createAdminClient();
+  const supabase = createAdminClient(actor.id);
   const { data: lastCategory, error: orderError } = await supabase
     .from("categories")
     .select("display_order")
@@ -159,7 +159,8 @@ async function replaceCatalogImage(
   id: string,
   imageUrl: string,
 ) {
-  const supabase = createAdminClient();
+  const actor = await requireAdmin();
+  const supabase = createAdminClient(actor.id);
   const { data: current, error: lookupError } = await supabase
     .from(table)
     .select("id,image_url")
@@ -202,7 +203,7 @@ export async function updateGameImage(formData: FormData) {
 }
 
 export async function updateCategoryImage(formData: FormData) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const categoryId = String(formData.get("category_id") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
 
@@ -211,7 +212,7 @@ export async function updateCategoryImage(formData: FormData) {
     throw new Error("Envie uma imagem válida para a categoria.");
   }
 
-  const supabase = createAdminClient();
+  const supabase = createAdminClient(actor.id);
   const { data: category } = await supabase
     .from("categories")
     .select("game_id")
@@ -239,7 +240,7 @@ export async function updateProductQuick(input: {
   isActive: boolean;
   price?: string | number;
 }) {
-  await requireAdmin();
+  const actor = await requireAdmin();
 
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -256,7 +257,7 @@ export async function updateProductQuick(input: {
 
   const price = input.price === undefined ? undefined : parsePrice(input.price);
   if (price === null) return { error: "Informe um preço válido." };
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const { data: updated, error } = await admin
     .from("products")
     .update({
@@ -282,7 +283,7 @@ export async function updateProductQuick(input: {
 }
 
 export async function saveProductOrder(productIds: string[]) {
-  await requireAdmin();
+  const actor = await requireAdmin();
 
   if (!Array.isArray(productIds) || productIds.length > 1000) {
     return { error: "Ordem de produtos inválida." };
@@ -301,7 +302,7 @@ export async function saveProductOrder(productIds: string[]) {
     };
   }
 
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const { error } = await admin.rpc("set_product_display_order", {
     product_ids: ids,
   });
@@ -322,7 +323,7 @@ export async function saveProductOrder(productIds: string[]) {
 }
 
 export async function saveGameOrder(gameIds: string[]) {
-  await requireAdmin();
+  const actor = await requireAdmin();
 
   if (!Array.isArray(gameIds) || gameIds.length > 500) {
     return { error: "Ordem de jogos inválida." };
@@ -339,7 +340,7 @@ export async function saveGameOrder(gameIds: string[]) {
     return { error: "A lista de jogos contém itens inválidos ou repetidos." };
   }
 
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const { error } = await admin.rpc("set_game_display_order", {
     game_ids: ids,
   });
@@ -363,7 +364,7 @@ export async function saveGameOrder(gameIds: string[]) {
 }
 
 export async function saveCategoryOrder(gameId: string, categoryIds: string[]) {
-  await requireAdmin();
+  const actor = await requireAdmin();
 
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -381,7 +382,7 @@ export async function saveCategoryOrder(gameId: string, categoryIds: string[]) {
     return { error: "Ordem de categorias inválida." };
   }
 
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const { error } = await admin.rpc("set_category_display_order", {
     target_game_id: cleanGameId,
     category_ids: ids,
@@ -413,7 +414,7 @@ export async function saveCategoryOrder(gameId: string, categoryIds: string[]) {
 }
 
 export async function deleteProduct(formData: FormData) {
-  await requireAdmin();
+  const actor = await requireAdmin();
 
   const productId = String(formData.get("product_id") ?? "").trim();
 
@@ -425,7 +426,7 @@ export async function deleteProduct(formData: FormData) {
     throw new Error("Identificador do produto inválido.");
   }
 
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
 
   const { data: product, error: productError } = await admin
     .from("products")
@@ -489,12 +490,17 @@ export async function deleteProduct(formData: FormData) {
 
 // Edição e exclusão segura do catálogo: evita cascatas que apagariam produtos.
 export async function updateGameDetails(formData: FormData) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const id = String(formData.get("game_id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "")
     .trim()
     .toLowerCase();
+  const instructions = String(
+    formData.get("delivery_instructions") ?? "",
+  ).trim();
+  if (instructions.length > 2000)
+    throw new Error("As instruções podem ter até 2000 caracteres.");
   const deliveryHours = readDeliveryHours(formData.get("delivery_hours"));
   if (deliveryHours === "invalid")
     throw new Error("Informe um prazo de 1 a 720 horas, ou deixe vazio.");
@@ -510,7 +516,7 @@ export async function updateGameDetails(formData: FormData) {
     slug.length > 100
   )
     throw new Error("Dados do jogo inválidos.");
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const { data: before } = await admin
     .from("games")
     .select("slug")
@@ -519,7 +525,13 @@ export async function updateGameDetails(formData: FormData) {
   if (!before) throw new Error("Jogo não encontrado.");
   const { error } = await admin
     .from("games")
-    .update({ name, slug, is_active: isActive, delivery_hours: deliveryHours })
+    .update({
+      name,
+      slug,
+      is_active: isActive,
+      delivery_hours: deliveryHours,
+      delivery_instructions: instructions,
+    })
     .eq("id", id);
   if (error)
     throw new Error(
@@ -536,7 +548,7 @@ export async function updateGameDetails(formData: FormData) {
 }
 
 export async function updateCategoryDetails(formData: FormData) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const id = String(formData.get("category_id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "")
@@ -550,7 +562,7 @@ export async function updateCategoryDetails(formData: FormData) {
     slug.length > 100
   )
     throw new Error("Dados da categoria inválidos.");
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const descriptionTemplate = String(
     formData.get("description_template") ?? "",
   ).trim();
@@ -573,10 +585,10 @@ export async function updateCategoryDetails(formData: FormData) {
 }
 
 export async function deleteEmptyGame(formData: FormData) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const id = String(formData.get("game_id") ?? "");
   if (!UUID_PATTERN.test(id)) throw new Error("Jogo inválido.");
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const { count, error: checkError } = await admin
     .from("categories")
     .select("id", { head: true, count: "exact" })
@@ -603,10 +615,10 @@ export async function deleteEmptyGame(formData: FormData) {
 }
 
 export async function deleteEmptyCategory(formData: FormData) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const id = String(formData.get("category_id") ?? "");
   if (!UUID_PATTERN.test(id)) throw new Error("Categoria inválida.");
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const { count, error: checkError } = await admin
     .from("products")
     .select("id", { head: true, count: "exact" })
@@ -636,12 +648,15 @@ export type ProductEditorState = {
   error: string | null;
   success: string | null;
   id?: string;
+  revision?: number;
+  locked?: boolean;
+  rate?: number | null;
 };
 export async function saveProduct(
   _previous: ProductEditorState,
   form: FormData,
 ): Promise<ProductEditorState> {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const parsed = readProductForm(form);
   if (parsed.error) return { error: parsed.error, success: null };
   const values = parsed.values!;
@@ -653,7 +668,7 @@ export async function saveProduct(
   const id = String(form.get("product_id") ?? "");
   if (id && !UUID_PATTERN.test(id))
     return { error: "Produto inválido.", success: null };
-  const admin = createAdminClient();
+  const admin = createAdminClient(actor.id);
   const { data: category, error: categoryError } = await admin
     .from("categories")
     .select("id,slug")
@@ -675,22 +690,39 @@ export async function saveProduct(
       return { error: "Produto não encontrado.", success: null };
     old = data;
   }
+  const expectedRevision = Number(form.get("ops_version"));
+  if (
+    id &&
+    (!form.has("ops_version") ||
+      !Number.isSafeInteger(expectedRevision) ||
+      expectedRevision < 0)
+  )
+    return { error: "Reabra o produto antes de salvar.", success: null };
+  let savedRevision = 0,
+    savedLocked = values.pricing_locked,
+    savedRate = values.pricing_rate;
   let savedId = id;
   if (id) {
     const { data, error } = await admin
       .from("products")
       .update(values)
       .eq("id", id)
-      .select("id")
+      .eq("ops_version", expectedRevision)
+      .select("id,ops_version,pricing_locked,pricing_rate")
       .maybeSingle();
     if (error || !data)
       return {
         error:
           error?.code === "23505"
             ? "Este identificador já está em uso por outro produto. Escolha um identificador único."
-            : "Não foi possível atualizar o produto.",
+            : !data && !error
+              ? "O produto mudou desde que você abriu. Atualize a página antes de salvar."
+              : "Não foi possível atualizar o produto.",
         success: null,
       };
+    savedRevision = data.ops_version;
+    savedLocked = data.pricing_locked;
+    savedRate = data.pricing_rate;
   } else {
     const { data: last, error: positionError } = await admin
       .from("products")
@@ -756,6 +788,9 @@ export async function saveProduct(
     error: null,
     success: id ? "Produto atualizado." : "Produto cadastrado.",
     id: savedId,
+    revision: savedRevision,
+    locked: savedLocked,
+    rate: savedRate,
   };
 }
 export async function createProduct(form: FormData) {
@@ -774,7 +809,7 @@ export async function bulkUpdateProducts(
   action: string,
   value?: string,
 ) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   if (!Array.isArray(ids) || ids.some((id) => !UUID_PATTERN.test(id)))
     return { error: "Selecione produtos válidos." };
   const number =
@@ -783,7 +818,7 @@ export async function bulkUpdateProducts(
       : action === "price_percent"
         ? Number(String(value).replace(",", "."))
         : null;
-  const { error } = await createAdminClient().rpc(
+  const { error } = await createAdminClient(actor.id).rpc(
     "bulk_update_store_products",
     { p_ids: ids, p_action: action, p_value: number },
   );
@@ -798,9 +833,9 @@ export async function bulkUpdateProducts(
   return { error: null };
 }
 export async function setFeaturedProduct(id: string | null) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   if (id && !UUID_PATTERN.test(id)) return { error: "Produto inválido." };
-  const { error } = await createAdminClient()
+  const { error } = await createAdminClient(actor.id)
     .from("store_settings")
     .upsert({ id: true, featured_product_id: id });
   if (error)

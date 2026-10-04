@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "node --import tsx --test --test-concurrency=1 tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm test"
+    "check": "npm run lint && npm run typecheck && npm test",
+    "backup": "node --import tsx scripts/backup.ts",
+    "backup:verify": "node --import tsx scripts/backup-verify.ts",
+    "backup:restore-storage": "node --import tsx scripts/restore-storage.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

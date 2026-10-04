@@ -1,3 +1,4 @@
+import { recordStoreIssue, cleanIssueMessage } from "./store-issues";
 import "server-only";
 
 import { CHAT_ATTACHMENT_BUCKET } from "@/lib/chat-attachments";
@@ -325,7 +326,8 @@ export async function sendOrderStatusEmail(
     await recordEmailDelivery({ order, title: subject, status: "sent" });
     return { sent: true, alreadySent: false as const };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = cleanIssueMessage(error);
+    await recordStoreIssue("email", error, "/admin/pedidos/[id]");
     await recordEmailDelivery({
       order,
       title: subject,

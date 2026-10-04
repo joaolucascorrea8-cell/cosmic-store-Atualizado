@@ -1,3 +1,4 @@
+import DeliveryInstructions from "@/app/components/DeliveryInstructions";
 import ProductPreferenceButton from "@/app/components/ProductPreferenceButton";
 import ShareProduct from "@/app/components/ShareProduct";
 import ServiceHours from "@/app/components/ServiceHours";
@@ -21,7 +22,7 @@ const getProduct = cache(async (slug: string) => {
   const { data: product, error } = await client
     .from("products")
     .select(
-      "id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,category_id,delivery_hours",
+      "id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,category_id,delivery_hours,delivery_instructions",
     )
     .eq("slug", slug)
     .eq("is_active", true)
@@ -36,7 +37,7 @@ const getProduct = cache(async (slug: string) => {
   if (!category) return null;
   const { data: game } = await client
     .from("games")
-    .select("name,slug,delivery_hours")
+    .select("name,slug,delivery_hours,delivery_instructions")
     .eq("id", category.game_id)
     .eq("is_active", true)
     .maybeSingle();
@@ -177,6 +178,21 @@ export default async function ProductDetail({
               {product.description ||
                 "Item digital para o seu jogo. Consulte a equipe se tiver dúvidas antes de comprar."}
             </p>
+            <DeliveryInstructions
+              items={[
+                {
+                  delivery_instructions: [
+                    {
+                      name: product.name,
+                      text:
+                        product.delivery_instructions ||
+                        product.game.delivery_instructions ||
+                        "",
+                    },
+                  ],
+                },
+              ]}
+            />
             <div className="mt-8 rounded-xl border border-white/10 bg-[#17121f] p-5 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Valor do item

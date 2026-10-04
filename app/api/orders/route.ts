@@ -1,3 +1,4 @@
+import {recordStoreIssue} from "@/lib/store-issues";
 import { couponCode } from "@/lib/coupons";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
@@ -406,6 +407,7 @@ export async function POST(request: Request) {
     ]);
     return orderResponse(order);
   } catch (error) {
+    await recordStoreIssue("checkout",error,"/api/orders");
     console.error(
       "Falha no checkout:",
       error instanceof Error ? error.message : "Erro desconhecido",

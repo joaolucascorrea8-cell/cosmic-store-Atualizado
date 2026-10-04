@@ -28,6 +28,7 @@ type Game = {
   image_url: string | null;
   is_active: boolean;
   delivery_hours: number | null;
+  delivery_instructions: string;
   display_order: number;
 };
 type Category = {
@@ -56,7 +57,9 @@ export default async function CatalogAdmin({
   const [gameResult, categoryResult, productResult] = await Promise.all([
     client
       .from("games")
-      .select("id,name,slug,image_url,is_active,delivery_hours,display_order")
+      .select(
+        "id,name,slug,image_url,is_active,delivery_hours,delivery_instructions,display_order",
+      )
       .order("display_order", { ascending: true })
       .order("name"),
     client
@@ -325,6 +328,17 @@ export default async function CatalogAdmin({
                                 className="admin-input"
                               />
                             </div>
+                            <label className="admin-label block">
+                              Instruções de entrega do jogo
+                              <textarea
+                                className="admin-input mt-2"
+                                rows={3}
+                                name="delivery_instructions"
+                                maxLength={2000}
+                                defaultValue={game.delivery_instructions}
+                                placeholder="Usadas quando o produto não tiver instruções próprias."
+                              />
+                            </label>
                             <PendingButton className="admin-small-button w-full">
                               Salvar dados
                             </PendingButton>
@@ -522,6 +536,7 @@ export default async function CatalogAdmin({
                               id={category.id}
                               initial={category.description_template}
                             />
+
                             <PendingButton className="admin-small-button w-full">
                               Salvar dados
                             </PendingButton>

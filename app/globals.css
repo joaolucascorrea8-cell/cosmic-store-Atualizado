@@ -1492,3 +1492,15 @@ body {
   font-size: clamp(1.05rem, 2vw, 1.7rem);
   white-space: nowrap;
 }
+
+/* Retorno das operações administrativas. */
+.admin-success {
+  border: 1px solid rgb(52 211 153 / .2);
+  border-radius: 12px;
+  background: rgb(16 185 129 / .07);
+  padding: 14px 16px;
+  color: #a7f3d0;
+  font-size: .875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}

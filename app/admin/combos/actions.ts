@@ -90,7 +90,7 @@ export async function saveCombo(
     };
   if ((sendEmail || sendDiscord) && !isActive)
     return { error: "Publique o combo antes de divulgá-lo." };
-  const admin = createAdminClient();
+  const admin = createAdminClient(user.id);
   const { data: previous } = id
     ? await admin.from("combos").select("image_url").eq("id", id).maybeSingle()
     : { data: null };
@@ -179,7 +179,7 @@ export async function promoteCombo(formData: FormData) {
       "O texto da divulgação deve ter entre 2 e 3000 caracteres.",
     );
 
-  const admin = createAdminClient();
+  const admin = createAdminClient(user.id);
   const { data, error } = await admin
     .from("combos")
     .select(
@@ -242,14 +242,14 @@ export async function promoteCombo(formData: FormData) {
 }
 
 export async function toggleCombo(formData: FormData) {
-  await requireAdmin();
+  const user = await requireAdmin();
   const id = String(formData.get("combo_id") ?? "");
   const activeText = String(formData.get("active") ?? "");
   if (!["true", "false"].includes(activeText))
     throw new Error("Visibilidade inválida.");
   const active = activeText === "true";
   if (!uuidRegex.test(id)) throw new Error("Combo inválido.");
-  const admin = createAdminClient();
+  const admin = createAdminClient(user.id);
   const { data: combo } = await admin
     .from("combos")
     .select(
@@ -258,7 +258,6 @@ export async function toggleCombo(formData: FormData) {
     .eq("id", id)
     .maybeSingle();
   if (!combo) throw new Error("Combo não encontrado.");
-  const user = await requireAdmin();
   const { error } = await admin.rpc("save_store_combo", {
     p_admin_id: user.id,
     p_combo_id: id,

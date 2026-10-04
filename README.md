@@ -1,6 +1,16 @@
+# Atualização atual: Robux e operação da loja
+
+Comece por [ATUALIZACAO-OPERACAO-E-ROBUX.md](./ATUALIZACAO-OPERACAO-E-ROBUX.md). Esta entrega acrescenta reajuste por Robux com prévia e reversão, importação CSV, instruções de entrega, notas privadas, responsáveis, respostas rápidas editáveis, relatórios, histórico, diagnóstico e backup local.
+
+**Banco:** a atualização nova é `supabase/migrations/202610040003_store_operations.sql`, após a `202610040002` da versão anterior. Use o verificador de instalação incluído. Categorias começam manuais e o encerramento automático de pedidos vem desligado. Nenhum preço muda ao instalar.
+
+[Testes e limites](./VERIFICACOES-OPERACAO.md) · [Backup e restauração](./BACKUP-E-RESTAURACAO.md)
+
+As seções abaixo documentam as etapas anteriores do projeto.
+
 # Atualização: favoritos, cupons e atendimento
 
-A entrega mais recente acrescenta modelos de descrição por categoria, central de pendências, favoritos/avisos de reposição, relatos e agrupamento de servidores, horários/prazos configuráveis e cupons no checkout. Inclui também compartilhar produto e comprar novamente pelo histórico.
+A entrega anterior acrescentou modelos de descrição por categoria, central de pendências, favoritos/avisos de reposição, relatos e agrupamento de servidores, horários/prazos configuráveis e cupons no checkout. Inclui também compartilhar produto e comprar novamente pelo histórico.
 
 **Instalação:** veja `ATUALIZACAO.md`. Em uma loja já atualizada com servidores, execute somente a nova migração `202610040002_customer_tools.sql` antes do deploy. `VERIFICACOES.md` registra os testes e limites da validação.
 

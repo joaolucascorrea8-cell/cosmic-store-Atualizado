@@ -1,3 +1,4 @@
+import DeliveryInstructions from "@/app/components/DeliveryInstructions";
 import OrderDiscount from "@/app/components/OrderDiscount";
 import RepurchaseButton from "./RepurchaseButton";
 import { deliveryText } from "@/lib/store-service";
@@ -36,7 +37,7 @@ export default async function OrderPage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity)",
+      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity,delivery_instructions)",
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -233,6 +234,7 @@ export default async function OrderPage({
               <ProofReuploadForm orderId={id} />
             </>
           )}
+          <DeliveryInstructions items={order.order_items ?? []} />
           {chatAvailable ? (
             <OrderChat
               orderId={id}
