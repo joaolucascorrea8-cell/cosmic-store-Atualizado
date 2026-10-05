@@ -25,10 +25,18 @@ export async function updateOrderStatus(formData: FormData) {
   const admin = createAdminClient();
   const { data: before, error: lookupError } = await admin
     .from("orders")
-    .select("status")
+    .select("status,order_type,robux_orders(supplier_status)")
     .eq("id", orderId)
     .maybeSingle();
   if (lookupError || !before) throw new Error("Pedido não encontrado.");
+  const robuxRelation = before.robux_orders;
+  const robux = Array.isArray(robuxRelation) ? robuxRelation[0] : robuxRelation;
+  if (before.order_type === "robux") {
+    if (["preparing_delivery", "delivered"].includes(status))
+      throw new Error("A entrega de Robux é controlada pela integração. Use o botão Comprar e entregar.");
+    if (status === "cancelled" && ["PENDING", "COMPLETED"].includes(robux?.supplier_status ?? ""))
+      throw new Error("Não cancele um pedido enquanto a compra do GamePass está em processamento ou já foi concluída.");
+  }
   const rejectionReason = String(formData.get("rejection_reason") ?? "").trim();
   const expected = String(formData.get("expected_status") ?? before.status);
   const { data: result, error } = await admin.rpc("transition_store_order", {

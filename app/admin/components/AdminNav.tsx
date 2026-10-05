@@ -6,6 +6,7 @@ import Icon, { type IconName } from "@/app/components/Icon";
 const items: [string, string, IconName][] = [
   ["/admin", "Visão geral", "layout"],
   ["/admin/pedidos", "Pedidos e Pix", "package"],
+  ["/admin/robux", "Robux", "coins"],
   ["/admin/produtos", "Produtos", "tag"],
   ["/admin/combos", "Combos", "grid"],
   ["/admin/catalogo", "Jogos e categorias", "gamepad"],

@@ -17,7 +17,30 @@ import {
   updateOrderStatus,
 } from "../actions";
 import PendingButton from "../../components/PendingButton";
+import RobuxStatusWatcher from "@/app/pedidos/[id]/RobuxStatusWatcher";
+import { executeRobuxOrder } from "@/app/admin/robux/actions";
+import { getByRobuxBalance, getByRobuxRates } from "@/lib/byrobux";
+import { effectiveMarginPerThousand } from "@/lib/robux-pricing";
+import { getRobuxSettings } from "@/lib/robux-settings";
 
+type RobuxOrderRow = {
+  mode: string;
+  requested_robux: number;
+  gamepass_robux: number;
+  net_robux: number;
+  gamepass_url: string;
+  quoted_supplier_k: number;
+  quoted_cosmic_k: number;
+  quoted_supplier_cost: number;
+  supplier_batch_id: string | null;
+  supplier_order_id: string | null;
+  supplier_status: string;
+  supplier_rate_at_execute: number | null;
+  supplier_cost_at_execute: number | null;
+  supplier_error_message: string | null;
+  executed_at: string | null;
+  completed_at: string | null;
+};
 type AuditEvent = {
   id: string;
   admin_id: string;
@@ -33,6 +56,10 @@ type Delivery = {
   error_message: string | null;
   created_at: string;
 };
+function relation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+}
+
 const actionLabels: Record<string, string> = {
   "status:paid": "Pagamento confirmado",
   "status:preparing_delivery": "Preparação da entrega iniciada",
@@ -56,7 +83,7 @@ export default async function AdminOrderPage({
   const { data: order } = await admin
     .from("orders")
     .select(
-      "*,order_items(product_name,unit_price,quantity,delivery_instructions),profiles(nickname)",
+      "*,order_items(product_name,unit_price,quantity,delivery_instructions),profiles(nickname),robux_orders(*)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -103,6 +130,24 @@ export default async function AdminOrderPage({
       .createSignedUrl(order.proof_path, 600);
     proofUrl = data?.signedUrl ?? null;
   }
+  const robuxOrder = relation(order.robux_orders as RobuxOrderRow | RobuxOrderRow[] | null);
+  const isRobux = order.order_type === "robux" && Boolean(robuxOrder);
+  let supplierOverview: { rate: number; balance: number } | null = null;
+  let minRobuxMargin = 7;
+  if (isRobux) {
+    try {
+      const [rates, balance, robuxSettings] = await Promise.all([
+        getByRobuxRates(),
+        getByRobuxBalance(),
+        getRobuxSettings(),
+      ]);
+      minRobuxMargin = robuxSettings.minMarginPerThousand;
+      supplierOverview = {
+        rate: Number(rates.robuxRateBrlPerThousand),
+        balance: Number(balance.balanceBrl),
+      };
+    } catch {}
+  }
   const status = orderStatus[order.status] ?? {
     label: order.status,
     className: "",
@@ -111,6 +156,7 @@ export default async function AdminOrderPage({
     order.status,
   );
   const canSend = chatAvailable && !order.chat_closed_at;
+  const supplierStatus = isRobux ? String(robuxOrder?.supplier_status ?? "NOT_STARTED") : "";
   const buttons: string[][] =
     order.status === "proof_submitted" || order.status === "under_review"
       ? [
@@ -119,15 +165,21 @@ export default async function AdminOrderPage({
           ["cancelled", "Cancelar pedido"],
         ]
       : order.status === "paid"
-        ? [
-            ["preparing_delivery", "Iniciar preparação"],
-            ["cancelled", "Cancelar pedido"],
-          ]
-        : order.status === "preparing_delivery"
-          ? [
-              ["delivered", "Marcar como entregue"],
+        ? isRobux
+          ? [["cancelled", "Cancelar pedido"]]
+          : [
+              ["preparing_delivery", "Iniciar preparação"],
               ["cancelled", "Cancelar pedido"],
             ]
+        : order.status === "preparing_delivery"
+          ? isRobux
+            ? ["PENDING", "COMPLETED"].includes(supplierStatus)
+              ? []
+              : [["cancelled", "Cancelar pedido"]]
+            : [
+                ["delivered", "Marcar como entregue"],
+                ["cancelled", "Cancelar pedido"],
+              ]
           : order.status === "awaiting_payment" ||
               order.status === "proof_rejected"
             ? [["cancelled", "Cancelar pedido"]]
@@ -228,6 +280,67 @@ export default async function AdminOrderPage({
             </a>
           )}
         </section>
+        {isRobux && robuxOrder && (
+          <section className="mt-6 rounded-2xl border border-violet-500/20 bg-violet-500/[.055] p-4 sm:p-6">
+            {supplierStatus === "PENDING" && (
+              <RobuxStatusWatcher orderId={id} initialSupplierStatus={supplierStatus} />
+            )}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[.16em] text-violet-300">Entrega automática · ByRobux</p>
+                <h2 className="mt-1 text-xl font-black">Pedido de Robux</h2>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-black ${supplierStatus === "COMPLETED" ? "bg-emerald-500/15 text-emerald-300" : supplierStatus === "PENDING" ? "bg-violet-500/15 text-violet-200" : supplierStatus === "CANCELLED" || supplierStatus === "FAILED" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-zinc-300"}`}>
+                {supplierStatus === "NOT_STARTED" ? "Aguardando execução" : supplierStatus === "PENDING" ? "Processando" : supplierStatus === "COMPLETED" ? "GamePass comprado" : supplierStatus === "CANCELLED" ? "Cancelado pelo fornecedor" : "Falha"}
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-zinc-500">Opção</p><strong className="mt-1 block text-sm">{robuxOrder.mode === "tax_paid" ? "Taxa paga" : "Sem taxa paga"}</strong></div>
+              <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-zinc-500">GamePass</p><strong className="mt-1 block text-sm">{Number(robuxOrder.gamepass_robux).toLocaleString("pt-BR")} Robux</strong></div>
+              <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-zinc-500">Cliente recebe</p><strong className="mt-1 block text-sm">≈ {Number(robuxOrder.net_robux).toLocaleString("pt-BR")} Robux</strong></div>
+              <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-zinc-500">K vendido</p><strong className="mt-1 block text-sm">R$ {Number(robuxOrder.quoted_cosmic_k).toFixed(2).replace(".", ",")}</strong></div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a href={String(robuxOrder.gamepass_url)} target="_blank" rel="noreferrer" className="btn-secondary">Abrir GamePass ↗</a>
+              <CopyButton value={String(robuxOrder.gamepass_url)} label="Copiar link" />
+            </div>
+
+            {supplierOverview && (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-zinc-500">K atual fornecedor</p><strong className="mt-1 block">R$ {supplierOverview.rate.toFixed(2).replace(".", ",")}</strong></div>
+                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-zinc-500">Saldo ByRobux</p><strong className="mt-1 block">{supplierOverview.balance.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></div>
+                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-zinc-500">Custo atual estimado</p><strong className="mt-1 block">{((Number(robuxOrder.gamepass_robux) / 1000) * supplierOverview.rate).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></div>
+                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-zinc-500">Margem atual / 1K</p><strong className={`mt-1 block ${effectiveMarginPerThousand(Number(order.total), Number(robuxOrder.gamepass_robux), supplierOverview.rate) >= minRobuxMargin ? "text-emerald-300" : "text-amber-300"}`}>R$ {effectiveMarginPerThousand(Number(order.total), Number(robuxOrder.gamepass_robux), supplierOverview.rate).toFixed(2).replace(".", ",")}</strong></div>
+              </div>
+            )}
+
+            {robuxOrder.supplier_error_message && (
+              <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">{String(robuxOrder.supplier_error_message)}</p>
+            )}
+
+            {["paid", "preparing_delivery"].includes(order.status) && !["PENDING", "COMPLETED"].includes(supplierStatus) && (
+              <form action={executeRobuxOrder} className="mt-5">
+                <input type="hidden" name="order_id" value={id} />
+                <PendingButton
+                  confirm={supplierStatus === "CANCELLED" ? "Tentar a compra novamente na ByRobux?" : "Comprar este GamePass usando seu saldo da ByRobux?"}
+                  className="min-h-11 rounded-xl bg-violet-600 px-5 py-3 text-sm font-black hover:bg-violet-500"
+                >
+                  {supplierStatus === "CANCELLED" || supplierStatus === "FAILED" ? "Tentar novamente" : "Comprar e entregar"}
+                </PendingButton>
+                <p className="mt-2 text-xs leading-5 text-zinc-500">Antes de executar, a Cosmic confere novamente K, margem, GamePass e saldo. Se algo estiver fora dos limites, a compra é bloqueada.</p>
+              </form>
+            )}
+            {supplierStatus === "PENDING" && (
+              <p className="mt-5 rounded-xl border border-violet-400/20 bg-violet-500/10 p-4 text-sm text-violet-100">Compra enviada. O status é consultado automaticamente enquanto esta página ou a página do cliente estiver aberta.</p>
+            )}
+            {supplierStatus === "COMPLETED" && (
+              <p className="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">GamePass comprado com sucesso. Os Robux agora ficam sujeitos ao período de pendência do Roblox.</p>
+            )}
+          </section>
+        )}
+
         {buttons.length > 0 && (
           <section className="mt-6 rounded-2xl border border-white/10 bg-[#111122] p-4 sm:p-6">
             <h2 className="font-black">Atualizar pedido</h2>

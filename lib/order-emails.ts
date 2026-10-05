@@ -18,6 +18,7 @@ type OrderEmailRow = {
   user_id: string;
   order_code: string;
   status: string;
+  order_type: string;
   game_nickname: string;
   total: number | string;
   subtotal: number | string | null;
@@ -130,7 +131,7 @@ async function getOrder(orderId: string) {
   const { data, error } = await admin
     .from("orders")
     .select(
-      "id,user_id,order_code,status,game_nickname,total,subtotal,discount_total,coupon_code,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity),profiles(nickname)",
+      "id,user_id,order_code,status,order_type,game_nickname,total,subtotal,discount_total,coupon_code,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity),profiles(nickname)",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -255,7 +256,9 @@ export async function sendOrderStatusEmail(
   const subject =
     kind === "payment"
       ? `✅ Pagamento confirmado — ${order.order_code}`
-      : `🎉 Pedido entregue — ${order.order_code}`;
+      : order.order_type === "robux"
+        ? `🎮 GamePass comprado — ${order.order_code}`
+        : `🎉 Pedido entregue — ${order.order_code}`;
 
   // Usa também o histórico como segunda trava contra duplicidade caso o e-mail
   // tenha sido aceito e o timestamp do pedido não tenha sido salvo por algum erro raro.
@@ -291,6 +294,17 @@ export async function sendOrderStatusEmail(
       extra:
         '<p style="margin:0;color:#d4d4d8;font-size:15px;line-height:1.65;">Agora é só acompanhar o pedido pela loja. Quando houver uma atualização importante, ela também aparecerá na sua conta.</p>',
       buttonLabel: "Acompanhar meu pedido",
+    });
+  } else if (order.order_type === "robux") {
+    html = baseTemplate({
+      eyebrow: "GamePass comprado",
+      title: "A compra do seu GamePass foi concluída! 🎮",
+      intro:
+        "A Cosmic concluiu a compra do GamePass. Agora a liberação dos Robux depende do período de pendência do Roblox.",
+      order,
+      extra:
+        '<div style="margin:0;padding:16px;border-radius:14px;background:#123024;border:1px solid #166534;color:#dcfce7;font-size:15px;line-height:1.65;">⏳ <strong>Robux pendentes:</strong> após a compra do GamePass, o Roblox pode manter os Robux pendentes por alguns dias. Normalmente informamos uma estimativa de 3 a 7 dias, mas o prazo final é controlado pelo Roblox.</div>',
+      buttonLabel: "Acompanhar meus Robux",
     });
   } else {
     attachment = (await getLatestAdminDeliveryAttachment(orderId)) ?? undefined;

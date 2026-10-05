@@ -30,7 +30,7 @@ export default async function OrdersPage({
     let request = supabase
       .from("orders")
       .select(
-        "id,order_code,status,total,game_nickname,created_at,updated_at",
+        "id,order_code,status,total,game_nickname,created_at,updated_at,order_type,robux_orders(supplier_status)",
         { count: "exact" },
       )
       .eq("user_id", user.id);
@@ -132,10 +132,21 @@ export default async function OrdersPage({
         <div className="mt-6 space-y-3">
           {orders?.length ? (
             orders.map((order) => {
-              const status = orderStatus[order.status] ?? {
-                label: order.status,
-                className: "text-zinc-300 bg-white/5",
-              };
+              const robuxRelation = order.robux_orders;
+              const robux = Array.isArray(robuxRelation) ? robuxRelation[0] : robuxRelation;
+              const supplierStatus = robux?.supplier_status ?? "";
+              const status = order.order_type === "robux"
+                ? supplierStatus === "COMPLETED" || order.status === "delivered"
+                  ? { label: "GamePass comprado", className: "text-emerald-300 bg-emerald-500/10" }
+                  : supplierStatus === "PENDING"
+                    ? { label: "Comprando GamePass", className: "text-violet-200 bg-violet-500/10" }
+                    : supplierStatus === "CANCELLED" || supplierStatus === "FAILED"
+                      ? { label: "Entrega em revisão", className: "text-amber-200 bg-amber-500/10" }
+                      : orderStatus[order.status] ?? { label: order.status, className: "text-zinc-300 bg-white/5" }
+                : orderStatus[order.status] ?? {
+                    label: order.status,
+                    className: "text-zinc-300 bg-white/5",
+                  };
               const unreadCount =
                 unreadByOrder.get(`/pedidos/${order.id}`) ?? 0;
               return (

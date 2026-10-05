@@ -72,6 +72,9 @@ export default function HeaderMobileMenu({
         <Link href="/jogos" onClick={closeMenu} className={linkClass}>
           Jogos
         </Link>
+        <Link href="/robux" onClick={closeMenu} className={linkClass}>
+          Robux
+        </Link>
         <Link href="/combos" onClick={closeMenu} className={linkClass}>
           Combos
         </Link>

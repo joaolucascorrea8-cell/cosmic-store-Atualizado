@@ -18,6 +18,26 @@ import FeedbackForm from "./FeedbackForm";
 import ProofReuploadForm from "./ProofReuploadForm";
 import OrderStatusWatcher from "./OrderStatusWatcher";
 import OrderProgress from "./OrderProgress";
+import RobuxStatusWatcher from "./RobuxStatusWatcher";
+
+type RobuxOrderRow = {
+  mode: string;
+  requested_robux: number;
+  gamepass_robux: number;
+  net_robux: number;
+  fee_robux?: number;
+  gamepass_url: string;
+  gamepass_id: string;
+  roblox_username: string;
+  quoted_cosmic_k: number;
+  supplier_status: string;
+  supplier_error_message: string | null;
+  executed_at: string | null;
+  completed_at: string | null;
+};
+function relation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -37,17 +57,28 @@ export default async function OrderPage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_items(product_name,unit_price,quantity,delivery_instructions)",
+      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_type,order_items(product_name,unit_price,quantity,delivery_instructions),robux_orders(mode,requested_robux,gamepass_robux,net_robux,gamepass_url,gamepass_id,roblox_username,quoted_cosmic_k,supplier_status,supplier_error_message,executed_at,completed_at)",
     )
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
   if (!order) notFound();
 
-  const status = orderStatus[order.status] ?? {
-    label: order.status,
-    className: "bg-white/5 text-zinc-300",
-  };
+  const robuxOrder = relation(order.robux_orders as RobuxOrderRow | RobuxOrderRow[] | null);
+  const isRobux = order.order_type === "robux" && Boolean(robuxOrder);
+  const supplierStatus = robuxOrder?.supplier_status ?? "";
+  const status = isRobux
+    ? supplierStatus === "COMPLETED" || order.status === "delivered"
+      ? { label: "GamePass comprado", className: "text-emerald-300 bg-emerald-500/10" }
+      : supplierStatus === "PENDING"
+        ? { label: "Comprando GamePass", className: "text-violet-200 bg-violet-500/10" }
+        : supplierStatus === "CANCELLED" || supplierStatus === "FAILED"
+          ? { label: "Entrega em revisão", className: "text-amber-200 bg-amber-500/10" }
+          : orderStatus[order.status] ?? { label: order.status, className: "bg-white/5 text-zinc-300" }
+    : orderStatus[order.status] ?? {
+        label: order.status,
+        className: "bg-white/5 text-zinc-300",
+      };
   const maskEmail = (email?: string | null) => {
     if (!email) return "seu e-mail";
     const [local, domain] = email.split("@");
@@ -96,6 +127,9 @@ export default async function OrderPage({
         initialStatus={order.status}
         initialChatClosedAt={order.chat_closed_at}
       />
+      {isRobux && supplierStatus === "PENDING" && (
+        <RobuxStatusWatcher orderId={id} initialSupplierStatus={supplierStatus} />
+      )}
       <main
         id="conteudo-principal"
         tabIndex={-1}
@@ -131,8 +165,16 @@ export default async function OrderPage({
             </span>
           </div>
 
-          <OrderProgress status={order.status} />
-          {order.delivery_hours && (
+          {isRobux && robuxOrder ? (
+            <div className="mt-7 grid grid-cols-3 gap-2 text-center text-[11px] font-bold sm:text-xs">
+              <div className={`rounded-xl border p-3 ${["paid", "preparing_delivery", "delivered"].includes(order.status) ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-white/[.02] text-zinc-500"}`}>Pagamento</div>
+              <div className={`rounded-xl border p-3 ${["PENDING", "COMPLETED"].includes(supplierStatus) ? "border-violet-500/30 bg-violet-500/10 text-violet-200" : "border-white/10 bg-white/[.02] text-zinc-500"}`}>GamePass</div>
+              <div className={`rounded-xl border p-3 ${supplierStatus === "COMPLETED" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-white/[.02] text-zinc-500"}`}>Robux pendentes</div>
+            </div>
+          ) : (
+            <OrderProgress status={order.status} />
+          )}
+          {order.delivery_hours && !isRobux && (
             <p className="mt-3 text-xs text-zinc-400">
               {deliveryText(order.delivery_hours)}
             </p>
@@ -179,7 +221,38 @@ export default async function OrderPage({
             </div>
           </section>
 
-          {["delivered", "cancelled"].includes(order.status) && (
+          {isRobux && robuxOrder && (
+            <section className="mt-5 rounded-2xl border border-violet-500/20 bg-violet-500/[.055] p-5 sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[.16em] text-violet-300">Entrega via GamePass</p>
+                  <h2 className="mt-1 text-xl font-black">Detalhes dos seus Robux</h2>
+                </div>
+                <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-zinc-300">{robuxOrder.mode === "tax_paid" ? "Taxa paga" : "Sem taxa paga"}</span>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-zinc-500">GamePass</p><strong className="mt-1 block">{Number(robuxOrder.gamepass_robux).toLocaleString("pt-BR")} Robux</strong></div>
+                <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-zinc-500">Você recebe</p><strong className="mt-1 block">≈ {Number(robuxOrder.net_robux).toLocaleString("pt-BR")} Robux</strong></div>
+                <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-zinc-500">Conta Roblox</p><strong className="mt-1 block break-all">{robuxOrder.roblox_username}</strong></div>
+              </div>
+              <a href={robuxOrder.gamepass_url} target="_blank" rel="noreferrer" className="btn-secondary mt-4">Abrir meu GamePass ↗</a>
+
+              {supplierStatus === "PENDING" && (
+                <p className="mt-5 rounded-xl border border-violet-400/20 bg-violet-500/10 p-4 text-sm leading-6 text-violet-100">Seu pagamento foi confirmado e a compra do GamePass está sendo processada. Esta página atualiza o status automaticamente.</p>
+              )}
+              {(supplierStatus === "CANCELLED" || supplierStatus === "FAILED") && (
+                <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">A compra automática precisa de uma nova tentativa. Seu pagamento continua confirmado e a equipe da Cosmic foi avisada.</p>
+              )}
+              {(supplierStatus === "COMPLETED" || order.status === "delivered") && (
+                <div className="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm leading-6 text-emerald-100">
+                  <strong className="block">✓ GamePass comprado com sucesso</strong>
+                  <span className="mt-1 block">Agora o Roblox processa a liberação. Os Robux podem aparecer como <strong>pendentes</strong> e normalmente levam cerca de 3 a 7 dias para ficar disponíveis. Esse prazo é controlado pelo Roblox.</span>
+                </div>
+              )}
+            </section>
+          )}
+
+          {!isRobux && ["delivered", "cancelled"].includes(order.status) && (
             <RepurchaseButton orderId={id} />
           )}
           {order.status === "awaiting_payment" && (
@@ -205,9 +278,9 @@ export default async function OrderPage({
           )}
           {order.delivery_email_sent_at ? (
             <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-              <strong>🎉 Confirmação de entrega enviada.</strong>
+              <strong>{isRobux ? "🎮 Confirmação da compra do GamePass enviada." : "🎉 Confirmação de entrega enviada."}</strong>
               <span className="mt-1 block">
-                Enviamos o e-mail e a imagem da entrega para{" "}
+                {isRobux ? "Enviamos a confirmação para " : "Enviamos o e-mail e a imagem da entrega para "}
                 <strong>{maskedEmail}</strong>. Se não aparecer na caixa de
                 entrada, confira também Spam e Promoções.
               </span>
@@ -234,7 +307,7 @@ export default async function OrderPage({
               <ProofReuploadForm orderId={id} />
             </>
           )}
-          <DeliveryInstructions items={order.order_items ?? []} />
+          {!isRobux && <DeliveryInstructions items={order.order_items ?? []} />}
           {chatAvailable ? (
             <OrderChat
               orderId={id}
