@@ -361,7 +361,7 @@ export default function LoginPage() {
       </div>
 
       <div className="relative mx-auto grid w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/10 bg-[#0f0d18]/95 shadow-[0_30px_90px_rgba(0,0,0,.48)] lg:grid-cols-[.92fr_1.08fr]">
-        <aside className="relative hidden min-h-[650px] overflow-hidden border-r border-white/10 bg-[radial-gradient(circle_at_25%_20%,rgba(139,92,246,.25),transparent_34%),linear-gradient(145deg,#151020,#0b0910)] p-10 lg:flex lg:flex-col lg:justify-between">
+        <aside className="relative hidden min-h-[620px] overflow-hidden border-r border-white/10 bg-[radial-gradient(circle_at_25%_20%,rgba(139,92,246,.25),transparent_34%),linear-gradient(145deg,#151020,#0b0910)] p-9 lg:flex lg:flex-col">
           <div>
             <Link
               href="/"
@@ -372,16 +372,16 @@ export default function LoginPage() {
               </span>
               Cosmic Store
             </Link>
-            <h2 className="mt-20 max-w-sm text-4xl font-black leading-[1.08] tracking-[-.045em]">
+            <h2 className="mt-14 max-w-sm text-4xl font-black leading-[1.08] tracking-[-.045em]">
               Entre, acompanhe seu pedido e receba tudo em um só lugar.
             </h2>
-            <p className="mt-5 max-w-md text-sm leading-6 text-zinc-400">
+            <p className="mt-4 max-w-md text-sm leading-6 text-zinc-300/80">
               Acesso rápido para suas compras, comprovantes, suporte e entregas
               dentro do jogo.
             </p>
           </div>
 
-          <div className="grid gap-3">
+          <div className="mt-auto grid gap-2.5 pt-10">
             {[
               [
                 "01",
@@ -401,14 +401,14 @@ export default function LoginPage() {
             ].map(([number, title, description]) => (
               <div
                 key={number}
-                className="flex gap-4 rounded-2xl border border-white/[.07] bg-white/[.035] p-4 backdrop-blur-sm"
+                className="flex gap-3.5 rounded-2xl border border-white/[.08] bg-white/[.04] px-4 py-3.5 backdrop-blur-sm"
               >
                 <span className="text-xs font-black text-violet-300">
                   {number}
                 </span>
                 <div>
                   <strong className="text-sm">{title}</strong>
-                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  <p className="mt-1 text-xs leading-5 text-zinc-400">
                     {description}
                   </p>
                 </div>
@@ -417,7 +417,7 @@ export default function LoginPage() {
           </div>
         </aside>
 
-        <section className="flex min-h-[620px] items-center p-5 sm:p-8 lg:p-12">
+        <section className="flex min-h-[600px] items-center p-5 sm:p-8 lg:p-11">
           <div className="mx-auto w-full max-w-md">
             <div className="text-center lg:text-left">
               <Link
@@ -432,7 +432,7 @@ export default function LoginPage() {
               <h1 className="mt-2 text-3xl font-black tracking-[-.04em]">
                 {mode === "login" ? "Bem-vindo de volta" : "Crie sua conta"}
               </h1>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
+              <p className="mt-2 text-sm leading-6 text-zinc-300/80">
                 {mode === "login"
                   ? "Entre para continuar suas compras e acompanhar pedidos."
                   : "Use Discord ou crie sua conta por e-mail em poucos segundos."}
@@ -536,7 +536,7 @@ export default function LoginPage() {
                   required
                   autoComplete="email"
                   disabled={busy}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-[#080812] px-4 py-3 outline-none transition placeholder:text-zinc-700 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-[#080812] px-4 py-3 outline-none transition placeholder:text-zinc-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                 />
               </label>
 
@@ -565,17 +565,27 @@ export default function LoginPage() {
                     required
                     autoComplete="off"
                     disabled={busy}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-[#080812] px-4 py-3 outline-none transition placeholder:text-zinc-700 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-[#080812] px-4 py-3 outline-none transition placeholder:text-zinc-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                   />
                 </label>
               )}
 
               <label className="mb-4 block text-sm font-bold text-zinc-300">
-                Senha
+                <span className="flex items-center justify-between gap-3">
+                  <span>{mode === "login" ? "Senha" : "Criar senha"}</span>
+                  {mode === "login" && (
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs font-bold text-violet-300 transition hover:text-violet-200 hover:underline"
+                    >
+                      Esqueceu sua senha?
+                    </Link>
+                  )}
+                </span>
                 <div className="relative mt-2">
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Sua senha"
+                    placeholder={mode === "login" ? "Sua senha" : "Crie uma senha"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     onKeyDown={(event) =>
@@ -590,12 +600,13 @@ export default function LoginPage() {
                       mode === "login" ? "current-password" : "new-password"
                     }
                     disabled={busy}
-                    className="w-full rounded-xl border border-white/10 bg-[#080812] px-4 py-3 pr-20 outline-none transition placeholder:text-zinc-700 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
+                    aria-describedby={mode === "register" ? "password-help" : undefined}
+                    className="w-full rounded-xl border border-white/10 bg-[#080812] px-4 py-3 pr-20 outline-none transition placeholder:text-zinc-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((value) => !value)}
-                    className="absolute inset-y-0 right-2 my-auto h-9 rounded-lg px-2.5 text-xs font-black text-zinc-500 transition hover:bg-white/5 hover:text-white"
+                    className="absolute inset-y-0 right-2 my-auto h-9 rounded-lg px-2.5 text-xs font-black text-zinc-400 transition hover:bg-white/5 hover:text-white"
                     aria-label={
                       showPassword ? "Ocultar senha" : "Mostrar senha"
                     }
@@ -603,6 +614,11 @@ export default function LoginPage() {
                     {showPassword ? "Ocultar" : "Mostrar"}
                   </button>
                 </div>
+                {mode === "register" && (
+                  <span id="password-help" className="mt-2 block text-xs font-medium text-zinc-400">
+                    Use pelo menos 6 caracteres.
+                  </span>
+                )}
               </label>
 
               {capsLock && (
@@ -612,7 +628,7 @@ export default function LoginPage() {
               )}
 
               {mode === "register" && (
-                <p className="mb-4 text-xs leading-5 text-zinc-500">
+                <p className="mb-4 text-xs leading-5 text-zinc-400">
                   Confira seu e-mail. Ele será usado para recuperar a conta e
                   receber atualizações dos pedidos. O nickname é escolhido no
                   próximo passo.
@@ -632,17 +648,9 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {mode === "login" && (
-              <Link
-                href="/forgot-password"
-                className="mt-4 block text-center text-sm font-bold text-violet-300 hover:text-violet-200 hover:underline"
-              >
-                Esqueceu sua senha?
-              </Link>
-            )}
             <Link
               href="/ajuda"
-              className="mt-3 block text-center text-xs font-bold text-zinc-600 transition hover:text-violet-300"
+              className="mt-4 block text-center text-xs font-bold text-zinc-400 transition hover:text-violet-300"
             >
               Precisa de ajuda para entrar? →
             </Link>
