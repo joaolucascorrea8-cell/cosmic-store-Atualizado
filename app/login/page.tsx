@@ -381,7 +381,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="mt-auto grid gap-2.5 pt-10">
+          <div className="mt-14 grid gap-2.5">
             {[
               [
                 "01",
