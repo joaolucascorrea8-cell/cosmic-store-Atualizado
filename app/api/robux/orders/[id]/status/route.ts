@@ -83,10 +83,15 @@ export async function GET(
       { status: 404 },
     );
 
+  // Capture the narrowed values before entering the nested function.
+  // TypeScript does not keep the outer nullability narrowing inside closures.
+  const safeOrder = order;
+  const safeDetails = details;
+
   async function finalizeCompleted() {
-    const actor = await currentAdminId(details.executed_by);
+    const actor = await currentAdminId(safeDetails.executed_by);
     if (!actor) throw new Error("Nenhum administrador disponível para concluir o pedido.");
-    let currentStatus = order.status;
+    let currentStatus = safeOrder.status;
     let changed = false;
     if (currentStatus === "paid") {
       const prep = await admin.rpc("transition_store_order", {
@@ -113,9 +118,9 @@ export async function GET(
         changed = true;
         await Promise.allSettled([
           notifyCustomer(
-            order.user_id,
+            safeOrder.user_id,
             "GamePass comprado com sucesso",
-            `A compra do GamePass do pedido ${order.order_code} foi concluída. Agora os Robux ficam sujeitos ao período de pendência do Roblox.`,
+            `A compra do GamePass do pedido ${safeOrder.order_code} foi concluída. Agora os Robux ficam sujeitos ao período de pendência do Roblox.`,
             `/pedidos/${id}`,
           ),
           sendOrderStatusEmail(id, "delivery"),
