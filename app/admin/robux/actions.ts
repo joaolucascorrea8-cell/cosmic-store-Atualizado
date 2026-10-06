@@ -226,7 +226,16 @@ export async function executeRobuxOrder(formData: FormData) {
         last_checked_at: new Date().toISOString(),
       })
       .eq("order_id", orderId);
-    throw new Error(message);
+
+    // Erros esperados da integração (saldo insuficiente, K/margem fora
+    // do limite, GamePass alterado, indisponibilidade do fornecedor etc.)
+    // são mostrados dentro do próprio pedido. Não relançamos a exceção,
+    // pois isso fazia o Next/React abrir a tela genérica de erro 441.
+    console.warn(`[robux-order] Execução bloqueada para ${orderId}: ${message}`);
+    revalidatePath(`/admin/pedidos/${orderId}`);
+    revalidatePath(`/pedidos/${orderId}`);
+    revalidatePath("/admin/pedidos");
+    return;
   }
 
   revalidatePath(`/admin/pedidos/${orderId}`);
