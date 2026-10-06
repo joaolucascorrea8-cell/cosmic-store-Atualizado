@@ -35,9 +35,139 @@ export type ByRobuxOrder = {
   createdAt: string;
 };
 
+export type RobloxGamePassCreator = {
+  name: string;
+  type: "User" | "Group" | "Unknown";
+  targetId: string | null;
+  source: "byrobux" | "roblox" | "fallback";
+};
+
+function cleanCreatorName(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeCreatorType(value: unknown): RobloxGamePassCreator["type"] {
+  const type = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (type === "user") return "User";
+  if (type === "group") return "Group";
+  return "Unknown";
+}
+
 export function normalizeByRobuxUsername(value: unknown) {
-  const username = typeof value === "string" ? value.trim() : "";
+  const username = cleanCreatorName(value);
   return username || "Identificada pelo GamePass";
+}
+
+export async function resolveGamePassCreator({
+  gamePassId,
+  byRobuxUsername,
+}: {
+  gamePassId: unknown;
+  byRobuxUsername: unknown;
+}): Promise<RobloxGamePassCreator> {
+  const supplierName = cleanCreatorName(byRobuxUsername);
+  if (supplierName) {
+    return {
+      name: supplierName,
+      type: "Unknown",
+      targetId: null,
+      source: "byrobux",
+    };
+  }
+
+  const id = typeof gamePassId === "string" ? gamePassId.trim() : String(gamePassId ?? "").trim();
+  if (!/^\d{1,20}$/.test(id)) {
+    return {
+      name: "Identificada pelo GamePass",
+      type: "Unknown",
+      targetId: null,
+      source: "fallback",
+    };
+  }
+
+  try {
+    const response = await fetch(
+      `https://apis.roblox.com/game-passes/v1/game-passes/${encodeURIComponent(id)}/product-info`,
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(8_000),
+      },
+    );
+
+    if (!response.ok) {
+      console.warn(
+        `[roblox/gamepass] Não foi possível consultar o criador do GamePass ${id}: HTTP ${response.status}.`,
+      );
+      return {
+        name: "Identificada pelo GamePass",
+        type: "Unknown",
+        targetId: null,
+        source: "fallback",
+      };
+    }
+
+    const payload = (await response.json().catch(() => null)) as
+      | {
+          Creator?: {
+            Name?: unknown;
+            CreatorType?: unknown;
+            CreatorTargetId?: unknown;
+            Id?: unknown;
+          };
+          creator?: {
+            name?: unknown;
+            creatorType?: unknown;
+            creatorTargetId?: unknown;
+            id?: unknown;
+          };
+        }
+      | null;
+
+    const creator = payload?.Creator;
+    const creatorLower = payload?.creator;
+    const name =
+      cleanCreatorName(creator?.Name) || cleanCreatorName(creatorLower?.name);
+    if (!name) {
+      return {
+        name: "Identificada pelo GamePass",
+        type: "Unknown",
+        targetId: null,
+        source: "fallback",
+      };
+    }
+
+    const rawTargetId =
+      creator?.CreatorTargetId ??
+      creatorLower?.creatorTargetId ??
+      creator?.Id ??
+      creatorLower?.id ??
+      null;
+
+    return {
+      name,
+      type: normalizeCreatorType(
+        creator?.CreatorType ?? creatorLower?.creatorType,
+      ),
+      targetId:
+        rawTargetId === null || rawTargetId === undefined
+          ? null
+          : String(rawTargetId),
+      source: "roblox",
+    };
+  } catch (error) {
+    console.warn(
+      `[roblox/gamepass] Falha ao consultar o criador do GamePass ${id}.`,
+      error,
+    );
+    return {
+      name: "Identificada pelo GamePass",
+      type: "Unknown",
+      targetId: null,
+      source: "fallback",
+    };
+  }
 }
 
 export class ByRobuxApiError extends Error {

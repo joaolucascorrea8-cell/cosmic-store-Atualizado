@@ -5,7 +5,7 @@ import { createPixPayload } from "@/lib/pix";
 import {
   calculateByRobux,
   friendlyByRobuxError,
-  normalizeByRobuxUsername,
+  resolveGamePassCreator,
 } from "@/lib/byrobux";
 import { getRobuxSettings } from "@/lib/robux-settings";
 import {
@@ -115,7 +115,11 @@ export async function POST(request: Request) {
 
     const cosmicK = cosmicRateFromSupplier(supplierK, settings);
     const total = salePriceForGamepass(breakdown.gamepassRobux, cosmicK);
-    const robloxUsername = normalizeByRobuxUsername(item.username);
+    const creator = await resolveGamePassCreator({
+      gamePassId: item.id,
+      byRobuxUsername: item.username,
+    });
+    const robloxUsername = creator.name;
     if (
       typeof body?.expectedPrice !== "number" ||
       Math.round(body.expectedPrice * 100) !== Math.round(total * 100)

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   calculateByRobux,
   friendlyByRobuxError,
-  normalizeByRobuxUsername,
+  resolveGamePassCreator,
 } from "@/lib/byrobux";
 import { getRobuxSettings } from "@/lib/robux-settings";
 import {
@@ -83,10 +83,15 @@ export async function POST(request: Request) {
 
     const cosmicK = cosmicRateFromSupplier(supplierK, settings);
     const price = salePriceForGamepass(breakdown.gamepassRobux, cosmicK);
-    const username = normalizeByRobuxUsername(item.username);
+    const creator = await resolveGamePassCreator({
+      gamePassId: item.id,
+      byRobuxUsername: item.username,
+    });
     return NextResponse.json({
       valid: true,
-      username,
+      username: creator.name,
+      creatorType: creator.type,
+      creatorSource: creator.source,
       gamepassId: item.id,
       gamepassRobux: breakdown.gamepassRobux,
       netRobux: breakdown.netRobux,
