@@ -12,7 +12,7 @@ export type ByRobuxCalculateItem = {
   id: string;
   link: string;
   robux: number;
-  username: string;
+  username: string | null;
   error: boolean;
 };
 
@@ -34,6 +34,11 @@ export type ByRobuxOrder = {
   batchId: string;
   createdAt: string;
 };
+
+export function normalizeByRobuxUsername(value: unknown) {
+  const username = typeof value === "string" ? value.trim() : "";
+  return username || "Identificada pelo GamePass";
+}
 
 export class ByRobuxApiError extends Error {
   status: number;

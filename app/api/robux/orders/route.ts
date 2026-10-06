@@ -5,6 +5,7 @@ import { createPixPayload } from "@/lib/pix";
 import {
   calculateByRobux,
   friendlyByRobuxError,
+  normalizeByRobuxUsername,
 } from "@/lib/byrobux";
 import { getRobuxSettings } from "@/lib/robux-settings";
 import {
@@ -114,6 +115,7 @@ export async function POST(request: Request) {
 
     const cosmicK = cosmicRateFromSupplier(supplierK, settings);
     const total = salePriceForGamepass(breakdown.gamepassRobux, cosmicK);
+    const robloxUsername = normalizeByRobuxUsername(item.username);
     if (
       typeof body?.expectedPrice !== "number" ||
       Math.round(body.expectedPrice * 100) !== Math.round(total * 100)
@@ -144,7 +146,7 @@ export async function POST(request: Request) {
         p_net_robux: breakdown.netRobux,
         p_gamepass_url: link,
         p_gamepass_id: item.id,
-        p_roblox_username: item.username,
+        p_roblox_username: robloxUsername,
         p_supplier_k: supplierK,
         p_cosmic_k: cosmicK,
         p_supplier_cost: supplierCost,
@@ -172,7 +174,7 @@ export async function POST(request: Request) {
       await Promise.allSettled([
         createAdminNotifications(
           "Novo pedido de Robux",
-          `${order.order_code}: ${breakdown.netRobux.toLocaleString("pt-BR")} Robux previstos para ${item.username}.`,
+          `${order.order_code}: ${breakdown.netRobux.toLocaleString("pt-BR")} Robux previstos para ${robloxUsername}.`,
           `/admin/pedidos/${order.id}`,
           user.id,
         ),
