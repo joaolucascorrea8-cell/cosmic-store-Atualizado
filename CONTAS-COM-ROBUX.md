@@ -2,6 +2,8 @@
 
 Atualização de 09/10/2026, feita sobre o ZIP recebido. Não reconstrói a loja nem substitui o Quick Buy.
 
+> Revisão de organização/entrega/política: leia primeiro `ATUALIZACAO-ENTREGA-E-POLITICA.md`. Quem já instalou a modalidade deve aplicar somente a migration nova `202610090002_robux_account_delivery_policy.sql` e configurar a chave de entrega.
+
 ## Antes de instalar
 
 Guarde o ZIP original recebido como checkpoint. O arquivo de origem permaneceu intacto durante o trabalho. Faça também backup do banco pelo procedimento já existente em `BACKUP-E-RESTAURACAO.md` antes de aplicar uma migration.
@@ -14,9 +16,9 @@ O ZIP atual usa **Gmail** em `lib/notifications.ts` e `lib/gmail.ts` para envio.
 
 1. Extraia o ZIP atualizado. No seu repositório local, copie o conteúdo da pasta `cosmic-store` por cima dos arquivos correspondentes. Preserve a sua pasta `.git`, seu `.env.local` e as configurações de produção. O ZIP entregue não contém dependências, `.next`, histórico `.git` ou credenciais.
 2. Confira se as migrations anteriores, incluindo `202610050001_robux_quick_buy.sql`, já estão aplicadas. **Não reaplique todas as migrations antigas em produção.**
-3. No SQL Editor do Supabase, execute **somente** `supabase/migrations/202610090001_robux_accounts.sql`. O arquivo usa uma transação e acrescenta as estruturas abaixo; não remove produtos/pedidos e não modifica migrations anteriores. Aplique uma única vez, ou use o mecanismo de migrations que você já utiliza.
-4. Execute `supabase/verificacoes/202610090001_check.sql`. As tabelas devem existir com RLS; as RPCs devem mostrar `anon_can_execute=false`, `customer_can_execute=false`, `server_can_execute=true`. A tabela segura tem somente `order_id`, `robux`, `cosmic_k`, `sale_price`, `fulfillment_status`. A margem inicial deve ser 9.
-5. Mantenha as variáveis atuais de Supabase, Pix, Gmail, Discord e Quick Buy. **Nenhuma variável obrigatória nova foi criada.** A coleta de contas não utiliza `BYROBUX_API_KEY`, cookies, login ou sua sessão.
+3. No SQL Editor do Supabase, execute `supabase/migrations/202610090001_robux_accounts.sql` somente se ainda não aplicada e, em seguida, `supabase/migrations/202610090002_robux_account_delivery_policy.sql`. O arquivo usa uma transação e acrescenta as estruturas abaixo; não remove produtos/pedidos e não modifica migrations anteriores. Aplique uma única vez, ou use o mecanismo de migrations que você já utiliza.
+4. Execute `supabase/verificacoes/202610090001_check.sql`. As tabelas devem existir com RLS. Após a segunda migration, execute também `202610090002_check.sql`: as RPCs novas são exclusivas do servidor; a criação antiga de conta fica sem chamada direta, inclusive por `service_role`. A tabela segura tem somente `order_id`, `robux`, `cosmic_k`, `sale_price`, `fulfillment_status`. A margem inicial deve ser 9.
+5. Mantenha as variáveis atuais de Supabase, Pix, Gmail, Discord e Quick Buy. **Configure `ROBUX_ACCOUNT_DELIVERY_KEY` para a entrega protegida de usuário/senha, seguindo `ATUALIZACAO-ENTREGA-E-POLITICA.md`.** A coleta de contas não utiliza `BYROBUX_API_KEY`, cookies, login ou sua sessão.
 6. Mantenha `NEXT_PUBLIC_SITE_URL=https://www.cosmicstore.com.br` no seu ambiente, de acordo com o domínio oficial. O domínio, callbacks de autenticação e configurações do projeto não foram alterados.
 7. No terminal do projeto:
 
@@ -46,7 +48,7 @@ A Vercel deve continuar ligada ao mesmo repositório e branch. Confira as variá
 
 As rotas de coleta/validação e ações administrativas relevantes declaram `maxDuration = 300`. Verifique se os limites efetivos do seu projeto de hospedagem comportam essa duração. Cada requisição ao fornecedor tem timeout de 15 segundos; uma coleta completa tem limites de 240 segundos, 500 páginas/requisições e 200 cotações. Limites excedidos geram diagnóstico e preservação do último estado conhecido.
 
-A sincronização é **sob demanda**, com intervalo de 90 segundos entre coletas, cache compartilhado no banco e atualização da página aberta a cada 90 segundos. Não exige cadastro diário. Sem visitantes ou chamadas ao endpoint, o cache só volta a atualizar no próximo acesso. O tempo total depende da quantidade de páginas e da resposta externa; 90 segundos é o intervalo configurado, não uma promessa de concluir a coleta nesse tempo.
+A sincronização é **sob demanda**, agendada com `after()` após a resposta do catálogo em cache, com intervalo de 90 segundos entre coletas, cache compartilhado no banco e atualização da página aberta a cada 90 segundos. Não exige cadastro diário. Sem visitantes ou chamadas ao endpoint, o cache só volta a atualizar no próximo acesso. O tempo total depende da quantidade de páginas e da resposta externa; 90 segundos é o intervalo configurado, não uma promessa de concluir a coleta nesse tempo.
 
 Para manter consultas mesmo sem visitantes, há o endpoint opcional:
 
@@ -96,17 +98,17 @@ O Admin mostra última atualização com dados válidos, última coleta completa
 
 ## Fluxo operacional
 
-1. Cliente abre `/robux/contas`, filtra mínimo/máximo de Robux, ordena por preço ou quantidade e escolhe uma oferta. São 24 cards por página.
+1. Cliente abre `/robux/contas`, filtra mínimo/máximo de Robux, ordena por preço ou quantidade e escolhe uma oferta. São 12 opções por página, agrupadas por saldo/K/preço iguais. Ao escolher, o cliente confere o resumo e confirma a leitura da política.
 2. O servidor consulta novamente a cotação até localizar a oferta, conferindo identidade, saldo e K atuais. Se o preço mudar um centavo ou mais, o cliente vê o novo valor e precisa clicar novamente.
-3. Uma RPC cria atomicamente `orders`, `order_items`, snapshot privado e detalhes seguros. O token evita pedido duplicado em retry. Advisory locks impedem pedidos simultâneos da mesma oferta/grupo.
+3. Uma RPC cria atomicamente `orders`, `order_items`, snapshot privado, detalhes seguros e registro imutável da política lida. O token evita pedido duplicado em retry. Advisory locks impedem pedidos simultâneos da mesma oferta/grupo.
 4. A reserva para pagamento dura 20 minutos. Sem comprovante, um pedido com reserva vencida não pode enviar novo comprovante nem retomar o Pix; uma nova tentativa da oferta pode cancelar esse pedido vencido. Não cancela pedidos com comprovante. Se o cliente já pagou, deve falar com a equipe para revisão.
 5. O cliente usa o checkout/Pix/comprovante existente. A retomada do Pix revalida a conta e recusa alterações de cotação/custo; não altera silenciosamente um pedido já criado.
 6. O Admin confere o comprovante. Antes de confirmar pagamento ou iniciar preparação, a disponibilidade é validada novamente. Falha/ausência bloqueia essa etapa e marca a entrega em revisão; o comprovante/pedido/snapshot não são apagados.
 7. Cliente vê **Aguardando aquisição da conta**. O Admin abre **Abrir oferta no fornecedor**, confere os dados e compra manualmente. A Cosmic não clica, não gasta saldo nem obtém credenciais por automação.
-8. O Admin marca a confirmação **Já comprei manualmente...** e registra a aquisição. A etapa de aquisição gera evento administrativo. Depois envia os dados no **chat privado**, usando os recursos existentes, e uma imagem de confirmação da entrega.
-9. Só então marca como entregue. A exigência de imagem e os e-mails de pagamento/entrega existentes permanecem. Após a aquisição manual, não se exige que a conta ainda esteja anunciada no fornecedor para concluir a entrega.
+8. O Admin marca a confirmação **Já comprei manualmente...** e registra a aquisição. A etapa de aquisição gera evento administrativo. Depois preenche **Usuário**, **Senha** e **Instruções** nos campos próprios do Admin e salva os dados.
+9. Só então marca como entregue. Para contas, os dados salvos substituem a exigência de imagem. Os e-mails existentes são reutilizados; o aviso de conta entregue leva ao pedido, sem senha. Produtos comuns continuam com a exigência de imagem. Após a aquisição manual, não se exige que a conta ainda esteja anunciada no fornecedor para concluir a entrega.
 
-Nunca coloque credenciais em notas públicas, catálogo ou e-mail de anúncio. A entrega é pelo chat privado do pedido.
+Nunca coloque credenciais em notas públicas, catálogo ou e-mail de anúncio. A entrega de credenciais é na seção privada do pedido; o chat continua disponível para atendimento.
 
 ## Banco e segurança
 
@@ -121,7 +123,7 @@ Nunca coloque credenciais em notas públicas, catálogo ou e-mail de anúncio. A
 
 Os custos, margem, URLs, IDs operacionais e K fornecedor não estão na tabela do cliente. As APIs usam DTOs explícitos. RPCs de criação/aquisição/lease/rate limit são exclusivas de `service_role`. Actions administrativas verificam o sistema existente de roles. Não foram adicionados segredos client-side.
 
-O snapshot não pode ser editado: só podem mudar disponibilidade, última consulta e aquisição manual. Alterar catálogo/configuração não altera pedidos históricos. Dados de login da conta são enviados manualmente no chat existente; não são parte do catálogo.
+O snapshot não pode ser editado: só podem mudar disponibilidade, última consulta e aquisição manual. Alterar catálogo/configuração não altera pedidos históricos. Dados de login são inseridos manualmente em campos próprios, cifrados e liberados apenas ao dono do pedido entregue; não são parte do catálogo. As tabelas adicionais de política e entrega estão documentadas no guia da revisão.
 
 ## Roteiro de testes antes de liberar
 
@@ -130,9 +132,9 @@ Use ambiente de teste e usuários controlados. Não precisa comprar contas reais
 | Teste | Resultado esperado |
 | --- | --- |
 | Abrir `/robux` | Calculadora/GamePass e fluxo Quick Buy permanecem. Link para contas aparece. |
-| Abrir `/robux/contas` | Cards sem fornecedor, máscara, margem/custo ou URL externa. |
-| Celular 390 px / desktop 1440 px | Filtros usáveis, cards ajustados, sem rolagem horizontal. |
-| Ordenar preço/Robux e filtrar faixa | Lista corresponde ao filtro; paginação de 24. |
+| Abrir `/robux/contas` | Lista sem fornecedor, máscara, margem/custo ou URL externa. |
+| Celular 390 px / desktop 1440 px | Filtros usáveis, lista ajustada, sem rolagem horizontal. |
+| Ordenar preço/Robux e filtrar faixa | Lista corresponde ao filtro; paginação de 12. |
 | Duas cotações com mesmo K | Ofertas e links preservam `catalog` e não se misturam. |
 | Inserção/remoção pública | Próxima leitura válida atualiza a cotação. |
 | Fornecedor offline/HTML quebrado | Cache preservado, erro no Admin, sem dados apagados. |
@@ -145,8 +147,8 @@ Use ambiente de teste e usuários controlados. Não precisa comprar contas reais
 | Cliente tenta ler snapshot/config/cache | RLS retorna nenhuma linha / acesso negado conforme a tabela. |
 | Cliente lê seu pedido | Só dados seguros da conta e itens; snapshot não é consultado. |
 | Confirmação com estoque indisponível | Bloqueio e revisão; pedido/comprovante não desaparecem. |
-| Aquisição manual | Registra evento; dados são entregues pelo chat privado. |
-| Entrega sem aquisição/imagem | Recusada. Com ambas, usa fluxo/e-mail existentes. |
+| Aquisição manual | Registra evento; dados são salvos nos campos protegidos e liberados ao concluir. |
+| Entrega sem aquisição/dados | Recusada. Com ambos, usa o fluxo existente e e-mail com link para o pedido. |
 | Botão fornecedor no Admin | Abre página/catálogo do snapshot, mesmo após mudança de estoque. |
 | Loja em geral | Login, carrinho, cupons, produtos, suporte e Quick Buy seguem funcionando. |
 
@@ -154,4 +156,4 @@ Testes executados e limites estão em `VALIDACAO-CONTAS-ROBUX.md`. O fluxo real 
 
 ## Arquivos
 
-A relação completa de arquivos criados/modificados e a função de cada um está em `ARQUIVOS-CONTAS-ROBUX.md`. Nenhuma migration anterior ou arquivo de lógica Quick Buy foi alterado.
+A relação inicial está em `ARQUIVOS-CONTAS-ROBUX.md`; a lista desta revisão e a função de cada alteração estão em `ARQUIVOS-AJUSTE-CONTAS.md`. Nenhuma migration anterior ou arquivo de lógica Quick Buy foi alterado.

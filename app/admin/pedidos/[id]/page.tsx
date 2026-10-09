@@ -62,6 +62,8 @@ function relation<T>(value: T | T[] | null | undefined) {
 }
 
 const actionLabels: Record<string, string> = {
+  "account:credentials_saved": "Dados da conta salvos com segurança",
+  "account:manual_acquisition": "Aquisição manual da conta registrada",
   "status:paid": "Pagamento confirmado",
   "status:preparing_delivery": "Preparação da entrega iniciada",
   "status:proof_rejected": "Comprovante recusado",
@@ -180,7 +182,7 @@ export default async function AdminOrderPage({
               ? []
               : [["cancelled", "Cancelar pedido"]]
             : [
-                ["delivered", "Marcar como entregue"],
+                ["delivered", order.order_type === "robux_account" ? "Liberar conta e concluir entrega" : "Marcar como entregue"],
                 ["cancelled", "Cancelar pedido"],
               ]
           : order.status === "awaiting_payment" ||
@@ -350,8 +352,9 @@ export default async function AdminOrderPage({
             <h2 className="font-black">Atualizar pedido</h2>
             {buttons.some(([value]) => value === "delivered") && (
               <p className="mt-2 text-sm text-amber-200">
-                Antes de marcar como entregue, envie a print da entrega no chat
-                abaixo. Ela será anexada ao e-mail final do cliente.
+                {order.order_type === "robux_account"
+                  ? "Salve o usuário e a senha na seção Dados da conta. Ao marcar como entregue, o cliente poderá consultar os dados no pedido; o e-mail envia apenas o aviso de entrega."
+                  : "Antes de marcar como entregue, envie a print da entrega no chat abaixo. Ela será anexada ao e-mail final do cliente."}
               </p>
             )}
             <div className="mt-4 flex flex-wrap gap-2">

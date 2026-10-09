@@ -4,11 +4,15 @@
 
 - `npm run lint`: passou, sem erros ou avisos finais.
 - `npm run typecheck`: passou.
-- `npm test`: **85 testes passaram**, zero falhas. Inclui os 63 testes anteriores e 22 novos.
+- `npm test`: **93 testes passaram**, zero falhas. Inclui os 85 testes da primeira entrega e oito novos testes desta revisão.
 - `npm run build`: passou com Next.js 16.3.8, gerando as rotas atuais e novas.
-- As migrations foram executadas somente em um PostgreSQL isolado com PGlite. A migration de contas e o SQL de verificação foram testados.
+- As migrations foram executadas somente em um PostgreSQL isolado com PGlite. As duas migrations de contas e seus SQLs de verificação foram testados.
 - Testes das RPCs cobrem preço/margem, ausência de pedidos órfãos, snapshot, imutabilidade, reserva, expiração, RLS, limite/lease, aquisição manual, entrega e concorrência lógica de duas criações. O motor de teste serializa suas transações; não substitui um teste de carga multi-instância em PostgreSQL de produção.
 - Quick Buy original teve teste adicional de criação de pedido/GamePass e confirmação de pagamento; os testes antigos de loja, estoque, cupons, suporte, importação, relatórios e servidores continuam passando.
+
+## Segurança adicional desta revisão
+
+A suite cobre AES-256-GCM com nonce aleatório, senha com espaços preservada, recusa de chave errada/adulteração/troca de pedido, pagamento e aquisição obrigatórios, entrega sem imagem com credenciais, recusa de edição concorrente, ausência de senhas em auditoria, RLS/grants, aceite obrigatório, versão expirada e snapshot imutável da política. Os testes de itens comuns continuam exigindo imagem; Quick Buy preserva sua lógica.
 
 ## Fonte pública real
 
@@ -23,18 +27,21 @@ Esses números são um registro da consulta de 09/10/2026, não estoque atual ne
 Foi usada a aplicação compilada, em servidor local, com respostas simuladas de Supabase e dados fictícios, sem banco/credenciais de produção.
 
 - Chromium headless: celular **390×844** e desktop **1440×1000**, sem rolagem horizontal e sem erros JavaScript.
-- Renderização: 24 cards por página, segunda página de 7 cards no cenário de 31 ofertas.
+- Renderização: 12 linhas por página; 32 ofertas fictícias formam 31 opções após agrupar duas equivalentes. Filtros e segunda página verificados.
 - Filtro de quantidade e ordenação por Robux: passaram.
-- Mudança de preço no checkout (resposta 409 simulada): o novo valor aparece, o próximo clique usa esse valor e preserva o token idempotente.
-- API real do catálogo, com cache local simulado: HTTP 200; campos de oferta somente `id`, `robux`, `cosmicK`, `price`, `available`. Nenhum fornecedor, margem, custo, máscara ou URL operacional na resposta.
+- Mudança de preço no checkout (resposta 409 simulada): o novo valor aparece, a leitura deve ser confirmada novamente, o próximo clique usa esse valor e preserva o token idempotente.
+- API real do catálogo, com cache local simulado: HTTP 200; campos de oferta somente `id`, `robux`, `cosmicK`, `price`, `available`, `options`. A resposta também inclui texto/versão da política pública e prazo de entrega. Nenhum fornecedor, margem, custo, máscara ou URL operacional na resposta.
 - API real de criação sem sessão: HTTP 401.
-- Capturas mobile/desktop foram inspecionadas visualmente.
+- Capturas do catálogo, resumo, Admin e entrega ao cliente foram inspecionadas visualmente.
+- Com autenticação/Supabase simulados locais, o Admin salvou usuário/senha pelo Server Action real; a requisição ao banco continha somente credenciais cifradas.
+- A rota real de credenciais retornou 401 sem sessão, 404 para outro cliente, 404 antes da entrega e 200 para o dono após a entrega, com `private, no-store`.
+- A senha não apareceu no HTML inicial do pedido. O cliente abriu os dados e alternou a exibição da senha. O link de relato abriu o suporte com código e horário do pedido preenchidos.
 
 ## O que depende do seu ambiente
 
 Não foi feito login na sua loja/Supabase/fornecedor, Pix real, confirmação real de comprovante, aquisição real de conta ou envio real de e-mail/Discord. O fluxo autenticado completo deve ser validado com usuários/pedido controlados após instalar o SQL e manter suas variáveis atuais. Não houve deploy nem alterações em produção.
 
-Acesso Admin e ações usam a autenticação existente. Banco/RLS foram testados isoladamente; não houve inspeção do banco de produção. O teste de navegador cobriu catálogo/UX pública, e não uma sessão administrativa real.
+Acesso Admin e ações usam a autenticação existente. Banco/RLS foram testados isoladamente; não houve inspeção do banco de produção. O teste de navegador cobriu catálogo e fluxos de Admin/cliente com sessões fictícias locais, não uma sessão real de produção.
 
 A coleta depende da estrutura pública externa e de acesso de rede no ambiente da Vercel. Bloqueios/HTML alterado/timeout deixam diagnóstico e preservam estado; não são contornados. A reserva local não garante reserva no fornecedor. Agrupamento em `fourth` não fornece uma identidade física individual que o fornecedor não torna pública.
 

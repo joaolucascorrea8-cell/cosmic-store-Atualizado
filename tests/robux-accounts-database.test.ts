@@ -34,7 +34,7 @@ async function order(
   const { rows } = await db.query<{
     result: { created: boolean; order: { id: string; total: string } };
   }>(
-    "select public.create_robux_account_order($1,$2,$3,'000201-pix-payload-valido-para-teste',$4::jsonb,$5) result",
+    "select public.create_robux_account_order_with_policy($1,$2,$3,'000201-pix-payload-valido-para-teste',$4::jsonb,$5,(select version from public.robux_account_policy where id=1),true) result",
     [
       ids.user,
       token,
@@ -196,7 +196,7 @@ test("snapshot é imutável; confirmação exige disponibilidade fresca; aquisi�
   await transition(first.order.id, "preparing_delivery", "paid");
   await assert.rejects(
     transition(first.order.id, "delivered", "preparing_delivery"),
-    /imagem da entrega|aquisição/,
+    /aquisição|usuário e a senha/,
   );
   await db.query("select public.mark_robux_account_acquired($1,$2)", [
     first.order.id,
@@ -214,6 +214,7 @@ test("snapshot é imutável; confirmação exige disponibilidade fresca; aquisi�
     "insert into public.order_messages(order_id,user_id,message,attachment_path,attachment_type) values($1,$2,'Dados enviados','delivery.png','image/png')",
     [first.order.id, ids.admin],
   );
+  await db.query("select public.save_robux_account_delivery($1,$2,$3,null)", [first.order.id, ids.admin, "v1:" + "encrypted-test-placeholder".repeat(4)]);
   await transition(first.order.id, "delivered", "preparing_delivery");
   assert.equal(
     (
@@ -324,6 +325,7 @@ test("grupo fourth bloqueia compras simultâneas e só libera nova unidade após
     "insert into public.order_messages(order_id,user_id,message,attachment_path,attachment_type) values($1,$2,'Dados enviados','delivery.png','image/png')",
     [first.order.id, ids.admin],
   );
+  await db.query("select public.save_robux_account_delivery($1,$2,$3,null)", [first.order.id, ids.admin, "v1:" + "encrypted-test-placeholder".repeat(4)]);
   await transition(first.order.id, "delivered", "preparing_delivery");
   const second = await order(undefined, 71.5, group);
   assert.notEqual(second.order.id, first.order.id);
@@ -342,7 +344,7 @@ test("SQL de verificação executa e confirma RLS/privilegios sem acessar creden
       (row) =>
         !row.anon_can_execute &&
         !row.customer_can_execute &&
-        row.server_can_execute,
+        row.server_can_execute === (row.proname !== "create_robux_account_order"),
     ),
   );
 });

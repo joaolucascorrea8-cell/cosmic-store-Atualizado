@@ -1,4 +1,7 @@
 import "server-only";
+import { groupAccountOptions } from "./presentation";
+import { readAccountPolicy } from "./policy";
+import { getStoreService } from "@/lib/store-service-server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   fetchCatalog,
@@ -123,9 +126,11 @@ export function catalogFresh(state: CatalogState) {
   );
 }
 export async function publicCatalog(params: URLSearchParams) {
-  const [settings, state] = await Promise.all([
+  const [settings, state, policy, service] = await Promise.all([
     accountSettings(),
-    syncCatalog(),
+    readCatalog(),
+    readAccountPolicy(),
+    getStoreService(),
   ]);
   const available = settings.enabled && catalogFresh(state);
   const admin = createAdminClient();
@@ -156,7 +161,7 @@ export async function publicCatalog(params: URLSearchParams) {
   const missing = new Map(
     (checks ?? []).map((c) => [c.offer_id, Date.parse(c.checked_at)]),
   );
-  let offers = state.offers
+  const sourceOffers = state.offers
     .filter(
       (o) =>
         !blocked.has(o.providerId) &&
@@ -165,7 +170,9 @@ export async function publicCatalog(params: URLSearchParams) {
     .map((o) => ({
       ...publicOffer(o, settings.margin_per_thousand),
       available: available && Date.now() - Date.parse(o.seenAt) <= maxAge,
+      publicCount: o.publicCount,
     }));
+  let offers = groupAccountOptions(sourceOffers);
   const min = Number(params.get("min") || 0),
     max = Number(params.get("max") || 10000000);
   if (Number.isFinite(min)) offers = offers.filter((o) => o.robux >= min);
@@ -173,25 +180,29 @@ export async function publicCatalog(params: URLSearchParams) {
   const sort = params.get("sort");
   offers.sort(
     (a, b) =>
-      (sort === "robux_desc"
+      (sort === "value"
+        ? a.cosmicK - b.cosmicK || a.price - b.price
+        : sort === "robux_desc"
         ? b.robux - a.robux
         : sort === "robux_asc"
           ? a.robux - b.robux
           : a.price - b.price) || a.id.localeCompare(b.id),
   );
-  const pages = Math.max(1, Math.ceil(offers.length / 24));
+  const pages = Math.max(1, Math.ceil(offers.length / 12));
   const requested = Number(params.get("page") || 1);
   const page = Math.max(
     1,
     Math.min(pages, Number.isSafeInteger(requested) ? requested : 1),
   );
   return {
-    offers: offers.slice((page - 1) * 24, page * 24),
+    offers: offers.slice((page - 1) * 12, page * 12),
     page,
     pages,
     total: offers.length,
     available,
     updatedAt: state.last_success_at,
+    policy,
+    deliveryHours: service?.delivery_hours ?? 24,
     message: available
       ? ""
       : "Estamos atualizando a disponibilidade das contas. Tente novamente em instantes.",

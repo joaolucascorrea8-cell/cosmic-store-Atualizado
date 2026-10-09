@@ -2,8 +2,8 @@
 import { useActionState, useEffect, useState } from "react";
 import { createSupportTicket, type SupportState } from "./actions";
 import { useRouter } from "next/navigation";
-const key = "cosmic-support-draft-v1";
-export default function SupportForm() {
+export default function SupportForm({ orderCode, deliveredAt }: { orderCode?: string; deliveredAt?: string }) {
+  const key = orderCode ? `cosmic-support-account-${orderCode}` : "cosmic-support-draft-v1";
   const router = useRouter();
   const [state, action, pending] = useActionState<SupportState, FormData>(
     createSupportTicket,
@@ -29,13 +29,20 @@ export default function SupportForm() {
               : "order",
           );
           setMessage(typeof saved.message === "string" ? saved.message : "");
-        } else setId(crypto.randomUUID());
+        } else {
+          setId(crypto.randomUUID());
+          if (orderCode) {
+            setSubject(`Conta com Robux · ${orderCode}`);
+            setCategory("order");
+            setMessage(`Pedido: ${orderCode}${deliveredAt ? `\nEntrega liberada em: ${deliveredAt}` : ""}\n\nDescreva o problema ou seu pedido de reembolso:\n`);
+          }
+        }
       } catch {
         setId(crypto.randomUUID());
       }
       setLoaded(true);
     });
-  }, []);
+  }, [key, orderCode, deliveredAt]);
   useEffect(() => {
     if (loaded)
       try {
@@ -44,7 +51,7 @@ export default function SupportForm() {
           JSON.stringify({ id, subject, category, message }),
         );
       } catch {}
-  }, [id, subject, category, message, loaded]);
+  }, [id, subject, category, message, loaded, key]);
   useEffect(() => {
     if (state.destination) {
       try {
@@ -53,9 +60,10 @@ export default function SupportForm() {
       router.push(state.destination);
       router.refresh();
     }
-  }, [state.destination, router]);
+  }, [state.destination, router, key]);
   return (
     <form action={action} className="mt-5 space-y-4">
+      {orderCode && <p className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-3 text-xs leading-6 text-zinc-400">Atendimento do pedido {orderCode}. Informe se o problema é senha inválida, saldo ausente ou Robux já gastos. Preserve o vídeo do primeiro acesso e informe se possui a gravação; a equipe orientará como enviá-la com segurança. Não inclua senhas nesta mensagem.</p>}
       <input type="hidden" name="request_id" value={id} />
       <div>
         <label htmlFor="support-subject" className="admin-label">

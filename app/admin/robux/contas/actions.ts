@@ -7,6 +7,97 @@ import {
 } from "@/lib/robux-accounts/service";
 import { revalidatePath } from "next/cache";
 import { UUID_PATTERN } from "@/lib/catalog";
+import {
+  encryptCredentials,
+  validateCredentials,
+} from "@/lib/robux-accounts/credentials-crypto";
+
+export type AccountFormState = { error: string | null; success?: string };
+export async function saveAccountDelivery(
+  _previous: AccountFormState,
+  form: FormData,
+): Promise<AccountFormState> {
+  const user = await requireAdmin();
+  const id = String(form.get("order_id") ?? "");
+  if (!UUID_PATTERN.test(id)) return { error: "Pedido inválido." };
+  let encrypted: string;
+  try {
+    const credentials = validateCredentials({
+      username: String(form.get("username") ?? ""),
+      password: String(form.get("password") ?? ""),
+      instructions: String(form.get("instructions") ?? ""),
+    });
+    encrypted = encryptCredentials(
+      id,
+      credentials,
+      process.env.ROBUX_ACCOUNT_DELIVERY_KEY ?? "",
+    );
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Confira os dados da conta.",
+    };
+  }
+  const { error } = await createAdminClient(user.id).rpc(
+    "save_robux_account_delivery",
+    {
+      p_order_id: id,
+      p_admin_id: user.id,
+      p_encrypted: encrypted,
+      p_expected_updated_at: String(form.get("updated_at") ?? "") || null,
+    },
+  );
+  if (error)
+    return {
+      error:
+        error.code === "P0001"
+          ? error.message
+          : "Não foi possível salvar. Confira a atualização SQL.",
+    };
+  revalidatePath(`/admin/pedidos/${id}`);
+  revalidatePath(`/pedidos/${id}`);
+  return {
+    error: null,
+    success:
+      "Dados salvos. Eles são liberados ao cliente quando o pedido estiver entregue.",
+  };
+}
+export async function saveAccountPolicy(
+  _previous: AccountFormState,
+  form: FormData,
+): Promise<AccountFormState> {
+  const user = await requireAdmin();
+  const body = String(form.get("body") ?? "").trim();
+  const version = String(form.get("version") ?? "");
+  if (!UUID_PATTERN.test(version) || body.length < 100 || body.length > 12000)
+    return { error: "Informe uma política entre 100 e 12.000 caracteres." };
+  const { error } = await createAdminClient(user.id).rpc(
+    "save_robux_account_policy",
+    {
+      p_admin_id: user.id,
+      p_body: body,
+      p_expected_version: version,
+    },
+  );
+  if (error)
+    return {
+      error:
+        error.code === "P0001"
+          ? error.message
+          : "Não foi possível salvar a política.",
+    };
+  for (const path of [
+    "/admin/robux/contas",
+    "/reembolso/contas",
+    "/robux/contas",
+  ])
+    revalidatePath(path);
+  return {
+    error: null,
+    success:
+      "Política salva. Novos pedidos solicitarão a leitura da versão atual.",
+  };
+}
 export async function saveAccountSettings(form: FormData) {
   const user = await requireAdmin();
   const margin = Number(String(form.get("margin") ?? "").replace(",", "."));

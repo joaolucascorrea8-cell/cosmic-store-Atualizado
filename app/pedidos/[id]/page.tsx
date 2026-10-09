@@ -19,6 +19,7 @@ import ProofReuploadForm from "./ProofReuploadForm";
 import OrderStatusWatcher from "./OrderStatusWatcher";
 import OrderProgress from "./OrderProgress";
 import RobuxStatusWatcher from "./RobuxStatusWatcher";
+import AccountDelivery from "./AccountDelivery";
 
 type RobuxOrderRow = {
   mode: string;
@@ -65,6 +66,7 @@ export default async function OrderPage({
   if (!order) notFound();
 
   const isAccount = order.order_type === "robux_account";
+  const { data: accountPolicy } = isAccount ? await supabase.from("robux_account_policy_acceptances").select("policy_body,accepted_at").eq("order_id", id).maybeSingle() : { data: null };
   const { data: accountDetails } = isAccount ? await supabase.from("robux_account_order_details").select("robux,cosmic_k,sale_price,fulfillment_status").eq("order_id", id).maybeSingle() : { data: null };
   const robuxOrder = relation(order.robux_orders as RobuxOrderRow | RobuxOrderRow[] | null);
   const isRobux = order.order_type === "robux" && Boolean(robuxOrder);
@@ -225,7 +227,8 @@ export default async function OrderPage({
             </div>
           </section>
 
-          {isAccount && accountDetails && <section className="mt-5 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5"><h2 className="text-xl font-black">Conta com {accountDetails.robux.toLocaleString("pt-BR")} Robux</h2><p className="mt-2 text-sm text-zinc-300">K Cosmic: R$ {Number(accountDetails.cosmic_k).toFixed(2).replace(".", ",")} / 1K · Entrega dos dados no chat privado.</p><p className="mt-2 text-sm text-zinc-400">A disponibilidade é conferida durante a preparação. Caso a conta não esteja disponível, a equipe revisará a entrega com você.</p></section>}
+          {isAccount && accountDetails && <section className="mt-5 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5"><h2 className="text-xl font-black">Conta com {accountDetails.robux.toLocaleString("pt-BR")} Robux</h2><p className="mt-2 text-sm text-zinc-300">K Cosmic: R$ {Number(accountDetails.cosmic_k).toFixed(2).replace(".", ",")} / 1K</p><p className="mt-2 text-sm text-zinc-400">O usuário e a senha serão liberados nesta página quando a entrega for concluída.</p><Link href={`/suporte?pedido=${id}`} className="mt-4 inline-block text-sm text-violet-300">Falar sobre este pedido ou solicitar reembolso →</Link>{accountPolicy ? <details className="mt-4 border-t border-white/10 pt-4"><summary className="cursor-pointer text-sm text-zinc-400">Política lida antes da compra</summary><p className="mt-3 text-xs text-zinc-500">Leitura confirmada em {localDate(accountPolicy.accepted_at)}</p><p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-zinc-400">{accountPolicy.policy_body}</p><div className="mt-3"><CopyButton value={accountPolicy.policy_body} label="Copiar política do pedido" /></div></details> : <Link href="/reembolso/contas" className="mt-3 block text-xs text-zinc-400 underline">Consultar política atual</Link>}</section>}
+          {isAccount && order.status === "delivered" && <AccountDelivery orderId={id} />}
           {isRobux && robuxOrder && (
             <section className="mt-5 rounded-2xl border border-violet-500/20 bg-violet-500/[.055] p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -285,7 +288,7 @@ export default async function OrderPage({
             <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
               <strong>{isRobux ? "🎮 Confirmação da compra do GamePass enviada." : "🎉 Confirmação de entrega enviada."}</strong>
               <span className="mt-1 block">
-                {isRobux ? "Enviamos a confirmação para " : "Enviamos o e-mail e a imagem da entrega para "}
+                {isRobux || isAccount ? "Enviamos a confirmação para " : "Enviamos o e-mail e a imagem da entrega para "}
                 <strong>{maskedEmail}</strong>. Se não aparecer na caixa de
                 entrada, confira também Spam e Promoções.
               </span>

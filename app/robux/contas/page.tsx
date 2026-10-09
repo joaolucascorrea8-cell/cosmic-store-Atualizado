@@ -12,8 +12,7 @@ export default function AccountsPage() {
           <h1 className="section-title">Contas com Robux</h1>
           <p className="section-description max-w-3xl">
             Escolha uma conta pronta com saldo de Robux. Após confirmar o
-            pagamento, nossa equipe prepara os dados para entrega no chat
-            privado do pedido.
+            pagamento, você recebe o usuário e a senha na área privada do pedido.
           </p>
         </div>
         <nav
@@ -34,6 +33,9 @@ export default function AccountsPage() {
             Contas com Robux
           </Link>
         </nav>
+        <div className="mb-7 grid gap-3 text-sm sm:grid-cols-3">
+          {["1. Escolha o saldo", "2. Confira a conta e a política", "3. Pague com Pix"].map(step => <p key={step} className="border-l-2 border-violet-500/40 pl-3 text-zinc-400">{step}</p>)}
+        </div>
         <AccountCatalog />
       </main>
       <SiteFooter />

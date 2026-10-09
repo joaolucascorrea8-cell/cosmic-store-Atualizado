@@ -10,6 +10,8 @@ import {
   AccountUnavailable,
 } from "@/lib/robux-accounts/service";
 import { publicOffer } from "@/lib/providers/byrobux/accounts-parser";
+import { readAccountPolicy } from "@/lib/robux-accounts/policy";
+import { UUID_PATTERN } from "@/lib/catalog";
 export const maxDuration = 300;
 export async function POST(request: Request) {
   const {
@@ -27,10 +29,13 @@ export async function POST(request: Request) {
       body?.checkoutToken ?? "",
     ) ||
     typeof body?.expectedPrice !== "number" ||
-    !Number.isFinite(body.expectedPrice)
+    !Number.isFinite(body.expectedPrice) ||
+    body.policyAccepted !== true ||
+    typeof body.policyVersion !== "string" ||
+    !UUID_PATTERN.test(body.policyVersion)
   )
     return NextResponse.json(
-      { error: "Selecione uma oferta válida." },
+      { error: "Escolha a conta e confirme a leitura da política de reembolso." },
       { status: 400 },
     );
   try {
@@ -63,6 +68,9 @@ export async function POST(request: Request) {
         created: false,
       });
     }
+    const policy = await readAccountPolicy();
+    if (body.policyVersion !== policy.version)
+      return NextResponse.json({ error: "A política foi atualizada. Leia a versão atual e confirme novamente.", policy }, { status: 409 });
     await takeLimit(`user:${user.id}`, 10);
     const settings = await accountSettings();
     if (!settings.enabled)
@@ -82,13 +90,15 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     const code = `COSMIC-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
-    const { data, error } = await admin.rpc("create_robux_account_order", {
+    const { data, error } = await admin.rpc("create_robux_account_order_with_policy", {
       p_user_id: user.id,
       p_token: body.checkoutToken,
       p_code: code,
       p_pix: createPixPayload(safe.price, code),
       p_offer: offer,
       p_expected: safe.price,
+      p_policy_version: policy.version,
+      p_policy_accepted: true,
     });
     if (error) {
       console.error("[robux-accounts/create]", error);

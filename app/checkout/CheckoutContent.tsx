@@ -15,6 +15,7 @@ type CreatedOrder = {
   id: string;
   order_code: string;
   status: string;
+  order_type?: string;
   total: number;
   pix_payload: string;
   game_nickname?: string;
@@ -359,6 +360,7 @@ export default function CheckoutContent({
             depois continuam no seu carrinho.
           </p>
         )}
+      {order?.order_type === "robux_account" && <div className="mb-5 rounded-xl border border-violet-400/20 bg-violet-500/5 p-4 text-sm text-zinc-300">Você está comprando uma conta com Robux. Os dados de acesso serão liberados no pedido após o pagamento e a preparação da entrega. <Link href={`/pedidos/${order.id}`} className="text-violet-300 underline">Consultar pedido e política lida</Link>.</div>}
       <ol aria-label="Etapas da compra" className="checkout-steps mb-7">
         <li className="checkout-step-active">
           <span>01</span> Dados

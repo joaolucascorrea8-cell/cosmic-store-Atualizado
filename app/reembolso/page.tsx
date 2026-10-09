@@ -5,6 +5,7 @@ export const metadata = {
   alternates: { canonical: "/reembolso" },
 };
 import LegalPage from "@/app/components/LegalPage";
+import Link from "next/link";
 
 export default function RefundPage() {
   return (
@@ -12,7 +13,9 @@ export default function RefundPage() {
       eyebrow="Compras e entregas"
       title="Política de Reembolso"
       intro="Nosso objetivo é entregar cada pedido com clareza e segurança. Esta política descreve quando um pedido pode ser cancelado ou reembolsado, sem afastar os direitos previstos na legislação brasileira."
+      updatedAt="9 de outubro de 2026"
     >
+      <section className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-5"><h2>Comprou uma conta com Robux?</h2><p>Consulte também as orientações de primeiro acesso e a política específica desta modalidade, apresentada antes do pagamento.</p><Link href="/reembolso/contas" className="mt-3 inline-block font-bold text-violet-300">Política de contas com Robux →</Link></section>
       <section>
         <h2>1. Prazo de entrega garantido</h2>
         <p>

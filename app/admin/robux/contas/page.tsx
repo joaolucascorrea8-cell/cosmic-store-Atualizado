@@ -1,3 +1,5 @@
+import { readAccountPolicy } from "@/lib/robux-accounts/policy";
+import AccountPolicyForm from "./AccountPolicyForm";
 import { getRequestTime } from "@/lib/store-service-server";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/require-admin";
@@ -19,16 +21,16 @@ export default async function AdminAccountsPage({
   searchParams: Promise<{ page?: string }>;
 }) {
   await requireAdmin();
-  let settings, state;
+  let settings, state, policy;
   try {
-    [settings, state] = await Promise.all([accountSettings(), readCatalog()]);
+    [settings, state, policy] = await Promise.all([accountSettings(), readCatalog(), readAccountPolicy()]);
   } catch {
     return (
       <main className="admin-page">
         <h1 className="admin-title">Contas com Robux</h1>
         <p className="admin-error mt-5">
-          Aplique a migration 202610090001_robux_accounts.sql antes de usar esta
-          modalidade. O Quick Buy continua com suas configurações próprias.
+          Confira as migrations 202610090001_robux_accounts.sql e
+          202610090002_robux_account_delivery_policy.sql. O Quick Buy continua com suas configurações próprias.
         </p>
       </main>
     );
@@ -149,6 +151,9 @@ export default async function AdminAccountsPage({
         </label>
         <PendingButton>Salvar configuração</PendingButton>
       </form>
+      <section className="admin-panel mt-5">
+        <details><summary className="cursor-pointer text-lg font-black">Política de reembolso das contas</summary><p className="mt-3 text-sm text-zinc-400">O cliente lê este texto antes do Pix. <Link href="/reembolso/contas" className="text-violet-300 underline">Ver página pública</Link></p><AccountPolicyForm body={policy.body} version={policy.version} /></details>
+      </section>
       <section className="admin-panel mt-5">
         <h2 className="text-lg font-black">
           Ofertas encontradas · página {page} de {pages}

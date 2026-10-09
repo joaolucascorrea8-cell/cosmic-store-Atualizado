@@ -36,16 +36,15 @@ export async function createDatabase() {
     );
     try {
       await db.exec(sql);
+      // Verify rerunnable historical migrations at their original place in the
+      // sequence; never overwrite newer production functions at the end.
+      if (["202609300001_store_refinement.sql", "202610040003_store_operations.sql"].includes(file)) await db.exec(sql);
     } catch (error) {
       throw new Error(
         `${file}: ${error instanceof Error ? error.message : error}`,
       );
     }
   }
-  await db.exec(
-    await readFile(join(root, "202609300001_store_refinement.sql"), "utf8"),
-  );
-  await db.exec(await readFile(join(root, "202610040003_store_operations.sql"), "utf8"));
   await db.exec(
     `insert into auth.users(id,email) values('${ids.user}','cliente@example.invalid'),('${ids.admin}','owner@example.invalid');insert into public.admins values('${ids.admin}','owner');insert into public.games(id,name,slug) values('${ids.game}','Blox Fruits','blox-fruits');insert into public.categories(id,name,slug,game_id) values('${ids.category}','Permanentes','permanentes','${ids.game}');insert into public.products(id,name,slug,category_id,price,stock,is_active) values('${ids.a}','Dragon','dragon','${ids.category}',20,10,true),('${ids.b}','Buddha','buddha','${ids.category}',30,10,true);insert into public.combos(id,name,slug,price,compare_at_price,is_active) values('${ids.combo}','Dupla','dupla',40,50,true);insert into public.combo_items values('${ids.combo}','${ids.a}',1),('${ids.combo}','${ids.b}',1);`,
   );

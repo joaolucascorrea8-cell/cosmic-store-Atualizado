@@ -306,6 +306,15 @@ export async function sendOrderStatusEmail(
         '<div style="margin:0;padding:16px;border-radius:14px;background:#123024;border:1px solid #166534;color:#dcfce7;font-size:15px;line-height:1.65;">⏳ <strong>Robux pendentes:</strong> após a compra do GamePass, o Roblox pode manter os Robux pendentes por alguns dias. Normalmente informamos uma estimativa de 3 a 7 dias, mas o prazo final é controlado pelo Roblox.</div>',
       buttonLabel: "Acompanhar meus Robux",
     });
+  } else if (order.order_type === "robux_account") {
+    html = baseTemplate({
+      eyebrow: "Conta entregue",
+      title: "Sua conta com Robux está pronta!",
+      intro: "Os dados de acesso estão disponíveis na área privada do seu pedido. Entre na Cosmic Store para consultar seu usuário, senha e instruções.",
+      order,
+      extra: '<p style="color:#d4d4d8;font-size:15px;line-height:1.65;">Prepare a gravação do primeiro acesso, confira o saldo e relate qualquer problema pelo suporte. Por segurança, os dados da conta ficam disponíveis somente no pedido.</p>',
+      buttonLabel: "Acessar minha conta entregue",
+    });
   } else {
     attachment = (await getLatestAdminDeliveryAttachment(orderId)) ?? undefined;
     if (!attachment)

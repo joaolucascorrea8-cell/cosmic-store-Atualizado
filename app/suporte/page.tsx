@@ -4,7 +4,7 @@ import SiteHeader from "@/app/components/SiteHeader";
 import SiteFooter from "@/app/components/SiteFooter";
 import { createClient } from "@/lib/supabase/server";
 import SupportForm from "./SupportForm";
-import { localDate } from "@/lib/catalog";
+import { localDate, UUID_PATTERN } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 const labels: Record<string, string> = {
@@ -13,12 +13,16 @@ const labels: Record<string, string> = {
   closed: "Encerrado",
 };
 
-export default async function SupportPage() {
+export default async function SupportPage({ searchParams }: { searchParams: Promise<{ pedido?: string }> }) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/suporte");
+  const { pedido } = await searchParams;
+  const { data: accountOrder } = pedido && UUID_PATTERN.test(pedido)
+    ? await supabase.from("orders").select("order_code,delivered_at").eq("id", pedido).eq("user_id", user.id).eq("order_type", "robux_account").maybeSingle()
+    : { data: null };
 
   const [{ data: tickets }, { data: unread }] = await Promise.all([
     supabase
@@ -66,7 +70,7 @@ export default async function SupportPage() {
         <div className="mt-9 grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
           <section className="surface rounded-3xl p-6">
             <h2 className="text-xl font-black">Novo atendimento</h2>
-            <SupportForm />
+            <SupportForm orderCode={accountOrder?.order_code} deliveredAt={accountOrder?.delivered_at ? localDate(accountOrder.delivered_at) : undefined} />
           </section>
 
           <section className="surface rounded-3xl p-6">
