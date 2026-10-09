@@ -1,3 +1,4 @@
+import AccountOrderPanel from "@/app/admin/robux/contas/AccountOrderPanel";
 import DeliveryInstructions from "@/app/components/DeliveryInstructions";
 import WorkPanel from "@/app/admin/components/WorkPanel";
 import OrderDiscount from "@/app/components/OrderDiscount";
@@ -70,6 +71,8 @@ const actionLabels: Record<string, string> = {
   "chat:open": "Atendimento reaberto",
   "chat:close": "Atendimento encerrado",
 };
+
+export const maxDuration = 300;
 
 export default async function AdminOrderPage({
   params,
@@ -280,6 +283,7 @@ export default async function AdminOrderPage({
             </a>
           )}
         </section>
+        {order.order_type === "robux_account" && <AccountOrderPanel orderId={id} status={order.status} />}
         {isRobux && robuxOrder && (
           <section className="mt-6 rounded-2xl border border-violet-500/20 bg-violet-500/[.055] p-4 sm:p-6">
             {supplierStatus === "PENDING" && (

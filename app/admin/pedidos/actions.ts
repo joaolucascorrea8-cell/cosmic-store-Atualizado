@@ -1,5 +1,6 @@
 "use server";
 
+import { validateAccountOrder } from "@/lib/robux-accounts/service";
 import { UUID_PATTERN } from "@/lib/catalog";
 import { revalidatePath } from "next/cache";
 import { notifyCustomer } from "@/lib/notifications";
@@ -36,6 +37,10 @@ export async function updateOrderStatus(formData: FormData) {
       throw new Error("A entrega de Robux é controlada pela integração. Use o botão Comprar e entregar.");
     if (status === "cancelled" && ["PENDING", "COMPLETED"].includes(robux?.supplier_status ?? ""))
       throw new Error("Não cancele um pedido enquanto a compra do GamePass está em processamento ou já foi concluída.");
+  }
+  if (before.order_type === "robux_account" && ["paid", "preparing_delivery"].includes(status)) {
+    try { await validateAccountOrder(orderId); }
+    catch { throw new Error("Não foi possível confirmar a disponibilidade da conta. Consulte o painel deste pedido antes de continuar."); }
   }
   const rejectionReason = String(formData.get("rejection_reason") ?? "").trim();
   const expected = String(formData.get("expected_status") ?? before.status);

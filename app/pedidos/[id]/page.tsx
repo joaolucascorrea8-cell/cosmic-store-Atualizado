@@ -64,10 +64,14 @@ export default async function OrderPage({
     .maybeSingle();
   if (!order) notFound();
 
+  const isAccount = order.order_type === "robux_account";
+  const { data: accountDetails } = isAccount ? await supabase.from("robux_account_order_details").select("robux,cosmic_k,sale_price,fulfillment_status").eq("order_id", id).maybeSingle() : { data: null };
   const robuxOrder = relation(order.robux_orders as RobuxOrderRow | RobuxOrderRow[] | null);
   const isRobux = order.order_type === "robux" && Boolean(robuxOrder);
   const supplierStatus = robuxOrder?.supplier_status ?? "";
-  const status = isRobux
+  const status = isAccount && ["paid", "preparing_delivery"].includes(order.status)
+    ? { label: accountDetails?.fulfillment_status === "review" ? "Entrega em revisão" : accountDetails?.fulfillment_status === "acquired" ? "Conta em preparação" : "Aguardando aquisição da conta", className: "text-violet-200 bg-violet-500/10" }
+    : isRobux
     ? supplierStatus === "COMPLETED" || order.status === "delivered"
       ? { label: "GamePass comprado", className: "text-emerald-300 bg-emerald-500/10" }
       : supplierStatus === "PENDING"
@@ -221,6 +225,7 @@ export default async function OrderPage({
             </div>
           </section>
 
+          {isAccount && accountDetails && <section className="mt-5 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5"><h2 className="text-xl font-black">Conta com {accountDetails.robux.toLocaleString("pt-BR")} Robux</h2><p className="mt-2 text-sm text-zinc-300">K Cosmic: R$ {Number(accountDetails.cosmic_k).toFixed(2).replace(".", ",")} / 1K · Entrega dos dados no chat privado.</p><p className="mt-2 text-sm text-zinc-400">A disponibilidade é conferida durante a preparação. Caso a conta não esteja disponível, a equipe revisará a entrega com você.</p></section>}
           {isRobux && robuxOrder && (
             <section className="mt-5 rounded-2xl border border-violet-500/20 bg-violet-500/[.055] p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -252,7 +257,7 @@ export default async function OrderPage({
             </section>
           )}
 
-          {!isRobux && ["delivered", "cancelled"].includes(order.status) && (
+          {!isRobux && !isAccount && ["delivered", "cancelled"].includes(order.status) && (
             <RepurchaseButton orderId={id} />
           )}
           {order.status === "awaiting_payment" && (
