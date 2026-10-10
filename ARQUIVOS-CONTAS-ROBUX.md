@@ -1,6 +1,6 @@
 # Arquivos — entrega completa de Contas com Robux
 
-Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais, política, mínimo de K, avisos, atualização automática e preços por faixa de 10/10/2026. **50 arquivos criados, 17 modificados; nenhum arquivo de código removido.**
+Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais, política, mínimo de K, avisos, atualização automática e preços por faixa de 10/10/2026. **51 arquivos criados, 17 modificados; nenhum arquivo de código removido.**
 
 ## Criados
 
@@ -15,6 +15,7 @@ Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais
 | `ATUALIZACAO-AUTOMATICA-CONTAS.md` | Explica funcionamento, limites, instalação do patch, Git/deploy, validação e roteiro de testes. |
 | `ATUALIZACAO-ENTREGA-E-POLITICA.md` | Instalação desta revisão, chave, SQL, política, operação e testes. |
 | `ATUALIZACAO-K-CONTAS.md` | Regra 34/5, instalação, migrations, Git, deploy, entrega por credenciais e roteiro de testes. |
+| `ATUALIZACAO-ORDEM-CONTAS.md` | Documenta menor preço como padrão, instalação do patch de ordenação, arquivos alterados e ausência de SQL novo. |
 | `ATUALIZACAO-PRECOS-POR-FAIXA.md` | Guia desta revisão: tabela, SQL, VS Code, Git, deploy, testes e limites. |
 | `CONTAS-COM-ROBUX.md` | Guia consolidado com quatro migrations, tabela, K base, histórico, instalação e operação automática. |
 | `CORRECAO-ERROS-PEDIDOS.md` | Explica React #441, instalação do patch, configuração exata da chave, Git, deploy e testes. |
@@ -31,7 +32,7 @@ Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais
 | `app/api/robux/accounts/orders/route.ts` | Usa mínimo e acréscimo ao revalidar o preço antes de criar pedido/Pix. |
 | `app/pedidos/[id]/AccountDelivery.tsx` | Primeiro acesso, mostrar/copiar dados e link para relatar problema. |
 | `app/reembolso/contas/page.tsx` | Página pública da política vigente com orientações e suporte. |
-| `app/robux/contas/AccountCatalog.tsx` | Exibe K base Cosmic e explica a tabela abaixo de 1.000 Robux no catálogo e resumo; inclui rótulo de atualização automática. |
+| `app/robux/contas/AccountCatalog.tsx` | Abre do menor preço total para o maior; preserva outras ordenações, exibe K base Cosmic e explica a tabela abaixo de 1.000 e a atualização automática. |
 | `app/robux/contas/page.tsx` | Introdução, navegação das modalidades e etapas da compra. |
 | `lib/providers/byrobux/accounts-catalog.ts` | Descobre cotações/páginas e preserva estado nas falhas parciais. |
 | `lib/providers/byrobux/accounts-parser.ts` | Precifica contas pela tabela compartilhada usando o K base dinâmico; parser público e campos privados permanecem separados. |

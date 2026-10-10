@@ -117,7 +117,7 @@ O Admin mostra última atualização com dados válidos, última coleta completa
 
 ## Fluxo operacional
 
-1. Cliente abre `/robux/contas`, filtra mínimo/máximo de Robux, ordena por preço ou quantidade e escolhe uma oferta. São 12 opções por página, agrupadas por saldo/K/preço iguais. Ao escolher, o cliente confere o resumo e confirma a leitura da política.
+1. Cliente abre `/robux/contas`, inicialmente do **menor preço total para o maior**. Pode filtrar mínimo/máximo de Robux ou escolher melhor valor por 1K, mais Robux ou menos Robux. São 12 opções por página, agrupadas por saldo/K/preço iguais. A atualização automática mantém a ordenação escolhida enquanto a página está aberta. Ao escolher, o cliente confere o resumo e confirma a leitura da política.
 2. O servidor consulta novamente a cotação até localizar a oferta, conferindo identidade, saldo e K atuais. Se o preço mudar um centavo ou mais, o cliente vê o novo valor e precisa clicar novamente.
 3. Uma RPC cria atomicamente `orders`, `order_items`, snapshot privado, detalhes seguros e registro imutável da política lida. O token evita pedido duplicado em retry. Advisory locks impedem pedidos simultâneos da mesma oferta/grupo.
 4. A reserva para pagamento dura 20 minutos. Sem comprovante, um pedido com reserva vencida não pode enviar novo comprovante nem retomar o Pix; uma nova tentativa da oferta pode cancelar esse pedido vencido. Não cancela pedidos com comprovante. Se o cliente já pagou, deve falar com a equipe para revisão.

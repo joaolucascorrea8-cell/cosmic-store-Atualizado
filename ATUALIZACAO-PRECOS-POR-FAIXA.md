@@ -20,7 +20,7 @@ Abaixo de 1.000 Robux, a curva histórica usa, na referência K34: até 350, `qu
 
 Produtos e contas compartilham a mesma função. Os preços coincidem quando usam a mesma quantidade e o mesmo K base; preços de produtos editados manualmente não são regravados. O Quick Buy/GamePass continua com sua configuração, cálculo e modalidade de taxa próprios. Esta alteração não promete igualar ofertas com Ks diferentes nem saldo em conta e Robux líquidos de GamePass.
 
-O catálogo, o resumo e os pedidos passam a exibir **K base Cosmic**. A ordenação **Melhor valor por 1K** considera o preço final por Robux. Somente o Admin vê custo, origem e configuração. Pedidos anteriores mantêm valores, itens, Pix e snapshots originais; a regra usada fica identificada no snapshot privado.
+O catálogo, o resumo e os pedidos passam a exibir **K base Cosmic**. O catálogo abre do **menor preço total para o maior**, com essa opção selecionada. A ordenação alternativa **Melhor valor por 1K** considera o preço final por Robux. Somente o Admin vê custo, origem e configuração. Pedidos anteriores mantêm valores, itens, Pix e snapshots originais; a regra usada fica identificada no snapshot privado.
 
 ## O que baixar
 

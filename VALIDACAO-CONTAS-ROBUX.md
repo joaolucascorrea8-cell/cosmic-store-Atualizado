@@ -10,7 +10,13 @@
 - Testes das RPCs cobrem preço/margem, ausência de pedidos órfãos, snapshot, imutabilidade, reserva, expiração, RLS, limite/lease, aquisição manual, entrega e concorrência lógica de duas criações. O motor de teste serializa suas transações; não substitui um teste de carga multi-instância em PostgreSQL de produção.
 - Quick Buy original teve teste adicional de criação de pedido/GamePass e confirmação de pagamento; os testes antigos de loja, estoque, cupons, suporte, importação, relatórios e servidores continuam passando.
 
-## Preços por faixa — revisão mais recente de 10/10/2026
+## Ordenação inicial — revisão mais recente de 10/10/2026
+
+A vitrine inicia com Menor preço total selecionado; a API já suportava esse filtro e seu padrão sem parâmetro também é menor preço. A única alteração de código desta revisão é a seleção inicial e a posição da opção no componente público. As demais opções, atualização automática, cálculo, banco e pedidos permanecem.
+
+`npm run check` passou com lint, TypeScript e 105 testes. O build completo e as regressões HTTP existentes em `qa/check-admin-order-actions.cjs` também passaram. Não foram criados testes novos para esta troca de padrão. A verificação visual da seleção no celular/navegador deve ser feita após o deploy; o navegador continua indisponível neste ambiente.
+
+## Preços por faixa — revisão anterior de 10/10/2026
 
 `npm run check` e o build completo passaram. `tests/robux-account-price-table.test.ts` cobre:
 

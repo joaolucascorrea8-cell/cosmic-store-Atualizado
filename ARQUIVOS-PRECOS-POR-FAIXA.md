@@ -1,8 +1,8 @@
 # Arquivos — preços por faixa das contas
 
-Patch cumulativo desde a correção enviada no commit `936b73c`: **8 criados, 15 modificados; nenhum removido.** Inclui os arquivos da atualização automática anteriormente entregue, pois sua instalação ainda não foi confirmada.
+Patch cumulativo desde a correção enviada no commit `936b73c`: **9 criados, 15 modificados; nenhum removido.** Inclui os arquivos da atualização automática anteriormente entregue, pois sua instalação ainda não foi confirmada.
 
-Em relação ao checkpoint imediatamente anterior aos preços por faixa: **6 criados e 13 modificados**.
+Em relação ao checkpoint imediatamente anterior aos preços por faixa: **7 criados e 13 modificados**.
 
 ## Criados no patch cumulativo
 
@@ -11,6 +11,7 @@ Em relação ao checkpoint imediatamente anterior aos preços por faixa: **6 cri
 | `ARQUIVOS-ATUALIZACAO-AUTOMATICA.md` | Lista dos arquivos desta revisão com finalidade e comparação ao checkpoint. |
 | `ARQUIVOS-PRECOS-POR-FAIXA.md` | Manifesto cumulativo desde o último push confirmado e identificação dos arquivos desta revisão. |
 | `ATUALIZACAO-AUTOMATICA-CONTAS.md` | Explica funcionamento, limites, instalação do patch, Git/deploy, validação e roteiro de testes. |
+| `ATUALIZACAO-ORDEM-CONTAS.md` | Documenta menor preço como padrão, instalação do patch de ordenação, arquivos alterados e ausência de SQL novo. |
 | `ATUALIZACAO-PRECOS-POR-FAIXA.md` | Guia desta revisão: tabela, SQL, VS Code, Git, deploy, testes e limites. |
 | `lib/robux-price-table.ts` | Cálculo compartilhado da tabela por quantidade, com centavos inteiros e arredondamento somente do preço final. |
 | `supabase/migrations/202610100002_robux_account_price_table.sql` | Migration nova: identifica a regra no snapshot e calcula novas contas pela tabela no banco, sem reprecificar pedidos/configurações existentes. |
@@ -27,7 +28,7 @@ Em relação ao checkpoint imediatamente anterior aos preços por faixa: **6 cri
 | `app/admin/robux/contas/AccountOrderPanel.tsx` | Mostra a regra histórica do snapshot e o K base, preservando link de aquisição e entrega por credenciais. |
 | `app/admin/robux/contas/page.tsx` | Explica configuração/curva e exemplos; usa K base no quadro de ofertas e inicia consulta automática sem botão. |
 | `app/pedidos/[id]/page.tsx` | Na seção segura de contas, identifica o K como base; preserva total histórico e demais fluxos do pedido. |
-| `app/robux/contas/AccountCatalog.tsx` | Exibe K base Cosmic e explica a tabela abaixo de 1.000 Robux no catálogo e resumo; inclui rótulo de atualização automática. |
+| `app/robux/contas/AccountCatalog.tsx` | Abre do menor preço total para o maior; preserva outras ordenações, exibe K base Cosmic e explica a tabela abaixo de 1.000 e a atualização automática. |
 | `lib/live-pages.ts` | Inclui o Admin de contas no ciclo existente de 90 segundos, com proteção de campos em edição; revisão automática incluída no patch. |
 | `lib/providers/byrobux/accounts-parser.ts` | Precifica contas pela tabela compartilhada usando o K base dinâmico; parser público e campos privados permanecem separados. |
 | `lib/robux-accounts/presentation.ts` | Compara preço final por Robux com aritmética exata para ordenar Melhor valor por 1K. |
