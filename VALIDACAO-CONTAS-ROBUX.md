@@ -10,6 +10,17 @@
 - Testes das RPCs cobrem preço/margem, ausência de pedidos órfãos, snapshot, imutabilidade, reserva, expiração, RLS, limite/lease, aquisição manual, entrega e concorrência lógica de duas criações. O motor de teste serializa suas transações; não substitui um teste de carga multi-instância em PostgreSQL de produção.
 - Quick Buy original teve teste adicional de criação de pedido/GamePass e confirmação de pagamento; os testes antigos de loja, estoque, cupons, suporte, importação, relatórios e servidores continuam passando.
 
+## Avisos no pedido e configuração da chave — revisão de 10/10/2026
+
+ESLint, TypeScript, os 99 testes e o build completo passaram novamente após a correção. O teste reproduzível `qa/check-admin-order-actions.cjs` exercitou as Server Actions reais da aplicação compilada, por HTTP, com Supabase simulado localmente:
+
+- Recusas de entrega sem imagem e sem credenciais aparecem em `role="alert"`, com HTTP 200 e o pedido ainda visível; não alteram status nem criam notificação de entrega.
+- Pedido alterado por outro Admin não é sobrescrito. Recusa de comprovante sem motivo é exibida no formulário. Falha de SQL apresenta orientação genérica, sem detalhes técnicos da exceção.
+- Sem chave, a página explica a configuração; com chave válida, mostra usuário/senha. Gravação vazia é recusada. Dados completos são enviados cifrados ao banco simulado e permitem concluir a conta sem imagem.
+- Nenhum serviço externo, banco de produção, mensagem real ou compra foi utilizado. Os testes isolados do banco continuam verificando os guards reais de imagem/credenciais; o teste HTTP verifica o transporte e a renderização dos formulários.
+
+A validação visual em navegador/celular não foi repetida nesta revisão porque o executável não está disponível. O layout usa os mesmos formulários e classes responsivas; confirme a leitura dos novos avisos e instruções no aparelho após o deploy.
+
 ## Preços com mínimo — revisão de 10/10/2026
 
 A fórmula `max(mínimo, K fornecedor + acréscimo)` foi conferida em TypeScript e PostgreSQL nos limites 28,99 / 29 / 29,01 e em quantidades fracionárias de 1K. A atualização preserva pedidos, itens, política e funções de entrega/Quick Buy anteriores. Alterações de mínimo/acréscimo recalculam novas compras, recusam preço antigo e não reescrevem snapshots. A coluna privada nova também é imutável e não aparece nos detalhes seguros do cliente.

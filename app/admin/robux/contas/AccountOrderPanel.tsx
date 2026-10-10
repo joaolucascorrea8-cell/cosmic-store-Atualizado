@@ -207,13 +207,46 @@ export default async function AccountOrderPanel({
               Registre a aquisição manual da conta para preencher os dados que
               serão entregues ao cliente.
             </p>
+          ) : !accountDeliveryConfigured() ? (
+            <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm leading-6 text-amber-100">
+              <p className="font-bold">Configure a proteção dos dados da conta</p>
+              <p className="mt-2">
+                Falta uma chave válida em{" "}
+                <code className="break-all">ROBUX_ACCOUNT_DELIVERY_KEY</code>.
+                Ela protege as senhas no banco e não é a senha de uma conta Roblox.
+              </p>
+              <details className="mt-3">
+                <summary className="cursor-pointer font-bold">Como configurar na Vercel</summary>
+                <p className="mt-3">
+                  Se você já salvou dados de contas antes, recupere a chave original.
+                  Não gere outra: as entregas existentes dependem dela.
+                </p>
+                <ol className="mt-3 list-decimal space-y-3 pl-5">
+                  <li>
+                    Na primeira configuração, abra o terminal do VS Code e execute:
+                    <code className="mt-2 block break-all rounded-lg bg-black/20 p-3 text-xs">
+                      {`node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`}
+                    </code>
+                    Copie o resultado de 64 caracteres.
+                  </li>
+                  <li>
+                    Na Vercel, abra este projeto → Settings → Environment Variables.
+                    Adicione <code className="break-all">ROBUX_ACCOUNT_DELIVERY_KEY</code>{" "}
+                    e cole o resultado em Value. Selecione Production e salve.
+                  </li>
+                  <li>
+                    Faça um novo deploy ou Redeploy e reabra este pedido.
+                    Depois salve o usuário e a senha antes de concluir a entrega.
+                  </li>
+                </ol>
+                <p className="mt-3 text-xs">
+                  Guarde a chave em local seguro, fora do Git. Não compartilhe o valor.
+                  Ambientes que usam o mesmo banco precisam da mesma chave.
+                </p>
+              </details>
+            </div>
           ) : deliveryError ? (
             <p className="admin-error mt-4">{deliveryError}</p>
-          ) : !accountDeliveryConfigured() ? (
-            <p className="admin-error mt-4">
-              Configure ROBUX_ACCOUNT_DELIVERY_KEY na Vercel para salvar os
-              dados com segurança. Consulte o guia desta atualização.
-            </p>
           ) : (
             <AccountDeliveryForm
               orderId={orderId}

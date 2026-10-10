@@ -2,6 +2,8 @@
 
 Atualização de 10/10/2026, feita sobre o ZIP recebido. Não reconstrói a loja nem substitui o Quick Buy.
 
+> Correção atual do Admin: leia `CORRECAO-ERROS-PEDIDOS.md`. Faltas de print/credenciais passam a gerar avisos no pedido; o guia explica a chave de entrega na Vercel. Esta correção não acrescenta migrations.
+
 > Revisão atual de preços: leia primeiro `ATUALIZACAO-K-CONTAS.md`. Quem já instalou catálogo, política e entrega aplica somente `202610100001_robux_account_minimum_k.sql`. Para a revisão anterior de usuário/senha e política, consulte `ATUALIZACAO-ENTREGA-E-POLITICA.md`.
 
 ## Antes de instalar
@@ -156,4 +158,4 @@ Testes executados e limites estão em `VALIDACAO-CONTAS-ROBUX.md`. O fluxo real 
 
 ## Arquivos
 
-A relação inicial está em `ARQUIVOS-CONTAS-ROBUX.md`; a revisão de entrega está em `ARQUIVOS-AJUSTE-CONTAS.md` e a revisão de preços em `ARQUIVOS-K-CONTAS.md`. Nenhuma migration anterior ou arquivo de lógica Quick Buy foi alterado.
+A relação completa está em `ARQUIVOS-CONTAS-ROBUX.md`; a revisão de entrega está em `ARQUIVOS-AJUSTE-CONTAS.md`, a revisão de preços em `ARQUIVOS-K-CONTAS.md` e a correção de avisos em `ARQUIVOS-CORRECAO-PEDIDOS.md`. Nenhuma migration anterior ou arquivo de lógica Quick Buy foi alterado.

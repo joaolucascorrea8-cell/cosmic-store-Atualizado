@@ -15,8 +15,8 @@ import { withSignedChatAttachments } from "@/lib/chat-attachments";
 import {
   resendOrderEmail,
   updateOrderChat,
-  updateOrderStatus,
 } from "../actions";
+import OrderStatusActions from "../OrderStatusActions";
 import PendingButton from "../../components/PendingButton";
 import RobuxStatusWatcher from "@/app/pedidos/[id]/RobuxStatusWatcher";
 import { executeRobuxOrder } from "@/app/admin/robux/actions";
@@ -357,63 +357,12 @@ export default async function AdminOrderPage({
                   : "Antes de marcar como entregue, envie a print da entrega no chat abaixo. Ela será anexada ao e-mail final do cliente."}
               </p>
             )}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {buttons
-                .filter(([value]) => value !== "proof_rejected")
-                .map(([value, label]) => (
-                  <form key={value} action={updateOrderStatus}>
-                    <input type="hidden" name="order_id" value={id} />
-                    <input
-                      type="hidden"
-                      name="expected_status"
-                      value={order.status}
-                    />
-                    <input type="hidden" name="status" value={value} />
-                    <PendingButton
-                      confirm={
-                        value === "cancelled"
-                          ? "Cancelar este pedido? O estoque baixado será devolvido."
-                          : undefined
-                      }
-                      className={`min-h-11 rounded-xl px-4 py-2 text-sm font-bold ${value === "paid" || value === "delivered" ? "bg-emerald-600" : value === "preparing_delivery" ? "bg-violet-600" : "bg-red-600"}`}
-                    >
-                      {label}
-                    </PendingButton>
-                  </form>
-                ))}
-            </div>
-            {buttons.some(([value]) => value === "proof_rejected") && (
-              <form
-                action={updateOrderStatus}
-                className="mt-5 rounded-xl border border-red-500/20 bg-red-500/5 p-4"
-              >
-                <input type="hidden" name="order_id" value={id} />
-                <input
-                  type="hidden"
-                  name="expected_status"
-                  value={order.status}
-                />
-                <input type="hidden" name="status" value="proof_rejected" />
-                <label
-                  htmlFor="rejection_reason"
-                  className="text-sm font-bold text-red-200"
-                >
-                  Motivo da recusa
-                </label>
-                <textarea
-                  id="rejection_reason"
-                  name="rejection_reason"
-                  required
-                  minLength={5}
-                  maxLength={300}
-                  placeholder="Ex.: imagem ilegível ou valor diferente."
-                  className="mt-2 min-h-24 w-full rounded-xl border border-white/10 bg-[#080812] p-3 text-base outline-none focus:border-red-400"
-                />
-                <PendingButton className="mt-3 min-h-11 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold">
-                  Recusar comprovante
-                </PendingButton>
-              </form>
-            )}
+            <OrderStatusActions
+              key={`${id}:${order.status}`}
+              orderId={id}
+              status={order.status}
+              buttons={buttons}
+            />
           </section>
         )}
         {(canRetryPaymentEmail || canRetryDeliveryEmail) && (

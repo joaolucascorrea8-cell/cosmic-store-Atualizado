@@ -15,32 +15,37 @@ const allowed = [
   "cancelled",
   "proof_rejected",
 ];
-export async function updateOrderStatus(formData: FormData) {
+export type OrderStatusFormState = { error: string | null; success?: string };
+
+export async function updateOrderStatus(
+  _previous: OrderStatusFormState,
+  formData: FormData,
+): Promise<OrderStatusFormState> {
   const adminUser = await requireAdmin();
   const orderId = String(formData.get("order_id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!orderId || !allowed.includes(status))
-    throw new Error("Situação inválida.");
+    return { error: "Situação inválida." };
 
-  if (!UUID_PATTERN.test(orderId)) throw new Error("Pedido inválido.");
+  if (!UUID_PATTERN.test(orderId)) return { error: "Pedido inválido." };
   const admin = createAdminClient();
   const { data: before, error: lookupError } = await admin
     .from("orders")
     .select("status,order_type,robux_orders(supplier_status)")
     .eq("id", orderId)
     .maybeSingle();
-  if (lookupError || !before) throw new Error("Pedido não encontrado.");
+  if (lookupError || !before) return { error: "Não foi possível carregar este pedido. Atualize a página e tente novamente." };
   const robuxRelation = before.robux_orders;
   const robux = Array.isArray(robuxRelation) ? robuxRelation[0] : robuxRelation;
   if (before.order_type === "robux") {
     if (["preparing_delivery", "delivered"].includes(status))
-      throw new Error("A entrega de Robux é controlada pela integração. Use o botão Comprar e entregar.");
+      return { error: "A entrega de Robux é controlada pela integração. Use o botão Comprar e entregar." };
     if (status === "cancelled" && ["PENDING", "COMPLETED"].includes(robux?.supplier_status ?? ""))
-      throw new Error("Não cancele um pedido enquanto a compra do GamePass está em processamento ou já foi concluída.");
+      return { error: "Não cancele um pedido enquanto a compra do GamePass está em processamento ou já foi concluída." };
   }
   if (before.order_type === "robux_account" && ["paid", "preparing_delivery"].includes(status)) {
     try { await validateAccountOrder(orderId); }
-    catch { throw new Error("Não foi possível confirmar a disponibilidade da conta. Consulte o painel deste pedido antes de continuar."); }
+    catch { return { error: "Não foi possível confirmar a disponibilidade da conta. Consulte o painel deste pedido antes de continuar." }; }
   }
   const rejectionReason = String(formData.get("rejection_reason") ?? "").trim();
   const expected = String(formData.get("expected_status") ?? before.status);
@@ -52,20 +57,25 @@ export async function updateOrderStatus(formData: FormData) {
     p_reason: rejectionReason,
   });
   if (error) {
-  console.error("Falha em transition_store_order:", {
-    code: error.code,
-    message: error.message,
-    details: error.details,
-    hint: error.hint,
-  });
-
-  throw new Error(
-    error.code === "P0001"
-      ? error.message
-      : "Não foi possível atualizar o pedido. Confira a atualização SQL.",
-  );
-}
-  if (!result?.changed) return;
+    // Recusas de validação são respostas do formulário, não erros de renderização.
+    if (error.code !== "P0001") {
+      console.error("Falha em transition_store_order:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+    }
+    return {
+      error: error.code === "P0001"
+        ? error.message
+        : "Não foi possível atualizar o pedido. Confira a atualização SQL.",
+    };
+  }
+  if (!result?.changed) {
+    revalidatePath(`/admin/pedidos/${orderId}`);
+    return { error: null, success: "O pedido já está nesta situação." };
+  }
   const order = result.order as { user_id: string; order_code: string };
 
   const notifications: Record<string, [string, string]> = {
@@ -114,6 +124,7 @@ export async function updateOrderStatus(formData: FormData) {
   revalidatePath(`/admin/pedidos/${orderId}`);
   revalidatePath("/admin/pedidos");
   revalidatePath(`/pedidos/${orderId}`);
+  return { error: null, success: "Pedido atualizado." };
 }
 
 export async function resendOrderEmail(formData: FormData) {

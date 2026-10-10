@@ -1,6 +1,6 @@
 # Arquivos — entrega completa de Contas com Robux
 
-Comparação com o ZIP original anexado em 09/10/2026, incluindo a revisão de preços de 10/10/2026. **38 arquivos criados, 14 modificados; nenhum arquivo de código removido.**
+Comparação com o ZIP original anexado em 09/10/2026, incluindo as revisões de preço e avisos no Admin de 10/10/2026. **42 arquivos criados, 14 modificados; nenhum arquivo de código removido.**
 
 ## Criados
 
@@ -8,13 +8,16 @@ Comparação com o ZIP original anexado em 09/10/2026, incluindo a revisão de p
 | --- | --- |
 | `ARQUIVOS-AJUSTE-CONTAS.md` | Lista os arquivos desta revisão e a finalidade de cada alteração. |
 | `ARQUIVOS-CONTAS-ROBUX.md` | Manifesto completo atualizado em comparação com o ZIP original. |
+| `ARQUIVOS-CORRECAO-PEDIDOS.md` | Manifesto dos arquivos criados/modificados nesta correção, comparado ao checkpoint anterior. |
 | `ARQUIVOS-K-CONTAS.md` | Lista desta atualização de preços e arquivos incluídos por compatibilidade. |
 | `ATUALIZACAO-ENTREGA-E-POLITICA.md` | Instalação desta revisão, chave, SQL, política, operação e testes. |
 | `ATUALIZACAO-K-CONTAS.md` | Regra 34/5, instalação, migrations, Git, deploy, entrega por credenciais e roteiro de testes. |
-| `CONTAS-COM-ROBUX.md` | Guia consolidado com as três migrations, mínimo 34/acréscimo 5, segurança e operação. |
-| `VALIDACAO-CONTAS-ROBUX.md` | 99 testes, build, verificação funcional local, resultados anteriores e limites da validação atual. |
+| `CONTAS-COM-ROBUX.md` | Guia consolidado de contas, preços, migrations, operação, segurança e referência à correção de avisos. |
+| `CORRECAO-ERROS-PEDIDOS.md` | Explica React #441, instalação do patch, configuração exata da chave, Git, deploy e testes. |
+| `VALIDACAO-CONTAS-ROBUX.md` | 99 testes, build e resultados dos formulários reais por HTTP; registra as limitações de validação visual e produção. |
+| `app/admin/pedidos/OrderStatusActions.tsx` | Formulário com useActionState, avisos acessíveis, bloqueio durante envio e confirmação de cancelamento. |
 | `app/admin/robux/contas/AccountDeliveryForm.tsx` | Campos de usuário, senha oculta e instruções; salvamento com retorno amigável. |
-| `app/admin/robux/contas/AccountOrderPanel.tsx` | Exibe mínimo e acréscimo históricos; identifica regra anterior sem mínimo nos pedidos antigos. |
+| `app/admin/robux/contas/AccountOrderPanel.tsx` | Snapshot, fornecedor e entrega privados; instruções da chave na Vercel junto à configuração ausente. |
 | `app/admin/robux/contas/AccountPolicyForm.tsx` | Editor da política pública com controle de versão e conflito. |
 | `app/admin/robux/contas/actions.ts` | Valida e salva mínimo e acréscimo apenas com autenticação administrativa; mantém política e credenciais. |
 | `app/admin/robux/contas/page.tsx` | Dois campos configuráveis, explicação do limite resultante e ofertas com a nova fórmula. |
@@ -34,6 +37,7 @@ Comparação com o ZIP original anexado em 09/10/2026, incluindo a revisão de p
 | `lib/robux-accounts/policy.ts` | Leitura explícita dos campos seguros da política vigente. |
 | `lib/robux-accounts/presentation.ts` | Agrupa opções equivalentes sem alterar a identidade da oferta comprada. |
 | `lib/robux-accounts/service.ts` | Lê mínimo do banco e o aplica aos preços do catálogo, preservando cache e validação externa. |
+| `qa/check-admin-order-actions.cjs` | Regressão HTTP dos formulários reais: faltas de print/dados, SQL, concorrência, chave, cifragem e conclusão sem imagem, com Supabase fictício. |
 | `supabase/migrations/202610090001_robux_accounts.sql` | Primeira migration aditiva de catálogo, snapshot, reservas e RLS; inalterada nesta revisão. |
 | `supabase/migrations/202610090002_robux_account_delivery_policy.sql` | Política, aceite imutável, credenciais cifradas, RLS, RPCs e trava de entrega. |
 | `supabase/migrations/202610100001_robux_account_minimum_k.sql` | Mínimo configurável em contas, configuração inicial 34/5 e cálculo transacional com snapshot; preserva pedidos antigos e permissões. |
@@ -50,8 +54,8 @@ Comparação com o ZIP original anexado em 09/10/2026, incluindo a revisão de p
 | Arquivo | Finalidade |
 | --- | --- |
 | `.env.example` | Documenta a chave secreta de criptografia das entregas; não contém chave real. |
-| `app/admin/pedidos/[id]/page.tsx` | Integra painel da conta e atualiza botões, orientações e rótulos de auditoria. |
-| `app/admin/pedidos/actions.ts` | Revalida somente pedidos de conta antes das etapas críticas. |
+| `app/admin/pedidos/[id]/page.tsx` | Integra o painel privado de contas e o formulário de atualização com avisos inline, preservando o fluxo dos demais pedidos. |
+| `app/admin/pedidos/actions.ts` | Mantém transições atômicas e proteções da loja; retorna recusas esperadas ao formulário, preservando avisos/e-mails após mudança válida. |
 | `app/admin/robux/page.tsx` | Link para a área administrativa de contas. |
 | `app/api/orders/[id]/route.ts` | Revalida a conta ao retomar o Pix, preservando o fluxo de outros pedidos. |
 | `app/checkout/CheckoutContent.tsx` | Aviso específico de conta e acesso à política do pedido antes do Pix. |
@@ -64,4 +68,4 @@ Comparação com o ZIP original anexado em 09/10/2026, incluindo a revisão de p
 | `lib/order-emails.ts` | Reutiliza e-mail existente: contas recebem link para acesso privado, sem senha/imagem. |
 | `tests/fixture.ts` | Permite testar a aplicação das migrations até uma versão anterior, seguida da nova migration. |
 
-Migrations anteriores à revisão de preços não foram editadas. Os ZIPs excluem dependências, build, cache de TypeScript, histórico Git e credenciais; preserve seus arquivos privados e a pasta Git.
+Migrations anteriores não foram editadas. Os ZIPs excluem dependências, build, cache de TypeScript, histórico Git e credenciais; preserve seus arquivos privados e a pasta Git.
