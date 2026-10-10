@@ -41,7 +41,7 @@ test("regra aprovada mantém K 34 até fornecedor 29 e sobe centavo a centavo ac
   }
   assert.deepEqual(calculateCosmicPrice(1990, 26.93, 5, 34), { cosmicK: 34, price: 67.66 });
   assert.deepEqual(calculateCosmicPrice(1990, 29.5, 5, 34), { cosmicK: 34.5, price: 68.66 });
-  assert.deepEqual(calculateCosmicPrice(250, 29.5, 5, 34), { cosmicK: 34.5, price: 8.63 });
+  assert.deepEqual(calculateCosmicPrice(250, 29.5, 5, 34), { cosmicK: 34.5, price: 10.87 });
   assert.deepEqual(calculateCosmicPrice(1000, 29, 6, 36), { cosmicK: 36, price: 36 });
   assert.deepEqual(calculateCosmicPrice(1000, 31, 6, 36), { cosmicK: 37, price: 37 });
   for (const minimum of [-1, NaN, Infinity]) assert.throws(() => calculateCosmicPrice(1000, 29, 5, minimum));

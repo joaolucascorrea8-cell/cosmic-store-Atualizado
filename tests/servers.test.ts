@@ -247,6 +247,7 @@ test("atualizações automáticas cobrem catálogos e listas sem entrar no login
     "/admin",
     "/admin/servidores",
     "/admin/pedidos",
+    "/admin/robux/contas",
     "/admin/suporte",
     "/pedidos",
     "/suporte",

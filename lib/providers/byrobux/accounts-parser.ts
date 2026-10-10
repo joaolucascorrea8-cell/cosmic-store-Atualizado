@@ -1,5 +1,6 @@
 // Pure parser of anonymous, public HTML. Never evaluates scripts or retains purchase tokens.
 import { createHash } from "node:crypto";
+import { priceFromRobuxTable } from "../../robux-price-table";
 
 export type AccountQuote = {
   id: string;
@@ -97,7 +98,7 @@ export function calculateCosmicPrice(
   );
   return {
     cosmicK: kCents / 100,
-    price: Math.round((robux * kCents) / 1000) / 100,
+    price: priceFromRobuxTable(robux, kCents / 100),
   };
 }
 export function parseQuotes(html: string, seenAt = new Date().toISOString()) {

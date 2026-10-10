@@ -58,7 +58,7 @@ export default async function AccountOrderPanel({
               {Number(a.robux).toLocaleString("pt-BR")} Robux
             </h2>
             <p className="mt-2 text-sm text-zinc-400">
-              K Cosmic {money(a.cosmic_k)} / 1K
+              K base Cosmic {money(a.cosmic_k)} / 1K
             </p>
           </div>
           <div className="sm:text-right">
@@ -148,6 +148,11 @@ export default async function AccountOrderPanel({
               Cotação e histórico da oferta
             </summary>
             <div className="mt-3 space-y-2 leading-6">
+              <p>
+                {a.pricing_rule === "product_table_v1"
+                  ? "Preço pela tabela Cosmic por quantidade; proporcional ao K base a partir de 1.000 Robux."
+                  : "Preço proporcional original, anterior à tabela por quantidade. O valor deste pedido foi preservado."}
+              </p>
               <p>
                 K fornecedor {money(a.supplier_k)} · Acréscimo configurado{" "}
                 {money(a.margin_per_thousand)} / 1K

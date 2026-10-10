@@ -2,9 +2,13 @@
 
 Atualização de 10/10/2026, feita sobre o ZIP recebido. Não reconstrói a loja nem substitui o Quick Buy.
 
+> Revisão mais recente: leia `ATUALIZACAO-PRECOS-POR-FAIXA.md`. As novas contas abaixo de 1.000 Robux usam a mesma curva de preços de Produtos → Preços. Requer a migration nova `202610100002_robux_account_price_table.sql`; pedidos antigos mantêm seus valores. O patch também inclui a atualização automática do Admin.
+
+> Atualização automática: leia `ATUALIZACAO-AUTOMATICA-CONTAS.md`. A vitrine e o Admin de contas consultam automaticamente durante o uso; o botão é opcional. Sem migration ou variável nova nesta revisão.
+
 > Correção atual do Admin: leia `CORRECAO-ERROS-PEDIDOS.md`. Faltas de print/credenciais passam a gerar avisos no pedido; o guia explica a chave de entrega na Vercel. Esta correção não acrescenta migrations.
 
-> Revisão atual de preços: leia primeiro `ATUALIZACAO-K-CONTAS.md`. Quem já instalou catálogo, política e entrega aplica somente `202610100001_robux_account_minimum_k.sql`. Para a revisão anterior de usuário/senha e política, consulte `ATUALIZACAO-ENTREGA-E-POLITICA.md`.
+> Histórico: `ATUALIZACAO-K-CONTAS.md` documenta a introdução do mínimo de K. A regra proporcional abaixo de 1.000 Robux daquele guia foi substituída pela revisão mais recente. Para usuário/senha e política, consulte `ATUALIZACAO-ENTREGA-E-POLITICA.md`.
 
 ## Antes de instalar
 
@@ -18,8 +22,8 @@ O ZIP atual usa **Gmail** em `lib/notifications.ts` e `lib/gmail.ts` para envio.
 
 1. Extraia o ZIP atualizado. No seu repositório local, copie o conteúdo da pasta `cosmic-store` por cima dos arquivos correspondentes. Preserve a sua pasta `.git`, seu `.env.local` e as configurações de produção. O ZIP entregue não contém dependências, `.next`, histórico `.git` ou credenciais.
 2. Confira se as migrations anteriores, incluindo `202610050001_robux_quick_buy.sql`, já estão aplicadas. **Não reaplique todas as migrations antigas em produção.**
-3. No SQL Editor do Supabase, execute `supabase/migrations/202610090001_robux_accounts.sql` somente se ainda não aplicada e, em seguida, as migrations `202610090002_robux_account_delivery_policy.sql` e `202610100001_robux_account_minimum_k.sql`, se ainda não aplicadas. O arquivo usa uma transação e acrescenta as estruturas abaixo; não remove produtos/pedidos e não modifica migrations anteriores. Aplique uma única vez, ou use o mecanismo de migrations que você já utiliza.
-4. Execute `supabase/verificacoes/202610090001_check.sql`. As tabelas devem existir com RLS. Após a segunda migration, execute também `202610090002_check.sql`: as RPCs novas são exclusivas do servidor; a criação antiga de conta fica sem chamada direta, inclusive por `service_role`. A tabela segura tem somente `order_id`, `robux`, `cosmic_k`, `sale_price`, `fulfillment_status`. Execute também `202610100001_check.sql`: a configuração atual deve mostrar mínimo 34 e acréscimo 5.
+3. No SQL Editor do Supabase, aplique, em ordem e somente se ainda não aplicadas: `202610090001_robux_accounts.sql`, `202610090002_robux_account_delivery_policy.sql`, `202610100001_robux_account_minimum_k.sql` e `202610100002_robux_account_price_table.sql`, em `supabase/migrations`. Quem já instalou as três primeiras aplica somente a quarta. Todas usam transação; não removem produtos/pedidos e não modificam migrations anteriores. Execute cada uma uma única vez, ou use o mecanismo de migrations que você já utiliza. Aplique a nova migration antes de publicar o código correspondente.
+4. Execute os SQLs correspondentes em `supabase/verificacoes`. As tabelas devem existir com RLS; a criação interna fica sem chamada direta, inclusive por `service_role`, e somente o wrapper com aceite da política é executável pelo servidor. A tabela segura tem somente `order_id`, `robux`, `cosmic_k`, `sale_price`, `fulfillment_status`. A configuração inicial é mínimo 34/acréscimo 5; ajustes posteriores seus são preservados pela quarta migration. Em `202610100002_check.sql`, todos os exemplos de preço devem ter `confere = true`, e `tabela_instalada`, `snapshot_protegido`, `regra_no_snapshot` e `rls_enabled` também devem ser verdadeiros.
 5. Mantenha as variáveis atuais de Supabase, Pix, Gmail, Discord e Quick Buy. **Configure `ROBUX_ACCOUNT_DELIVERY_KEY` para a entrega protegida de usuário/senha, seguindo `ATUALIZACAO-ENTREGA-E-POLITICA.md`.** A coleta de contas não utiliza `BYROBUX_API_KEY`, cookies, login ou sua sessão.
 6. Mantenha `NEXT_PUBLIC_SITE_URL=https://www.cosmicstore.com.br` no seu ambiente, de acordo com o domínio oficial. O domínio, callbacks de autenticação e configurações do projeto não foram alterados.
 7. No terminal do projeto:
@@ -31,7 +35,7 @@ npm run build
 npm run dev
 ```
 
-8. Acesse `/admin/robux/contas`, usando uma conta com role `owner` ou `admin`. Clique em **Consultar catálogo** para fazer a primeira leitura. Confira mínimo de K em 34 e acréscimo em 5, ou ajuste conforme desejado. O botão respeita o intervalo e o bloqueio de sincronização; não força consultas repetidas.
+8. Acesse `/admin/robux/contas`, usando uma conta com role `owner` ou `admin`. O acesso já inicia a consulta automaticamente; **Consultar agora (opcional)** permite uma consulta manual respeitando o intervalo/cache. Confira mínimo de K em 34 e acréscimo em 5, ou ajuste conforme desejado.
 9. Confira `/robux/contas` e faça um pedido controlado antes de abrir a modalidade ao público. A opção **Aceitar novas compras de contas** permite pausar somente esta modalidade.
 
 Não foi executada nenhuma migration no seu banco de produção, nenhum pagamento real, aquisição no fornecedor ou deploy.
@@ -50,7 +54,7 @@ A Vercel deve continuar ligada ao mesmo repositório e branch. Confira as variá
 
 As rotas de coleta/validação e ações administrativas relevantes declaram `maxDuration = 300`. Verifique se os limites efetivos do seu projeto de hospedagem comportam essa duração. Cada requisição ao fornecedor tem timeout de 15 segundos; uma coleta completa tem limites de 240 segundos, 500 páginas/requisições e 200 cotações. Limites excedidos geram diagnóstico e preservação do último estado conhecido.
 
-A sincronização é **sob demanda**, agendada com `after()` após a resposta do catálogo em cache, com intervalo de 90 segundos entre coletas, cache compartilhado no banco e atualização da página aberta a cada 90 segundos. Não exige cadastro diário. Sem visitantes ou chamadas ao endpoint, o cache só volta a atualizar no próximo acesso. O tempo total depende da quantidade de páginas e da resposta externa; 90 segundos é o intervalo configurado, não uma promessa de concluir a coleta nesse tempo.
+A sincronização é **automática durante o uso**, agendada com `after()` após a resposta do catálogo em cache ou da página administrativa de contas. O cache é compartilhado no banco e respeita o intervalo mínimo de 90 segundos entre coletas. A vitrine e o Admin verificam novidades a cada 90 segundos quando visíveis; o Admin adia a atualização da tela durante edições não salvas. Não exige cadastro diário nem cliques no botão. Sem visitantes, Admin aberto ou chamadas ao endpoint, o cache só volta a atualizar no próximo acesso. O tempo total depende da quantidade de páginas e da resposta externa; 90 segundos é o intervalo de verificação da tela, não uma promessa de concluir a coleta nesse tempo.
 
 Para manter consultas mesmo sem visitantes, há o endpoint opcional:
 
@@ -63,14 +67,27 @@ Um agendador compatível com sua hospedagem pode chamá-lo aproximadamente a cad
 
 ## Preços
 
-Para contas, a fórmula é exclusivamente:
+O K base das contas continua dinâmico:
 
 ```text
-K Cosmic = maior entre (mínimo configurado) e (K público da cotação + acréscimo configurado)
-Preço = arredondar((Robux / 1.000) × K Cosmic, 2 casas)
+K base Cosmic = maior entre (mínimo configurado) e (K público da cotação + acréscimo configurado)
+Menos de 1.000 Robux: tabela por quantidade dos produtos, ajustada por K base / 34
+A partir de 1.000 Robux: (Robux / 1.000) × K base Cosmic
+Arredondamento: somente o preço final, para duas casas
 ```
 
 Configuração inicial atual: mínimo 34 e acréscimo 5. Exemplo: 1.990 Robux, K fornecedor 26,93 → K Cosmic 34 → R$67,66. K fornecedor 29,50 → K Cosmic 34,50 → R$68,66. Até fornecedor 29, o K fica em 34; acima, soma 5. Ambos os valores são configuráveis no Admin. O fornecedor continua dinâmico e não há ajuste para ,90/,99.
+
+| Quantidade | Preço com K base R$34 |
+| ---: | ---: |
+| 350 Robux | R$15,00 |
+| 400 Robux | R$16,00 |
+| 450 Robux | R$17,00 |
+| 500 Robux | R$18,55 |
+| 750 Robux | R$26,27 |
+| 1.000 Robux | R$34,00 |
+
+O mesmo cálculo é compartilhado com Produtos → Preços, sem reescrever produtos já cadastrados ou valores manuais. Os preços coincidem quando a quantidade e o K base usados são iguais. Quick Buy/GamePass conserva seu cálculo próprio, incluindo o modo de taxa; comparar saldo de conta com Robux líquidos de GamePass exige considerar essa diferença. O rótulo público é **K base Cosmic**, pois abaixo de 1.000 o preço segue a tabela, e a ordenação **Melhor valor por 1K** compara o preço final por Robux.
 
 O mínimo e o acréscimo só alteram novas ofertas/pedidos. Um pedido criado mantém o preço e a configuração do snapshot, mesmo que o Admin altere a configuração depois. O banco recalcula o valor durante a criação e rejeita divergência de preço, inclusive uma alteração de mínimo/acréscimo ocorrida entre a validação e a transação.
 
@@ -125,7 +142,7 @@ Nunca coloque credenciais em notas públicas, catálogo ou e-mail de anúncio. A
 
 Os custos, margem, URLs, IDs operacionais e K fornecedor não estão na tabela do cliente. As APIs usam DTOs explícitos. RPCs de criação/aquisição/lease/rate limit são exclusivas de `service_role`. Actions administrativas verificam o sistema existente de roles. Não foram adicionados segredos client-side.
 
-O snapshot não pode ser editado: só podem mudar disponibilidade, última consulta e aquisição manual. Alterar catálogo/configuração não altera pedidos históricos. Dados de login são inseridos manualmente em campos próprios, cifrados e liberados apenas ao dono do pedido entregue; não são parte do catálogo. As tabelas adicionais de política e entrega estão documentadas no guia da revisão.
+O snapshot não pode ser editado: só podem mudar disponibilidade, última consulta e aquisição manual. A coluna privada `pricing_rule` identifica pedidos anteriores como `proportional_v1` e os novos como `product_table_v1`, sem recalcular o histórico. Alterar catálogo/configuração não altera pedidos históricos. Dados de login são inseridos manualmente em campos próprios, cifrados e liberados apenas ao dono do pedido entregue; não são parte do catálogo. As tabelas adicionais de política e entrega estão documentadas no guia da revisão.
 
 ## Roteiro de testes antes de liberar
 
@@ -142,6 +159,9 @@ Use ambiente de teste e usuários controlados. Não precisa comprar contas reais
 | Fornecedor offline/HTML quebrado | Cache preservado, erro no Admin, sem dados apagados. |
 | Cotação sem sucesso por mais de 10 min | Compra desabilitada para suas ofertas. |
 | Mínimo 34 → 36 ou acréscimo 5 → 8 | Novos preços seguem o maior entre mínimo e K + acréscimo; snapshots antigos permanecem. |
+| Contas abaixo de 1.000 com K base 34 | 350 → 15; 400 → 16; 450 → 17; 500 → 18,55; 750 → 26,27. |
+| Melhor valor por 1K | Ordena por preço final dividido pelos Robux, considerando as faixas. |
+| Pedido criado antes da tabela | Mantém total, Pix, itens e snapshot originais; repetir a requisição não recalcula. |
 | Oferta desaparece ao clicar | Pedido não é criado; mensagem amigável, card antigo suprimido. |
 | Preço muda ao clicar | Novo preço visível, novo clique necessário. |
 | Duas sessões na mesma oferta | Apenas um pedido ativo; segunda recebe conflito. |
@@ -158,4 +178,4 @@ Testes executados e limites estão em `VALIDACAO-CONTAS-ROBUX.md`. O fluxo real 
 
 ## Arquivos
 
-A relação completa está em `ARQUIVOS-CONTAS-ROBUX.md`; a revisão de entrega está em `ARQUIVOS-AJUSTE-CONTAS.md`, a revisão de preços em `ARQUIVOS-K-CONTAS.md` e a correção de avisos em `ARQUIVOS-CORRECAO-PEDIDOS.md`. Nenhuma migration anterior ou arquivo de lógica Quick Buy foi alterado.
+A relação completa está em `ARQUIVOS-CONTAS-ROBUX.md` e o patch mais recente em `ARQUIVOS-PRECOS-POR-FAIXA.md`. Os manifestos anteriores documentam suas respectivas revisões. Nenhuma migration anterior foi editada. `lib/robux-pricing.ts` passou a reutilizar o cálculo da tabela em um módulo compartilhado; a lógica do Quick Buy e os resultados da tabela de produtos permanecem preservados.

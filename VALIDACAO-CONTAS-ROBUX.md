@@ -4,11 +4,33 @@
 
 - `npm run lint`: passou, sem erros ou avisos finais.
 - `npm run typecheck`: passou.
-- `npm test`: **99 testes passaram**, zero falhas. Inclui os 93 testes anteriores e seis novos testes de mínimo/configuração/histórico de preços.
+- `npm test`: **105 testes passaram**, zero falhas. Inclui os 99 testes anteriores e seis novos testes da tabela, banco, histórico e privacidade.
 - `npm run build`: passou com Next.js 16.3.8, gerando as rotas atuais e novas.
-- As migrations foram executadas somente em um PostgreSQL isolado com PGlite. As três migrations de contas e seus SQLs de verificação foram testados, incluindo atualização sobre um pedido existente.
+- As migrations foram executadas somente em um PostgreSQL isolado com PGlite. As quatro migrations de contas e seus SQLs de verificação foram testados, incluindo atualização sobre um pedido existente.
 - Testes das RPCs cobrem preço/margem, ausência de pedidos órfãos, snapshot, imutabilidade, reserva, expiração, RLS, limite/lease, aquisição manual, entrega e concorrência lógica de duas criações. O motor de teste serializa suas transações; não substitui um teste de carga multi-instância em PostgreSQL de produção.
 - Quick Buy original teve teste adicional de criação de pedido/GamePass e confirmação de pagamento; os testes antigos de loja, estoque, cupons, suporte, importação, relatórios e servidores continuam passando.
+
+## Preços por faixa — revisão mais recente de 10/10/2026
+
+`npm run check` e o build completo passaram. `tests/robux-account-price-table.test.ts` cobre:
+
+- Exemplos da tabela K34 (350/400/450/500/750/1.000/1.990), limites entre faixas e igualdade com o cálculo de Produtos → Preços usando o mesmo K base. Os limites de validação anteriores dos produtos foram preservados.
+- **7.007 comparações** de preço entre TypeScript e SQL (1.001 quantidades × sete Ks), mais quantidades grandes. Aritmética exata e arredondamento somente no final.
+- Criação de conta de 500 Robux por R$18,55; recusa do valor antigo R$17 sem criar pedido órfão; snapshot privado da regra; alteração de configuração e retry idempotente.
+- Atualização do banco com pedido antigo de 500 Robux a R$17: total, itens, dados seguros, política, configuração customizada e funções de Quick Buy/entrega permanecem. A regra histórica é identificada, sem recalcular o pedido.
+- Ordenação pelo preço final por Robux, DTO público com campos explícitos, imutabilidade da regra e verificações SQL/RLS.
+
+O teste `node qa/check-admin-order-actions.cjs` executou o build e conferiu por HTTP a API real do catálogo com Supabase simulado: tabela de preços, K base, ordenação e ausência de custos, IDs mascarados, margem, fornecedor, URLs e regra privada no retorno. As regressões HTTP de atualização automática do Admin, avisos no formulário, chave, dados cifrados e entrega sem imagem também passaram.
+
+A lógica própria do Quick Buy continua proporcional ao valor bruto do GamePass: os testes mantêm 500 × K34 → R$17 e 1.429 × K34 → R$48,59, sem confundir esse fluxo com o catálogo de contas. Não foram alterados preços salvos de produtos ou pedidos antigos.
+
+Não houve nova captura visual/mobile nesta revisão: o executável de navegador não está disponível. As alterações visuais são rótulos e explicações no layout existente; conferir sua leitura em celular e desktop faz parte do roteiro após o deploy. Nenhuma chamada real ao fornecedor, alteração em produção, Pix, e-mail ou deploy foi feita nesta revisão.
+
+## Atualização automática no Admin — revisão anterior de 10/10/2026
+
+ESLint, TypeScript, os 99 testes e o build completo passaram após incluir a página administrativa no mecanismo de atualização automática existente. A regressão de rotas em `tests/servers.test.ts` cobre a nova rota. O teste HTTP compilado `qa/check-admin-order-actions.cjs` confirmou que abrir o Admin chama `robux_account_claim_sync` após a resposta sem submissão de formulário, e que uma nova renderização consulta novamente o mesmo controle. O banco simulado recusou a aquisição do lease, conferindo que esse caminho não depende de acesso ao fornecedor. Os testes de banco existentes cobrem exclusão mútua, intervalo e preservação do cache em falhas.
+
+As regressões anteriores dos avisos, credenciais e entrega sem imagem também passaram. Não houve nova inspeção visual, espera de timer em navegador, uso de produção ou alteração de agendadores externos. O agendamento visual reutiliza `LivePageRefresh`, incluindo a proteção de campos em edição. Confira o ciclo no navegador após o deploy, conforme `ATUALIZACAO-AUTOMATICA-CONTAS.md`.
 
 ## Avisos no pedido e configuração da chave — revisão de 10/10/2026
 
@@ -72,4 +94,4 @@ O ZIP de origem não foi alterado. SHA-256 do ZIP recebido:
 b9a97778ae0f63f7e2f89affd40c8f6a68bcae947543ee75086501c75f26f4cd
 ```
 
-Nenhuma migration anterior ou arquivo original de integração Quick Buy foi modificado. Não há remoção de arquivos de código da fonte recebida. O pacote final exclui apenas dependências/artefatos de execução/histórico Git, que não são necessários para transportar o código.
+Nenhuma migration anterior foi modificada. A integração do Quick Buy mantém sua lógica; o módulo compartilhado `lib/robux-pricing.ts` apenas delega a curva de produtos à função reutilizada pelas contas. Não há remoção de arquivos de código da fonte recebida. O pacote final exclui apenas dependências/artefatos de execução/histórico Git, que não são necessários para transportar o código.

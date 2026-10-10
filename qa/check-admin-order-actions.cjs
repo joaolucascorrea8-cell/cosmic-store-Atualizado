@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
-const { randomBytes } = require('node:crypto');
+const { randomBytes, createHash } = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
 const base = 'http://127.0.0.1:3110';
@@ -55,7 +55,14 @@ let hasImage = false;
 let transitions = 0;
 let notifications = 0;
 let encryptedSaves = 0;
+let catalogSyncAttempts = 0;
 const checks = [];
+const priceOffers = [350,400,450,500,750,1000,1990].map(robux => {
+  const providerId = `price-test-${robux}`, quoteUrl = 'https://www.byrobux.net/accounts/test?catalog=alternate';
+  const hash = value => createHash('sha256').update(value).digest('hex');
+  return { id: hash(quoteUrl+providerId), providerId, maskedId: '***660', robux,
+    supplierK: 29, supplierPrice: robux*29/1000, quoteId: hash(quoteUrl), quoteUrl, seenAt: now };
+});
 
 const mock = http.createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -67,6 +74,11 @@ const mock = http.createServer(async (req, res) => {
   const fail = (message, code = 'P0001') => { res.statusCode = 400; send({ code, message }); };
   if (url.pathname === '/auth/v1/user') return send(user);
   if (req.method === 'HEAD') { res.setHeader('Content-Range', '*/0'); return res.end(); }
+  if (url.pathname === '/rest/v1/rpc/robux_account_claim_sync') {
+    catalogSyncAttempts++;
+    // Simula o intervalo/cache compartilhado: não consulta fornecedor neste teste.
+    return send(false);
+  }
   if (url.pathname === '/rest/v1/rpc/transition_store_order') {
     assert.equal(body.p_admin_id, adminId);
     assert.equal(body.p_order_id, orderId);
@@ -101,6 +113,9 @@ const mock = http.createServer(async (req, res) => {
     profiles: [{ id: adminId, nickname: 'Teste Admin', avatar_url: null }],
     orders: [order], robux_account_orders: [account],
     robux_account_deliveries: delivery ? [delivery] : [],
+    robux_account_settings: [{ enabled: true, min_cosmic_k: 34, margin_per_thousand: 5 }],
+    robux_account_policy: [{ version: '40000000-0000-4000-8000-000000000001', body: 'Política de teste local.', updated_at: now }],
+    robux_account_catalog: [{ quotes: [], offers: priceOffers, diagnostics: [], last_success_at: now, last_complete_at: now, last_attempt_at: now, last_error: null, next_attempt_at: now, lease_until: null }],
   };
   const rows = values[table] ?? [];
   return send(String(req.headers.accept).includes('vnd.pgrst.object') ? (rows[0] ?? null) : rows);
@@ -174,6 +189,34 @@ function inlineError(html, message) {
   }
   await new Promise(resolve => mock.listen(54329, '127.0.0.1', resolve));
   await startNext();
+
+  const catalogResponse = await fetch(base + '/api/robux/accounts/catalog?sort=value');
+  assert.equal(catalogResponse.status,200);
+  const catalog = await catalogResponse.json();
+  assert.deepEqual(catalog.offers.map(o=>o.robux),[1000,1990,750,500,450,400,350]);
+  const expectedPrices = {350:15,400:16,450:17,500:18.55,750:26.27,1000:34,1990:67.66};
+  for (const o of catalog.offers) {
+    assert.equal(o.cosmicK,34);
+    assert.equal(o.price,expectedPrices[o.robux]);
+    assert.deepEqual(Object.keys(o).sort(),['available','cosmicK','id','options','price','robux']);
+  }
+  assert(!/supplier|margin|maskedId|quoteUrl|byrobux|pricing_rule/.test(JSON.stringify(catalog)));
+  checks.push('API pública usa preços por faixa, preserva K base e ordena pelo preço efetivo por Robux');
+
+  const attemptsBeforeAdmin = catalogSyncAttempts;
+  const adminCatalog = await fetch(base + '/admin/robux/contas', { headers: { Cookie: cookie } });
+  assert.equal(adminCatalog.status, 200);
+  const adminHtml = await adminCatalog.text();
+  assert(adminHtml.includes('Não é necessário apertar o botão.'));
+  assert(adminHtml.includes('K base Cosmic'));
+  for (let i = 0; i < 30 && catalogSyncAttempts === attemptsBeforeAdmin; i++) await new Promise(resolve => setTimeout(resolve, 50));
+  assert(catalogSyncAttempts > attemptsBeforeAdmin, 'O simples acesso do Admin deve iniciar a sincronização');
+  const previousAttempts = catalogSyncAttempts;
+  const nextView = await fetch(base + '/admin/robux/contas', { headers: { Cookie: cookie } });
+  await nextView.text();
+  for (let i = 0; i < 30 && catalogSyncAttempts === previousAttempts; i++) await new Promise(resolve => setTimeout(resolve, 50));
+  assert(catalogSyncAttempts > previousAttempts, 'A atualização do painel deve consultar novamente o controle de sincronização');
+  checks.push('Abrir/atualizar o Admin inicia a sincronização após a resposta sem clicar em Consultar');
 
   let html = await submit(formData(await page(), 'status', 'delivered'));
   inlineError(html, 'Envie a imagem da entrega no chat antes de concluir.');

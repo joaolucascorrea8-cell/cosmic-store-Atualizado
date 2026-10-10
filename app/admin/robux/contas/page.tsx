@@ -2,12 +2,14 @@ import { readAccountPolicy } from "@/lib/robux-accounts/policy";
 import AccountPolicyForm from "./AccountPolicyForm";
 import { getRequestTime } from "@/lib/store-service-server";
 import Link from "next/link";
+import { after } from "next/server";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   accountSettings,
   readCatalog,
   catalogFresh,
+  syncCatalog,
 } from "@/lib/robux-accounts/service";
 import { calculateCosmicPrice } from "@/lib/providers/byrobux/accounts-parser";
 import { money, localDate } from "@/lib/catalog";
@@ -36,6 +38,12 @@ export default async function AdminAccountsPage({
       </main>
     );
   }
+  // O acesso do Admin também mantém o catálogo ativo, sem depender da vitrine.
+  // A sincronização usa o mesmo cache, intervalo e bloqueio entre instâncias.
+  after(async () => {
+    try { await syncCatalog(); }
+    catch { console.error("[robux-accounts/admin] Sincronização indisponível."); }
+  });
   const now = await getRequestTime();
   const { page: raw } = await searchParams,
     pages = Math.max(1, Math.ceil(state.offers.length / 50));
@@ -102,9 +110,14 @@ export default async function AdminAccountsPage({
           Próxima consulta permitida: {localDate(state.next_attempt_at)}
         </p>
         <p className="mt-2 text-sm text-zinc-400">
-          Atualização sob demanda, a cada 90 segundos durante uso da página.
-          Cache acima de 10 minutos bloqueia novas compras. A reserva local não
-          reserva no fornecedor.
+          Atualização automática enquanto esta página ou a vitrine estiver aberta.
+          O painel verifica novidades a cada 90 segundos; a consulta ao fornecedor
+          pode levar alguns instantes. Não é necessário apertar o botão.
+        </p>
+        <p className="mt-2 text-xs text-zinc-500">
+          Sem nenhuma dessas páginas abertas, a consulta retoma no próximo acesso.
+          Campos em edição são preservados. Cache acima de 10 minutos bloqueia
+          novas compras. A reserva local não reserva no fornecedor.
         </p>
         {state.last_error && (
           <p className="admin-error mt-4">{state.last_error}</p>
@@ -120,14 +133,20 @@ export default async function AdminAccountsPage({
           </details>
         )}
         <form action={refreshAccountCatalog} className="mt-4">
-          <PendingButton>Consultar catálogo</PendingButton>
+          <PendingButton>Consultar agora (opcional)</PendingButton>
         </form>
       </section>
       <form action={saveAccountSettings} className="admin-panel mt-5 max-w-xl">
         <h2 className="text-lg font-black">Preço das contas</h2>
         <p className="mt-2 text-sm text-zinc-400">
-          K Cosmic é o maior entre o mínimo configurado e o K fornecedor mais
-          o acréscimo. Esta regra vale para novas compras de contas.
+          O K base Cosmic é o maior entre o mínimo configurado e o K fornecedor mais
+          o acréscimo. Abaixo de 1.000 Robux, o preço usa a mesma tabela por quantidade
+          dos produtos. A partir de 1.000, o cálculo é proporcional. Novas compras
+          usam a configuração atual; pedidos existentes mantêm seus preços.
+        </p>
+        <p className="mt-2 text-xs text-zinc-500">
+          Com K base R$34: 350 Robux = R$15; 400 = R$16; 450 = R$17; 500 = R$18,55.
+          Ao mudar o K base, a tabela acompanha a mudança proporcionalmente.
         </p>
         <label className="mt-4 block">
           K Cosmic mínimo (R$ por 1.000 Robux)
@@ -190,7 +209,7 @@ export default async function AdminAccountsPage({
                 <th className="p-2">Robux</th>
                 <th className="p-2">K fornecedor</th>
                 <th className="p-2">Custo</th>
-                <th className="p-2">K Cosmic / venda</th>
+                <th className="p-2">K base Cosmic / venda</th>
                 <th className="p-2">Cotação</th>
               </tr>
             </thead>

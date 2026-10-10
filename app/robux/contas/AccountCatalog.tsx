@@ -246,6 +246,9 @@ export default function AccountCatalog() {
           {loading
             ? "Atualizando opções…"
             : `${catalog?.total ?? 0} opções de saldo`}
+          <span className="mt-1 block text-xs text-zinc-500">
+            Atualização automática
+          </span>
         </p>
         <button
           type="button"
@@ -253,7 +256,7 @@ export default function AccountCatalog() {
           disabled={loading}
           className="min-h-10 text-violet-300 disabled:opacity-40"
         >
-          Atualizar
+          Atualizar agora
         </button>
       </div>
       {catalog && !catalog.available && (
@@ -279,7 +282,7 @@ export default function AccountCatalog() {
               aria-hidden="true"
             >
               <span>Saldo da conta</span>
-              <span>K Cosmic</span>
+              <span>K base Cosmic</span>
               <span>Preço final</span>
               <span />
             </div>
@@ -308,7 +311,7 @@ export default function AccountCatalog() {
                   </div>
                   <p className="text-right text-sm text-zinc-300 sm:text-left">
                     <span className="block text-[11px] text-zinc-500 sm:hidden">
-                      K Cosmic
+                      K base Cosmic
                     </span>
                     {money(offer.cosmicK)}{" "}
                     <span className="text-xs text-zinc-500">/ 1K</span>
@@ -391,7 +394,9 @@ export default function AccountCatalog() {
       <p className="max-w-3xl text-xs leading-6 text-zinc-500">
         Cada opção inclui uma conta com o saldo informado. A disponibilidade e o
         valor são conferidos novamente antes do pedido. Contas com o mesmo saldo
-        e preço aparecem juntas para facilitar sua escolha.
+        e preço aparecem juntas para facilitar sua escolha. Abaixo de 1.000 Robux,
+        o preço segue a tabela por quantidade da Cosmic. A partir de 1.000, o
+        cálculo é proporcional ao K base.
       </p>
       <dialog
         ref={dialog}
@@ -432,11 +437,17 @@ export default function AccountCatalog() {
                   {chosen.robux.toLocaleString("pt-BR")} Robux
                 </strong>
                 <p className="mt-1 text-xs text-zinc-400">
-                  K Cosmic {money(chosen.cosmicK)} / 1K
+                  K base Cosmic {money(chosen.cosmicK)} / 1K
                 </p>
               </div>
               <strong className="text-2xl">{money(chosen.price)}</strong>
             </div>
+            {chosen.robux < 1000 && (
+              <p className="mb-4 text-xs leading-6 text-zinc-400">
+                Este saldo segue a tabela de preços abaixo de 1.000 Robux.
+                O preço final é o total mostrado acima.
+              </p>
+            )}
             <p className="text-sm leading-6 text-zinc-300">
               Você receberá{" "}
               <strong className="text-white">

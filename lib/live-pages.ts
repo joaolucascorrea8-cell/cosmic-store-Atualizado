@@ -5,6 +5,8 @@ export type LivePageConfig = {
 };
 const catalog = { scopes: ["catalog", "reviews"], tables: [], pollMs: 30000 };
 export function livePageConfig(pathname: string): LivePageConfig | null {
+  if (pathname === "/admin/robux/contas")
+    return { scopes: [], tables: [], pollMs: 90000 };
   if (pathname === "/conta/favoritos")
     return {
       scopes: ["catalog"],

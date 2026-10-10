@@ -1,5 +1,5 @@
 import "server-only";
-import { groupAccountOptions } from "./presentation";
+import { compareAccountUnitPrice, groupAccountOptions } from "./presentation";
 import { readAccountPolicy } from "./policy";
 import { getStoreService } from "@/lib/store-service-server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -186,7 +186,7 @@ export async function publicCatalog(params: URLSearchParams) {
   offers.sort(
     (a, b) =>
       (sort === "value"
-        ? a.cosmicK - b.cosmicK || a.price - b.price
+        ? compareAccountUnitPrice(a, b) || a.price - b.price
         : sort === "robux_desc"
         ? b.robux - a.robux
         : sort === "robux_asc"
