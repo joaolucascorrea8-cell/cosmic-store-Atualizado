@@ -13,7 +13,11 @@ import {
   publicOffer,
 } from "@/lib/providers/byrobux/accounts-parser";
 
-export type AccountSettings = { enabled: boolean; margin_per_thousand: number };
+export type AccountSettings = {
+  enabled: boolean;
+  margin_per_thousand: number;
+  min_cosmic_k: number;
+};
 export type CatalogState = {
   quotes: AccountQuote[];
   offers: AccountOffer[];
@@ -32,7 +36,7 @@ function assertOk(error: { message: string } | null) {
 export async function accountSettings(): Promise<AccountSettings> {
   const { data, error } = await createAdminClient()
     .from("robux_account_settings")
-    .select("enabled,margin_per_thousand")
+    .select("enabled,margin_per_thousand,min_cosmic_k")
     .eq("id", 1)
     .single();
   assertOk(error);
@@ -40,6 +44,7 @@ export async function accountSettings(): Promise<AccountSettings> {
   return {
     enabled: Boolean(data.enabled),
     margin_per_thousand: Number(data.margin_per_thousand),
+    min_cosmic_k: Number(data.min_cosmic_k),
   };
 }
 export async function readCatalog(): Promise<CatalogState> {
@@ -168,7 +173,7 @@ export async function publicCatalog(params: URLSearchParams) {
         !(missing.has(o.id) && missing.get(o.id)! >= Date.parse(o.seenAt)),
     )
     .map((o) => ({
-      ...publicOffer(o, settings.margin_per_thousand),
+      ...publicOffer(o, settings.margin_per_thousand, settings.min_cosmic_k),
       available: available && Date.now() - Date.parse(o.seenAt) <= maxAge,
       publicCount: o.publicCount,
     }));

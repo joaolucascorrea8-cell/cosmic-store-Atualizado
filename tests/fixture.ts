@@ -10,7 +10,7 @@ export const ids = {
   b: "50000000-0000-4000-8000-000000000002",
   combo: "60000000-0000-4000-8000-000000000001",
 };
-export async function createDatabase() {
+export async function createDatabase(through?: string) {
   const db = new PGlite();
   await db.exec(`
  create role anon;create role authenticated;create role service_role bypassrls;
@@ -28,7 +28,7 @@ export async function createDatabase() {
  `);
   const root = join(process.cwd(), "supabase/migrations");
   for (const file of (await readdir(root))
-    .filter((name) => name.endsWith(".sql"))
+    .filter((name) => name.endsWith(".sql") && (!through || name <= through))
     .sort()) {
     const sql = (await readFile(join(root, file), "utf8")).replace(
       /create extension if not exists pgcrypto;/gi,

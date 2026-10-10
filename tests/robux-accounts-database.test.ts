@@ -12,7 +12,7 @@ after(async () => {
 });
 beforeEach(async () => {
   await db.exec(
-    "truncate public.orders cascade;update public.robux_account_settings set margin_per_thousand=9,enabled=true;update public.robux_account_catalog set lease_until=null,next_attempt_at=now(),last_error=null;truncate public.robux_account_request_limits;",
+    "truncate public.orders cascade;update public.robux_account_settings set margin_per_thousand=9,min_cosmic_k=34,enabled=true;update public.robux_account_catalog set lease_until=null,next_attempt_at=now(),last_error=null;truncate public.robux_account_request_limits;",
   );
 });
 const offer = () => ({

@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     const offer = await validateOffer(body.offerId);
-    const safe = publicOffer(offer, settings.margin_per_thousand);
+    const safe = publicOffer(offer, settings.margin_per_thousand, settings.min_cosmic_k);
     if (Math.round(body.expectedPrice * 100) !== Math.round(safe.price * 100))
       return NextResponse.json(
         {

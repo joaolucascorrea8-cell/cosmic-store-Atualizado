@@ -30,7 +30,8 @@ export default async function AdminAccountsPage({
         <h1 className="admin-title">Contas com Robux</h1>
         <p className="admin-error mt-5">
           Confira as migrations 202610090001_robux_accounts.sql e
-          202610090002_robux_account_delivery_policy.sql. O Quick Buy continua com suas configurações próprias.
+          202610090002_robux_account_delivery_policy.sql e
+          202610100001_robux_account_minimum_k.sql. O Quick Buy continua com suas configurações próprias.
         </p>
       </main>
     );
@@ -125,11 +126,24 @@ export default async function AdminAccountsPage({
       <form action={saveAccountSettings} className="admin-panel mt-5 max-w-xl">
         <h2 className="text-lg font-black">Preço das contas</h2>
         <p className="mt-2 text-sm text-zinc-400">
-          K Cosmic = K fornecedor + margem. Sem piso ou ajustes ,90/,99. Não
-          altera o Quick Buy nem pedidos já criados.
+          K Cosmic é o maior entre o mínimo configurado e o K fornecedor mais
+          o acréscimo. Esta regra vale para novas compras de contas.
         </p>
         <label className="mt-4 block">
-          Margem por 1.000 Robux (R$)
+          K Cosmic mínimo (R$ por 1.000 Robux)
+          <input
+            name="min_cosmic_k"
+            type="number"
+            min="0"
+            max="10000"
+            step="0.01"
+            defaultValue={settings.min_cosmic_k}
+            required
+            className="mt-2 block w-full rounded-lg border border-white/10 bg-[#111122] p-3"
+          />
+        </label>
+        <label className="mt-4 block">
+          Acréscimo sobre o K fornecedor (R$ por 1.000 Robux)
           <input
             name="margin"
             type="number"
@@ -141,6 +155,16 @@ export default async function AdminAccountsPage({
             className="mt-2 block w-full rounded-lg border border-white/10 bg-[#111122] p-3"
           />
         </label>
+        <p className="mt-3 text-sm leading-6 text-zinc-400">
+          {settings.min_cosmic_k > settings.margin_per_thousand
+            ? `Com os valores salvos, o K Cosmic fica em ${money(settings.min_cosmic_k)} enquanto o K fornecedor for até ${money(settings.min_cosmic_k - settings.margin_per_thousand)}. Acima disso, soma ${money(settings.margin_per_thousand)} ao K fornecedor.`
+            : `Com os valores salvos, o K Cosmic acompanha o K fornecedor com acréscimo de ${money(settings.margin_per_thousand)}.`}
+        </p>
+        <p className="mt-2 text-xs text-zinc-500">
+          Quando o mínimo é aplicado, a diferença sobre o custo por 1K pode ser
+          maior que o acréscimo configurado. Game Pass e pedidos já criados
+          mantêm suas configurações e valores.
+        </p>
         <label className="my-4 flex gap-3">
           <input
             type="checkbox"
@@ -176,6 +200,7 @@ export default async function AdminAccountsPage({
                   o.robux,
                   o.supplierK,
                   settings.margin_per_thousand,
+                  settings.min_cosmic_k,
                 );
                 return (
                   <tr className="border-t border-white/10" key={o.id}>

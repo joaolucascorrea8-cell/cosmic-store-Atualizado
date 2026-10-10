@@ -149,8 +149,13 @@ export default async function AccountOrderPanel({
             </summary>
             <div className="mt-3 space-y-2 leading-6">
               <p>
-                K fornecedor {money(a.supplier_k)} · Margem{" "}
+                K fornecedor {money(a.supplier_k)} · Acréscimo configurado{" "}
                 {money(a.margin_per_thousand)} / 1K
+              </p>
+              <p>
+                {a.min_cosmic_k == null
+                  ? "Regra original deste pedido: K fornecedor + margem, sem mínimo."
+                  : `K Cosmic mínimo no pedido: ${money(a.min_cosmic_k)} / 1K. O maior entre o mínimo e o K fornecedor + acréscimo define o K da venda.`}
               </p>
               <p>
                 Snapshot {localDate(a.snapshot_at)} · Última validação{" "}

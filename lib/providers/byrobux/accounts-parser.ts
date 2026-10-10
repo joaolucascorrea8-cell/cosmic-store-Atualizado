@@ -77,6 +77,7 @@ export function calculateCosmicPrice(
   robux: number,
   supplierK: number,
   margin: number,
+  minCosmicK: number,
 ) {
   if (
     !Number.isSafeInteger(robux) ||
@@ -85,10 +86,15 @@ export function calculateCosmicPrice(
     !Number.isFinite(supplierK) ||
     supplierK <= 0 ||
     !Number.isFinite(margin) ||
-    margin < 0
+    margin < 0 ||
+    !Number.isFinite(minCosmicK) ||
+    minCosmicK < 0
   )
     throw new Error("Cotação inválida.");
-  const kCents = Math.round(supplierK * 100) + Math.round(margin * 100);
+  const kCents = Math.max(
+    Math.round(minCosmicK * 100),
+    Math.round(supplierK * 100) + Math.round(margin * 100),
+  );
   return {
     cosmicK: kCents / 100,
     price: Math.round((robux * kCents) / 1000) / 100,
@@ -269,10 +275,10 @@ export function parseQuoteAccounts(html: string, quote: AccountQuote) {
     quotes: parseQuotes(html, quote.seenAt),
   };
 }
-export function publicOffer(offer: AccountOffer, margin: number) {
+export function publicOffer(offer: AccountOffer, margin: number, minCosmicK: number) {
   return {
     id: offer.id,
     robux: offer.robux,
-    ...calculateCosmicPrice(offer.robux, offer.supplierK, margin),
+    ...calculateCosmicPrice(offer.robux, offer.supplierK, margin, minCosmicK),
   };
 }

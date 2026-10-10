@@ -1,8 +1,8 @@
 # Cosmic Store — Contas com Robux
 
-Atualização de 09/10/2026, feita sobre o ZIP recebido. Não reconstrói a loja nem substitui o Quick Buy.
+Atualização de 10/10/2026, feita sobre o ZIP recebido. Não reconstrói a loja nem substitui o Quick Buy.
 
-> Revisão de organização/entrega/política: leia primeiro `ATUALIZACAO-ENTREGA-E-POLITICA.md`. Quem já instalou a modalidade deve aplicar somente a migration nova `202610090002_robux_account_delivery_policy.sql` e configurar a chave de entrega.
+> Revisão atual de preços: leia primeiro `ATUALIZACAO-K-CONTAS.md`. Quem já instalou catálogo, política e entrega aplica somente `202610100001_robux_account_minimum_k.sql`. Para a revisão anterior de usuário/senha e política, consulte `ATUALIZACAO-ENTREGA-E-POLITICA.md`.
 
 ## Antes de instalar
 
@@ -16,8 +16,8 @@ O ZIP atual usa **Gmail** em `lib/notifications.ts` e `lib/gmail.ts` para envio.
 
 1. Extraia o ZIP atualizado. No seu repositório local, copie o conteúdo da pasta `cosmic-store` por cima dos arquivos correspondentes. Preserve a sua pasta `.git`, seu `.env.local` e as configurações de produção. O ZIP entregue não contém dependências, `.next`, histórico `.git` ou credenciais.
 2. Confira se as migrations anteriores, incluindo `202610050001_robux_quick_buy.sql`, já estão aplicadas. **Não reaplique todas as migrations antigas em produção.**
-3. No SQL Editor do Supabase, execute `supabase/migrations/202610090001_robux_accounts.sql` somente se ainda não aplicada e, em seguida, `supabase/migrations/202610090002_robux_account_delivery_policy.sql`. O arquivo usa uma transação e acrescenta as estruturas abaixo; não remove produtos/pedidos e não modifica migrations anteriores. Aplique uma única vez, ou use o mecanismo de migrations que você já utiliza.
-4. Execute `supabase/verificacoes/202610090001_check.sql`. As tabelas devem existir com RLS. Após a segunda migration, execute também `202610090002_check.sql`: as RPCs novas são exclusivas do servidor; a criação antiga de conta fica sem chamada direta, inclusive por `service_role`. A tabela segura tem somente `order_id`, `robux`, `cosmic_k`, `sale_price`, `fulfillment_status`. A margem inicial deve ser 9.
+3. No SQL Editor do Supabase, execute `supabase/migrations/202610090001_robux_accounts.sql` somente se ainda não aplicada e, em seguida, as migrations `202610090002_robux_account_delivery_policy.sql` e `202610100001_robux_account_minimum_k.sql`, se ainda não aplicadas. O arquivo usa uma transação e acrescenta as estruturas abaixo; não remove produtos/pedidos e não modifica migrations anteriores. Aplique uma única vez, ou use o mecanismo de migrations que você já utiliza.
+4. Execute `supabase/verificacoes/202610090001_check.sql`. As tabelas devem existir com RLS. Após a segunda migration, execute também `202610090002_check.sql`: as RPCs novas são exclusivas do servidor; a criação antiga de conta fica sem chamada direta, inclusive por `service_role`. A tabela segura tem somente `order_id`, `robux`, `cosmic_k`, `sale_price`, `fulfillment_status`. Execute também `202610100001_check.sql`: a configuração atual deve mostrar mínimo 34 e acréscimo 5.
 5. Mantenha as variáveis atuais de Supabase, Pix, Gmail, Discord e Quick Buy. **Configure `ROBUX_ACCOUNT_DELIVERY_KEY` para a entrega protegida de usuário/senha, seguindo `ATUALIZACAO-ENTREGA-E-POLITICA.md`.** A coleta de contas não utiliza `BYROBUX_API_KEY`, cookies, login ou sua sessão.
 6. Mantenha `NEXT_PUBLIC_SITE_URL=https://www.cosmicstore.com.br` no seu ambiente, de acordo com o domínio oficial. O domínio, callbacks de autenticação e configurações do projeto não foram alterados.
 7. No terminal do projeto:
@@ -29,7 +29,7 @@ npm run build
 npm run dev
 ```
 
-8. Acesse `/admin/robux/contas`, usando uma conta com role `owner` ou `admin`. Clique em **Consultar catálogo** para fazer a primeira leitura. Deixe a margem em 9 ou ajuste conforme desejado. O botão respeita o intervalo e o bloqueio de sincronização; não força consultas repetidas.
+8. Acesse `/admin/robux/contas`, usando uma conta com role `owner` ou `admin`. Clique em **Consultar catálogo** para fazer a primeira leitura. Confira mínimo de K em 34 e acréscimo em 5, ou ajuste conforme desejado. O botão respeita o intervalo e o bloqueio de sincronização; não força consultas repetidas.
 9. Confira `/robux/contas` e faça um pedido controlado antes de abrir a modalidade ao público. A opção **Aceitar novas compras de contas** permite pausar somente esta modalidade.
 
 Não foi executada nenhuma migration no seu banco de produção, nenhum pagamento real, aquisição no fornecedor ou deploy.
@@ -64,13 +64,13 @@ Um agendador compatível com sua hospedagem pode chamá-lo aproximadamente a cad
 Para contas, a fórmula é exclusivamente:
 
 ```text
-K Cosmic = K público da cotação + margem configurada
+K Cosmic = maior entre (mínimo configurado) e (K público da cotação + acréscimo configurado)
 Preço = arredondar((Robux / 1.000) × K Cosmic, 2 casas)
 ```
 
-Exemplo: 1.990 Robux, K fornecedor 26,93 e margem 9 → K Cosmic 35,93 → R$71,50. Mudando a margem para 10, a mesma cotação gera R$73,49. Não há piso de K, preço fixo do fornecedor nem ajuste para ,90/,99 nesta modalidade.
+Configuração inicial atual: mínimo 34 e acréscimo 5. Exemplo: 1.990 Robux, K fornecedor 26,93 → K Cosmic 34 → R$67,66. K fornecedor 29,50 → K Cosmic 34,50 → R$68,66. Até fornecedor 29, o K fica em 34; acima, soma 5. Ambos os valores são configuráveis no Admin. O fornecedor continua dinâmico e não há ajuste para ,90/,99.
 
-A margem só altera novas ofertas/pedidos. Um pedido criado mantém o preço e a margem do snapshot, mesmo que o Admin altere a configuração depois. O banco recalcula o valor durante a criação e rejeita divergência de preço, inclusive uma alteração de margem ocorrida entre a validação e a transação.
+O mínimo e o acréscimo só alteram novas ofertas/pedidos. Um pedido criado mantém o preço e a configuração do snapshot, mesmo que o Admin altere a configuração depois. O banco recalcula o valor durante a criação e rejeita divergência de preço, inclusive uma alteração de mínimo/acréscimo ocorrida entre a validação e a transação.
 
 ## Catálogo e falhas
 
@@ -114,7 +114,7 @@ Nunca coloque credenciais em notas públicas, catálogo ou e-mail de anúncio. A
 
 | Estrutura nova | Finalidade / acesso |
 | --- | --- |
-| `robux_account_settings` | Margem e pausa desta modalidade; leitura Admin, escrita servidor. |
+| `robux_account_settings` | Mínimo de K, acréscimo e pausa desta modalidade; leitura Admin, escrita servidor. |
 | `robux_account_catalog` | Cotações, ofertas, horários, diagnósticos e lease; privado. |
 | `robux_account_orders` | Snapshot imutável e estado operacional de aquisição/reserva; Admin. |
 | `robux_account_order_details` | Somente Robux, K Cosmic, preço e etapa; cliente dono/Admin. |
@@ -139,7 +139,7 @@ Use ambiente de teste e usuários controlados. Não precisa comprar contas reais
 | Inserção/remoção pública | Próxima leitura válida atualiza a cotação. |
 | Fornecedor offline/HTML quebrado | Cache preservado, erro no Admin, sem dados apagados. |
 | Cotação sem sucesso por mais de 10 min | Compra desabilitada para suas ofertas. |
-| Margem 9 → 10 | Novos preços mudam; snapshot de pedido antigo permanece. |
+| Mínimo 34 → 36 ou acréscimo 5 → 8 | Novos preços seguem o maior entre mínimo e K + acréscimo; snapshots antigos permanecem. |
 | Oferta desaparece ao clicar | Pedido não é criado; mensagem amigável, card antigo suprimido. |
 | Preço muda ao clicar | Novo preço visível, novo clique necessário. |
 | Duas sessões na mesma oferta | Apenas um pedido ativo; segunda recebe conflito. |
@@ -156,4 +156,4 @@ Testes executados e limites estão em `VALIDACAO-CONTAS-ROBUX.md`. O fluxo real 
 
 ## Arquivos
 
-A relação inicial está em `ARQUIVOS-CONTAS-ROBUX.md`; a lista desta revisão e a função de cada alteração estão em `ARQUIVOS-AJUSTE-CONTAS.md`. Nenhuma migration anterior ou arquivo de lógica Quick Buy foi alterado.
+A relação inicial está em `ARQUIVOS-CONTAS-ROBUX.md`; a revisão de entrega está em `ARQUIVOS-AJUSTE-CONTAS.md` e a revisão de preços em `ARQUIVOS-K-CONTAS.md`. Nenhuma migration anterior ou arquivo de lógica Quick Buy foi alterado.

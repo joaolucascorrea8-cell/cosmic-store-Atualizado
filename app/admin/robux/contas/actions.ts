@@ -100,21 +100,24 @@ export async function saveAccountPolicy(
 }
 export async function saveAccountSettings(form: FormData) {
   const user = await requireAdmin();
-  const margin = Number(String(form.get("margin") ?? "").replace(",", "."));
+  const rawMargin = String(form.get("margin") ?? "").trim().replace(",", ".");
+  const rawMinimum = String(form.get("min_cosmic_k") ?? "").trim().replace(",", ".");
+  const margin = Number(rawMargin), minimum = Number(rawMinimum);
   if (
-    !Number.isFinite(margin) ||
-    margin < 0 ||
-    margin > 10000 ||
-    (Math.round(margin * 100) !== margin * 100 &&
-      Math.abs(Math.round(margin * 100) - margin * 100) > 1e-8)
+    !rawMargin || !rawMinimum ||
+    [margin, minimum].some((value) =>
+      !Number.isFinite(value) || value < 0 || value > 10000 ||
+      Math.abs(Math.round(value * 100) - value * 100) > 1e-8,
+    )
   )
     throw new Error(
-      "Informe uma margem de 0 a 10.000 com até duas casas decimais.",
+      "Informe mínimo e acréscimo de 0 a 10.000 com até duas casas decimais.",
     );
   const { error } = await createAdminClient(user.id)
     .from("robux_account_settings")
     .update({
       margin_per_thousand: margin,
+      min_cosmic_k: minimum,
       enabled: form.get("enabled") === "on",
       updated_by: user.id,
       updated_at: new Date().toISOString(),

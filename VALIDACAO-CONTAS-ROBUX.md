@@ -4,13 +4,21 @@
 
 - `npm run lint`: passou, sem erros ou avisos finais.
 - `npm run typecheck`: passou.
-- `npm test`: **93 testes passaram**, zero falhas. Inclui os 85 testes da primeira entrega e oito novos testes desta revisão.
+- `npm test`: **99 testes passaram**, zero falhas. Inclui os 93 testes anteriores e seis novos testes de mínimo/configuração/histórico de preços.
 - `npm run build`: passou com Next.js 16.3.8, gerando as rotas atuais e novas.
-- As migrations foram executadas somente em um PostgreSQL isolado com PGlite. As duas migrations de contas e seus SQLs de verificação foram testados.
+- As migrations foram executadas somente em um PostgreSQL isolado com PGlite. As três migrations de contas e seus SQLs de verificação foram testados, incluindo atualização sobre um pedido existente.
 - Testes das RPCs cobrem preço/margem, ausência de pedidos órfãos, snapshot, imutabilidade, reserva, expiração, RLS, limite/lease, aquisição manual, entrega e concorrência lógica de duas criações. O motor de teste serializa suas transações; não substitui um teste de carga multi-instância em PostgreSQL de produção.
 - Quick Buy original teve teste adicional de criação de pedido/GamePass e confirmação de pagamento; os testes antigos de loja, estoque, cupons, suporte, importação, relatórios e servidores continuam passando.
 
-## Segurança adicional desta revisão
+## Preços com mínimo — revisão de 10/10/2026
+
+A fórmula `max(mínimo, K fornecedor + acréscimo)` foi conferida em TypeScript e PostgreSQL nos limites 28,99 / 29 / 29,01 e em quantidades fracionárias de 1K. A atualização preserva pedidos, itens, política e funções de entrega/Quick Buy anteriores. Alterações de mínimo/acréscimo recalculam novas compras, recusam preço antigo e não reescrevem snapshots. A coluna privada nova também é imutável e não aparece nos detalhes seguros do cliente.
+
+
+
+Na revisão de preços, a aplicação compilada também foi testada por HTTP com Supabase simulado: catálogo público com valores 34/34,50/35, ausência de dados internos, formulário real do Admin salvando os dois campos por Server Action e recálculo sem nova consulta ao fornecedor. A inspeção visual em navegador não foi repetida nesta revisão porque o executável não estava disponível e o download não pôde ser concluído. A estrutura pública aprovada não foi alterada; confira o novo formulário no celular após o deploy.
+
+## Segurança adicional da revisão de entrega
 
 A suite cobre AES-256-GCM com nonce aleatório, senha com espaços preservada, recusa de chave errada/adulteração/troca de pedido, pagamento e aquisição obrigatórios, entrega sem imagem com credenciais, recusa de edição concorrente, ausência de senhas em auditoria, RLS/grants, aceite obrigatório, versão expirada e snapshot imutável da política. Os testes de itens comuns continuam exigindo imagem; Quick Buy preserva sua lógica.
 
@@ -22,7 +30,7 @@ Esses números são um registro da consulta de 09/10/2026, não estoque atual ne
 
 `alternate` e `fourth` são reconhecidos, com e sem paginação. Valores monetários acima de mil funcionam nos formatos 2,633.05 e 2.633,05. IDs compostos repetidos são agrupados e registrados no diagnóstico; IDs individuais repetidos entre páginas são tratados como leitura instável.
 
-## Navegador e API local
+## Navegador e API local — revisão anterior de organização/entrega
 
 Foi usada a aplicação compilada, em servidor local, com respostas simuladas de Supabase e dados fictícios, sem banco/credenciais de produção.
 

@@ -26,21 +26,21 @@ function page(
   return `<html><body><h1>R$${options.k || "26.93"} / 1k Robux</h1>${options.links || ""}<table><thead><tr><th>ID</th><th>Robux</th><th>Price</th></tr></thead><tbody>${accounts.map((a) => `<tr><td>******${a.id.slice(-3)}</td><td>${a.col_1}</td><td>R$${(a.priceBrl / 100).toFixed(2)}</td></tr>`).join("")}</tbody></table>${accounts.length ? `Page ${options.page || 1} of ${options.pages || 1}` : "There are no accounts at this quote right now."}<script>self.__next_f.push([1,${flight}])</script></body></html>`;
 }
 const quote = parseQuotes(quoteLink())[0];
-test("contas usam margem dinâmica e centavos, sem piso nem finais artificiais", () => {
-  assert.deepEqual(calculateCosmicPrice(1990, 26.93, 9), {
+test("contas aceitam mínimo zero e mantêm cálculo em centavos sem finais artificiais", () => {
+  assert.deepEqual(calculateCosmicPrice(1990, 26.93, 9, 0), {
     cosmicK: 35.93,
     price: 71.5,
   });
-  assert.deepEqual(calculateCosmicPrice(1990, 26.93, 10), {
+  assert.deepEqual(calculateCosmicPrice(1990, 26.93, 10, 0), {
     cosmicK: 36.93,
     price: 73.49,
   });
-  assert.deepEqual(calculateCosmicPrice(1000, 20, 9), {
+  assert.deepEqual(calculateCosmicPrice(1000, 20, 9, 0), {
     cosmicK: 29,
     price: 29,
   });
   for (const amount of [-1, 0, 1.5, NaN])
-    assert.throws(() => calculateCosmicPrice(amount, 26.93, 9));
+    assert.throws(() => calculateCosmicPrice(amount, 26.93, 9, 0));
 });
 test("mesmo K e ID da página em catálogos diferentes não se misturam", () => {
   const q = parseQuotes(quoteLink() + quoteLink("MTMz", "fourth"));
@@ -64,7 +64,7 @@ test("parser cruza HTML com dados públicos, exclui tokens e mantém apenas DTO 
   assert.equal(result.offers[0].maskedId, "******660");
   assert.equal(result.offers[0].quoteUrl, quote.url);
   assert.equal(JSON.stringify(result).includes("NEVER_RETAIN"), false);
-  assert.deepEqual(Object.keys(publicOffer(result.offers[0], 9)).sort(), [
+  assert.deepEqual(Object.keys(publicOffer(result.offers[0], 5, 34)).sort(), [
     "cosmicK",
     "id",
     "price",

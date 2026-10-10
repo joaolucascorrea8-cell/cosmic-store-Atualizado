@@ -321,7 +321,7 @@ export default function AccountCatalog() {
                       className={`mt-1 text-[11px] ${offer.available ? "text-emerald-300" : "text-zinc-500"}`}
                     >
                       {offer.available
-                        ? "Disponível para consulta"
+                        ? "Disponível para compra"
                         : "Em atualização"}
                     </p>
                   </div>

@@ -55,7 +55,7 @@ async function create(accepted = true, version?: string) {
   };
   return (
     await db.query<{ result: { order: { id: string } } }>(
-      "select public.create_robux_account_order_with_policy($1,$2,$3,$4,$5::jsonb,71.50,$6,$7) result",
+      "select public.create_robux_account_order_with_policy($1,$2,$3,$4,$5::jsonb,67.66,$6,$7) result",
       [
         ids.user,
         randomUUID(),
