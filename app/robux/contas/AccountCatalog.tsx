@@ -28,7 +28,7 @@ const field =
 export default function AccountCatalog() {
   const router = useRouter();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [sort, setSort] = useState("price"),
+  const [sort, setSort] = useState("robux_asc"),
     [min, setMin] = useState(""),
     [max, setMax] = useState("");
   const [page, setPage] = useState(1),
@@ -233,10 +233,10 @@ export default function AccountCatalog() {
                 setPage(1);
               }}
             >
+              <option value="robux_asc">Menos Robux</option>
+              <option value="robux_desc">Mais Robux</option>
               <option value="price">Menor preço total</option>
               <option value="value">Melhor valor por 1K</option>
-              <option value="robux_desc">Mais Robux</option>
-              <option value="robux_asc">Menos Robux</option>
             </select>
           </label>
         </div>
