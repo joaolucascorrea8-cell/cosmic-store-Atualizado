@@ -28,8 +28,18 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Cosmic Store",
     description: "Produtos digitais, atendimento acompanhado e entrega rápida.",
+    siteName: "Cosmic Store",
     type: "website",
     locale: "pt_BR",
+    images: [
+      {
+        url: "/images/branding/cosmic-store-icon-512.png",
+        width: 512,
+        height: 512,
+        type: "image/png",
+        alt: "Logo da Cosmic Store",
+      },
+    ],
   },
   icons: {
     icon: [

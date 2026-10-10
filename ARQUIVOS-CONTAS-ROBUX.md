@@ -1,6 +1,6 @@
-# Arquivos — entrega completa de Contas com Robux
+# Arquivos — entrega completa da Cosmic Store
 
-Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais, política, mínimo de K, avisos, atualização automática e preços por faixa de 10/10/2026. **51 arquivos criados, 17 modificados; nenhum arquivo de código removido.**
+Comparação com o ZIP original de 09/10/2026, incluindo Contas com Robux, entrega/política, mínimo de K, avisos, atualização automática, tabela por faixa, ordem por quantidade e correção da logo de compartilhamento de 10/10/2026. **52 arquivos criados, 19 modificados; nenhum arquivo de código removido.**
 
 ## Criados
 
@@ -8,17 +8,18 @@ Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais
 | --- | --- |
 | `ARQUIVOS-AJUSTE-CONTAS.md` | Lista os arquivos desta revisão e a finalidade de cada alteração. |
 | `ARQUIVOS-ATUALIZACAO-AUTOMATICA.md` | Lista dos arquivos desta revisão com finalidade e comparação ao checkpoint. |
-| `ARQUIVOS-CONTAS-ROBUX.md` | Manifesto completo comparado ao ZIP original, sem remoção de código. |
+| `ARQUIVOS-CONTAS-ROBUX.md` | Manifesto completo do projeto, incluindo Contas com Robux, revisões de preço/ordem e correção da logo. |
 | `ARQUIVOS-CORRECAO-PEDIDOS.md` | Manifesto dos arquivos criados/modificados nesta correção, comparado ao checkpoint anterior. |
 | `ARQUIVOS-K-CONTAS.md` | Lista desta atualização de preços e arquivos incluídos por compatibilidade. |
 | `ARQUIVOS-PRECOS-POR-FAIXA.md` | Manifesto cumulativo desde o último push confirmado e identificação dos arquivos desta revisão. |
 | `ATUALIZACAO-AUTOMATICA-CONTAS.md` | Explica funcionamento, limites, instalação do patch, Git/deploy, validação e roteiro de testes. |
 | `ATUALIZACAO-ENTREGA-E-POLITICA.md` | Instalação desta revisão, chave, SQL, política, operação e testes. |
 | `ATUALIZACAO-K-CONTAS.md` | Regra 34/5, instalação, migrations, Git, deploy, entrega por credenciais e roteiro de testes. |
-| `ATUALIZACAO-ORDEM-CONTAS.md` | Documenta menor preço como padrão, instalação do patch de ordenação, arquivos alterados e ausência de SQL novo. |
+| `ATUALIZACAO-ORDEM-CONTAS.md` | Documenta menor quantidade de Robux como padrão, instalação do patch de ordenação, arquivos alterados e ausência de SQL novo. |
 | `ATUALIZACAO-PRECOS-POR-FAIXA.md` | Guia desta revisão: tabela, SQL, VS Code, Git, deploy, testes e limites. |
 | `CONTAS-COM-ROBUX.md` | Guia consolidado com quatro migrations, tabela, K base, histórico, instalação e operação automática. |
 | `CORRECAO-ERROS-PEDIDOS.md` | Explica React #441, instalação do patch, configuração exata da chave, Git, deploy e testes. |
+| `CORRECAO-LOGO-COMPARTILHAMENTO.md` | Guia do patch de logo: arquivos, VS Code, Git/deploy, endereço público e validação; sem SQL ou variável nova. |
 | `VALIDACAO-CONTAS-ROBUX.md` | Registra 105 testes/build, 7.007 comparações de preços, HTTP real simulado e limites de validação visual/produção. |
 | `app/admin/pedidos/OrderStatusActions.tsx` | Formulário com useActionState, avisos acessíveis, bloqueio durante envio e confirmação de cancelamento. |
 | `app/admin/robux/contas/AccountDeliveryForm.tsx` | Campos de usuário, senha oculta e instruções; salvamento com retorno amigável. |
@@ -32,7 +33,7 @@ Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais
 | `app/api/robux/accounts/orders/route.ts` | Usa mínimo e acréscimo ao revalidar o preço antes de criar pedido/Pix. |
 | `app/pedidos/[id]/AccountDelivery.tsx` | Primeiro acesso, mostrar/copiar dados e link para relatar problema. |
 | `app/reembolso/contas/page.tsx` | Página pública da política vigente com orientações e suporte. |
-| `app/robux/contas/AccountCatalog.tsx` | Abre do menor preço total para o maior; preserva outras ordenações, exibe K base Cosmic e explica a tabela abaixo de 1.000 e a atualização automática. |
+| `app/robux/contas/AccountCatalog.tsx` | Abre da menor quantidade de Robux para a maior; preserva outras ordenações, exibe K base Cosmic e explica a tabela abaixo de 1.000 e a atualização automática. |
 | `app/robux/contas/page.tsx` | Introdução, navegação das modalidades e etapas da compra. |
 | `lib/providers/byrobux/accounts-catalog.ts` | Descobre cotações/páginas e preserva estado nas falhas parciais. |
 | `lib/providers/byrobux/accounts-parser.ts` | Precifica contas pela tabela compartilhada usando o K base dinâmico; parser público e campos privados permanecem separados. |
@@ -43,7 +44,7 @@ Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais
 | `lib/robux-accounts/presentation.ts` | Compara preço final por Robux com aritmética exata para ordenar Melhor valor por 1K. |
 | `lib/robux-accounts/service.ts` | Usa a comparação efetiva de preço por Robux; coleta, cache, validação e snapshots continuam integrados ao fluxo existente. |
 | `lib/robux-price-table.ts` | Cálculo compartilhado da tabela por quantidade, com centavos inteiros e arredondamento somente do preço final. |
-| `qa/check-admin-order-actions.cjs` | Regressão HTTP compilada com preços/faixas, DTO público e ordenação; mantém sincronização automática e fluxos de entrega. |
+| `qa/check-admin-order-actions.cjs` | Regressões HTTP de catálogo/Admin/entrega e conferência de metadados da home e bytes públicos da logo/favicon. |
 | `supabase/migrations/202610090001_robux_accounts.sql` | Primeira migration aditiva de catálogo, snapshot, reservas e RLS; inalterada nesta revisão. |
 | `supabase/migrations/202610090002_robux_account_delivery_policy.sql` | Política, aceite imutável, credenciais cifradas, RLS, RPCs e trava de entrega. |
 | `supabase/migrations/202610100001_robux_account_minimum_k.sql` | Mínimo configurável em contas, configuração inicial 34/5 e cálculo transacional com snapshot; preserva pedidos antigos e permissões. |
@@ -69,6 +70,8 @@ Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais
 | `app/api/orders/[id]/route.ts` | Revalida a conta ao retomar o Pix, preservando o fluxo de outros pedidos. |
 | `app/checkout/CheckoutContent.tsx` | Aviso específico de conta e acesso à política do pedido antes do Pix. |
 | `app/components/LegalPage.tsx` | Permite data de atualização específica mantendo o padrão das outras páginas. |
+| `app/favicon.ico` | Substitui o triângulo padrão pelo PNG existente do ícone CS, empacotado em ICO sem alterar a arte. |
+| `app/layout.tsx` | Define a logo CS existente como imagem Open Graph e acrescenta o nome da loja na prévia; preserva demais metadados/configurações. |
 | `app/pedidos/[id]/page.tsx` | Na seção segura de contas, identifica o K como base; preserva total histórico e demais fluxos do pedido. |
 | `app/reembolso/page.tsx` | Inclui acesso à política específica de contas mantendo o conteúdo geral. |
 | `app/robux/page.tsx` | Adiciona a escolha entre GamePass e contas sem substituir a calculadora. |
@@ -80,4 +83,4 @@ Comparação com o ZIP original de 09/10/2026, incluindo entrega por credenciais
 | `tests/fixture.ts` | Permite testar a aplicação das migrations até uma versão anterior, seguida da nova migration. |
 | `tests/servers.test.ts` | Confere a participação do Admin de contas nas atualizações automáticas; revisão incluída no patch. |
 
-Migrations anteriores não foram editadas. A lógica de GamePass/Quick Buy foi preservada; o módulo de preços compartilhado delega a curva histórica de produtos à função reutilizada pelas contas. ZIPs excluem dependências, build, cache de TypeScript, histórico Git e credenciais; preserve seus arquivos privados e a pasta Git.
+Migrations anteriores não foram editadas. A lógica de GamePass/Quick Buy permanece preservada. A revisão de logo muda metadados e favicon, reutilizando a arte existente. ZIPs excluem dependências, build, cache TypeScript, histórico Git e credenciais; preserve seus arquivos privados e a pasta Git.

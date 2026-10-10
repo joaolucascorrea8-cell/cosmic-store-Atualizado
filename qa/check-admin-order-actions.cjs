@@ -190,6 +190,30 @@ function inlineError(html, message) {
   await new Promise(resolve => mock.listen(54329, '127.0.0.1', resolve));
   await startNext();
 
+  // A prévia precisa funcionar no HTML recebido pelo coletor, sem JavaScript/login.
+  const brandingPath = '/images/branding/cosmic-store-icon-512.png';
+  const homeResponse = await fetch(base + '/', { headers: { 'User-Agent': 'WhatsApp/2.26.1 A' } });
+  assert.equal(homeResponse.status, 200);
+  const head = (await homeResponse.text()).match(/<head>([\s\S]*?)<\/head>/)?.[1];
+  assert(head, 'A página inicial deve incluir head para a prévia do link');
+  assert(head.includes(`<meta property="og:image" content="${testEnv.NEXT_PUBLIC_SITE_URL}${brandingPath}"`));
+  assert(head.includes('<meta property="og:image:width" content="512"'));
+  assert(head.includes('<meta property="og:image:height" content="512"'));
+  assert(head.includes('<meta property="og:image:alt" content="Logo da Cosmic Store"'));
+  assert(!head.includes('vercel.svg'));
+  for (const [url, file, type] of [
+    [brandingPath, 'public' + brandingPath, 'image/png'],
+    ['/favicon.ico', 'app/favicon.ico', 'image/x-icon'],
+  ]) {
+    const response = await fetch(base + url);
+    assert.equal(response.status, 200);
+    assert(response.headers.get('content-type')?.startsWith(type));
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), fs.readFileSync(path.join(root, file)));
+  }
+  const favicon = fs.readFileSync(path.join(root, 'app/favicon.ico'));
+  assert.deepEqual(favicon.subarray(22), fs.readFileSync(path.join(root, 'public/images/branding/favicon-32.png')));
+  checks.push('Prévia da home entrega a logo CS no head; imagem e favicon públicos retornam os arquivos corretos');
+
   const catalogResponse = await fetch(base + '/api/robux/accounts/catalog?sort=value');
   assert.equal(catalogResponse.status,200);
   const catalog = await catalogResponse.json();
