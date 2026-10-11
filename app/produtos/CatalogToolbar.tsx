@@ -66,7 +66,7 @@ export default function CatalogToolbar({
       <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
         <div>
           <label htmlFor="catalog-search" className="admin-label">
-            Buscar por nome
+            {scoped ? "Buscar por nome" : "Buscar na loja"}
           </label>
           <div className="relative">
             <Icon
@@ -77,7 +77,11 @@ export default function CatalogToolbar({
               id="catalog-search"
               type="search"
               className="admin-input pl-10"
-              placeholder="Busque seu próximo item…"
+              placeholder={
+                scoped
+                  ? "Busque seu próximo item…"
+                  : "Jogo, produto ou categoria…"
+              }
               value={query}
               maxLength={100}
               onChange={(e) => {

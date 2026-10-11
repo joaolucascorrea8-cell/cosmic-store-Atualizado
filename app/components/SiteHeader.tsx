@@ -76,8 +76,8 @@ export default async function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/produtos"
-            aria-label="Buscar produtos"
+            href="/#buscar"
+            aria-label="Buscar na loja"
             className="hidden h-10 w-10 items-center justify-center rounded-xl border border-white/10 sm:flex"
           >
             <Icon name="search" />

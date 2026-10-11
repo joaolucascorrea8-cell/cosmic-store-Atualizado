@@ -64,7 +64,7 @@ export default function HeaderMobileMenu({
       </summary>
       <nav
         aria-label="Navegação mobile"
-        className="absolute right-0 top-12 grid w-[min(18rem,calc(100vw-2rem))] gap-1 rounded-2xl border border-white/15 bg-[#17131f] p-3 text-sm font-bold shadow-2xl"
+        className="absolute right-0 top-12 grid max-h-[calc(100dvh-5rem)] w-[min(18rem,calc(100vw-2rem))] gap-1 overflow-y-auto rounded-2xl border border-white/15 bg-[#17131f] p-3 text-sm font-bold shadow-2xl"
       >
         <Link href="/" onClick={closeMenu} className={linkClass}>
           Início
@@ -74,6 +74,12 @@ export default function HeaderMobileMenu({
         </Link>
         <Link href="/robux" onClick={closeMenu} className={linkClass}>
           Robux
+        </Link>
+        <Link href="/robux/contas" onClick={closeMenu} className={linkClass}>
+          Contas com Robux
+        </Link>
+        <Link href="/#buscar" onClick={closeMenu} className={linkClass}>
+          Buscar na loja
         </Link>
         <Link href="/combos" onClick={closeMenu} className={linkClass}>
           Combos

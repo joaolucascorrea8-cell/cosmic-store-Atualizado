@@ -1,17 +1,19 @@
 import { allRows } from "@/lib/query-pages";
-import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { withSignedReviewAttachments } from "@/lib/review-attachments";
 import { ACTIVE_COMBO_WINDOW_FILTER, type ComboNestedItem } from "@/lib/combos";
-import { money } from "@/lib/catalog";
 import SiteHeader from "./components/SiteHeader";
 import SiteFooter from "./components/SiteFooter";
 import ProductCard from "./components/ProductCard";
-import CatalogCard from "./components/CatalogCard";
 import StoreFeedbacks from "./components/StoreFeedbacks";
 import ComboCard from "./components/ComboCard";
 import Icon from "./components/Icon";
+import HomeGameCard from "./components/home/HomeGameCard";
+import StoreSearch from "./components/home/StoreSearch";
+import HomeOffers from "./components/home/HomeOffers";
+import styles from "./components/home/Storefront.module.css";
+import { storeServices } from "@/lib/storefront-search";
 export const dynamic = "force-dynamic";
 export default async function Home() {
   const client = await createClient();
@@ -96,280 +98,236 @@ export default async function Home() {
     image_url: string | null;
     combo_items: ComboNestedItem[];
   }[];
+  const catalogError = Boolean(g.error || c.error || p.error);
+  const categoryById = new Map(
+    categories.map((category) => [category.id, category]),
+  );
+  const gameById = new Map(games.map((game) => [game.id, game]));
+  const productCounts = new Map<string, number>();
+  for (const product of products) {
+    const gameId = categoryById.get(product.category_id)?.game_id;
+    if (gameId) productCounts.set(gameId, (productCounts.get(gameId) ?? 0) + 1);
+  }
+  // Keep the Admin's order. New games and categories arrive through the same queries.
+  const visibleGames = games.slice(0, 6);
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main id="conteudo-principal" tabIndex={-1}>
-        <section className="shell hero-stage grid items-center gap-8 py-8 md:py-12 lg:grid-cols-[.96fr_1.04fr] lg:gap-12">
-          <div className="min-w-0 max-w-xl">
-            <p className="hero-kicker">
-              <Icon name="gamepad" className="h-4 w-4" /> COSMIC STORE
-            </p>
-            <h1 className="hero-headline mt-5">
-              Seu jogo.
-              <br />
-              Seu próximo <span>upgrade.</span>
-            </h1>
-            <p className="mt-5 max-w-md text-sm leading-7 text-zinc-400 sm:text-base">
-              Frutas, passes e itens para seus jogos favoritos. Escolha no
-              catálogo, pague com Pix e acompanhe a entrega por aqui.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link className="btn-primary" href="/jogos">
-                Explorar jogos <Icon name="arrow" className="h-4 w-4" />
-              </Link>
-              <Link className="btn-secondary" href="/produtos">
-                Ver produtos
-              </Link>
-            </div>
-            <p className="mt-5 text-xs text-zinc-500">
-              Roblox, Blox Fruits e mais possibilidades para jogar.
-            </p>
-          </div>
-          <div className="hero-art relative overflow-hidden border border-white/10">
-            <div className="hero-art-grid" />
-            <div className="hero-orbit" />
-            <span className="absolute left-5 top-5 z-10 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[11px] font-semibold">
-              {featuredGame?.name ?? "Universo Cosmic"}
-            </span>
-            <Image
-              src={
-                featured?.image_url ||
-                "/images/products/20560-perm-dragon-blox-fruits.png"
-              }
-              alt={featured?.name ?? "Destaque da Cosmic Store"}
-              fill
-              priority
-              sizes="(max-width:1024px) 100vw,50vw"
-              className="hero-art-image object-contain"
-            />
-            <div className="hero-art-bottom absolute inset-x-0 bottom-0 z-10 p-5 sm:p-6">
-              <p className="eyebrow">Em destaque</p>
-              <div className="mt-2 flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
-                    {featured?.name ?? "Descubra seu próximo item"}
-                  </h2>
-                  {featured && (
-                    <p className="mt-1 text-sm text-zinc-300">
-                      {money(featured.price)}
-                    </p>
-                  )}
-                </div>
-                <Link
-                  href={featured ? `/produto/${featured.slug}` : "/jogos"}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-zinc-950"
-                  aria-label="Ver destaque"
-                >
-                  <Icon name="arrow" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-        <div className="shell trust-strip">
-          <div>
-            <Icon name="coins" />
-            <span>
-              Pagamento via Pix<small>Valor e instruções no checkout</small>
-            </span>
-          </div>
-          <div>
-            <Icon name="package" />
-            <span>
-              Entrega acompanhada<small>Andamento na área de pedidos</small>
-            </span>
-          </div>
-          <div>
-            <Icon name="chat" />
-            <span>
-              Suporte direto<small>Converse com a equipe no site</small>
-            </span>
-          </div>
-        </div>
-        <section className="shell store-section">
-          <div className="section-heading">
+      <main id="conteudo-principal" tabIndex={-1} className={styles.home}>
+        <div className="shell">
+          <div className={styles.opening}>
             <div>
-              <p className="eyebrow">Seu universo</p>
-              <h2 className="section-title">Escolha o jogo</h2>
+              <span className={styles.kicker}>SEU UNIVERSO. SUA LOJA.</span>
+              <h1>
+                O próximo nível <span>é seu.</span>
+              </h1>
+              <p>Itens para seus jogos, Robux e contas. Tudo na Cosmic.</p>
             </div>
-            <Link href="/jogos" className="section-link">
-              Todos os jogos ↗
-            </Link>
+            <StoreSearch />
           </div>
-          <div className="catalog-grid mt-6">
-            {games.slice(0, 3).map((game) => (
-              <CatalogCard
-                key={game.id}
-                href={`/${game.slug}`}
-                name={game.name}
-                imageUrl={game.image_url}
-                eyebrow="Jogo disponível"
-                description="Explore categorias e produtos"
-              />
+          <nav aria-label="Explore a loja" className={styles.shortcuts}>
+            <a href="#jogos">
+              <Icon name="grid" />
+              Itens de jogos
+            </a>
+            {storeServices.map((service) => (
+              <Link href={service.href} key={service.href}>
+                <Icon name={service.icon} />
+                {service.name}
+              </Link>
             ))}
-          </div>
-          {!games.length && (
-            <div className="empty-store-state mt-5">
-              Estamos preparando nossos jogos. Volte em breve.
-            </div>
-          )}
-        </section>
-        {categories.length > 0 && (
-          <section className="shell">
-            <p className="eyebrow">Encontre mais rápido</p>
-            <div className="category-shortcuts mt-4">
-              {categories.slice(0, 6).map((category) => {
-                const game = games.find(
-                  (game) => game.id === category.game_id,
-                )!;
-                return (
-                  <Link
-                    key={category.id}
-                    href={`/${game.slug}/${category.slug}`}
-                    className="category-shortcut"
-                  >
-                    <Icon
-                      name="grid"
-                      className="h-5 w-5 shrink-0 text-violet-300"
-                    />
-                    <span className="min-w-0">
-                      <strong className="block text-xs">{category.name}</strong>
-                      <small className="text-zinc-500">{game.name}</small>
-                    </span>
-                    <Icon
-                      name="chevron"
-                      className="ml-auto h-4 w-4 shrink-0 text-zinc-500"
-                    />
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
-        <section className="shell store-section">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Vitrine Cosmic</p>
-              <h2 className="section-title">Para o seu próximo jogo</h2>
-            </div>
-            <Link href="/produtos" className="section-link">
-              Ver todos ↗
-            </Link>
-          </div>
-          {products.length ? (
-            <div className="product-grid mt-6">
-              {products.slice(0, 8).map((product) => (
-                <ProductCard key={product.id} produto={product} />
-              ))}
-            </div>
-          ) : (
-            <div className="empty-store-state mt-6">
-              Os produtos aparecerão aqui quando forem publicados.
-            </div>
-          )}
-        </section>
-        {combos.length > 0 && (
-          <section className="shell pb-10">
-            <div className="section-heading">
+          </nav>
+          <section
+            id="jogos"
+            className={`${styles.games} scroll-mt-24`}
+            aria-labelledby="jogos-title"
+          >
+            <div className={styles.sectionHead}>
               <div>
-                <p className="eyebrow">Itens juntos, preço especial</p>
-                <h2 className="section-title">Combos da vez</h2>
+                <h2 id="jogos-title">Qual é o seu jogo?</h2>
+                <p>Entre no seu universo e encontre seus itens.</p>
               </div>
-              <Link href="/combos" className="section-link">
-                Ver combos ↗
+              <Link href="/jogos">
+                Todos os jogos
+                <Icon name="arrow" className="h-4 w-4" />
               </Link>
             </div>
-            <div className="mt-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {combos.map((combo) => (
-                <ComboCard key={combo.id} combo={combo} />
-              ))}
-              <div
-                className={`flex flex-col justify-center rounded-2xl border border-white/10 bg-[#15121d] p-6 ${combos.length === 1 ? "lg:col-span-2" : ""}`}
+            {g.error ? (
+              <div role="alert" className="empty-store-state">
+                Não foi possível carregar os jogos agora. Tente novamente em
+                instantes.
+              </div>
+            ) : visibleGames.length ? (
+              <>
+                <div className={styles.gameGrid}>
+                  {visibleGames.map((game, index) => (
+                    <HomeGameCard
+                      key={game.id}
+                      game={game}
+                      eager={index < 2}
+                      productCount={
+                        catalogError ? null : (productCounts.get(game.id) ?? 0)
+                      }
+                    />
+                  ))}
+                </div>
+                {visibleGames.length > 2 && (
+                  <p className={styles.scrollHint}>
+                    Deslize para explorar
+                    <Icon name="arrow" className="h-3 w-3" />
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="empty-store-state">
+                Estamos preparando nossos jogos. Enquanto isso, explore as
+                outras opções da loja.
+              </div>
+            )}
+          </section>
+          <HomeOffers featured={featured} gameName={featuredGame?.name} />
+          <section className={styles.catalog} aria-labelledby="produtos-title">
+            <div className={styles.sectionHead}>
+              <div>
+                <h2 id="produtos-title">Encontre seu próximo item</h2>
+                <p>Explore o catálogo e adicione seus favoritos ao carrinho.</p>
+              </div>
+              <Link href="/produtos">
+                Ver todos
+                <Icon name="arrow" className="h-4 w-4" />
+              </Link>
+            </div>
+            {categories.length > 0 && (
+              <nav
+                aria-label="Atalhos para categorias"
+                className={styles.categoryLinks}
               >
-                <Icon name="tag" className="h-7 w-7 text-violet-300" />
-                <h3 className="mt-4 text-xl font-bold">
-                  Mais itens para jogar
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-zinc-400">
-                  Veja exatamente o que acompanha cada combo e escolha o seu.
-                </p>
-                <Link href="/combos" className="btn-secondary mt-6">
-                  Explorar combos
+                {categories.slice(0, 6).map((category) => {
+                  const game = gameById.get(category.game_id)!;
+                  return (
+                    <Link
+                      key={category.id}
+                      href={`/${game.slug}/${category.slug}`}
+                    >
+                      {category.name}
+                      <span>{game.name}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
+            {catalogError ? (
+              <div role="alert" className="empty-store-state">
+                Não foi possível carregar todos os produtos. Tente novamente em
+                instantes.
+              </div>
+            ) : products.length ? (
+              <div className={styles.productGrid}>
+                {products.slice(0, 8).map((product) => (
+                  <ProductCard key={product.id} produto={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="empty-store-state">
+                Os produtos aparecerão aqui quando forem publicados.
+              </div>
+            )}
+          </section>
+          {combos.length > 0 && (
+            <section
+              className={styles.comboSection}
+              aria-labelledby="combos-title"
+            >
+              <div className={styles.sectionHead}>
+                <div>
+                  <h2 id="combos-title">Mais itens, um só combo</h2>
+                  <p>Veja o que acompanha cada pacote e escolha o seu.</p>
+                </div>
+                <Link href="/combos">
+                  Ver combos
+                  <Icon name="arrow" className="h-4 w-4" />
                 </Link>
+              </div>
+              <div className={styles.comboGrid}>
+                {combos.map((combo) => (
+                  <ComboCard key={combo.id} combo={combo} />
+                ))}
+              </div>
+            </section>
+          )}
+          <section
+            className={styles.confidence}
+            aria-label="Como funciona sua compra"
+          >
+            <div>
+              <Icon name="coins" />
+              <div>
+                <h2>Pagamento via Pix</h2>
+                <p>Confira o valor e as instruções antes de pagar.</p>
+              </div>
+            </div>
+            <div>
+              <Icon name="package" />
+              <div>
+                <h2>Acompanhe cada etapa</h2>
+                <p>Veja o pagamento e a entrega na área de pedidos.</p>
+              </div>
+            </div>
+            <div>
+              <Icon name="chat" />
+              <div>
+                <h2>Suporte de verdade</h2>
+                <p>Converse com a equipe pelo suporte da loja.</p>
               </div>
             </div>
           </section>
-        )}
-        <section className="shell pb-10">
-          <div className="grid gap-5 rounded-2xl border border-white/10 p-5 sm:grid-cols-3 sm:p-7">
-            {[
-              ["01", "Escolha seu item", "Explore jogos e categorias."],
-              [
-                "02",
-                "Pague com Pix",
-                "Informe o nickname e envie o comprovante.",
-              ],
-              [
-                "03",
-                "Acompanhe a entrega",
-                "A equipe confirma e entrega pelo pedido.",
-              ],
-            ].map(([n, title, description]) => (
-              <div key={n}>
-                <span className="text-xs font-semibold text-violet-300">
-                  {n}
-                </span>
-                <h3 className="mt-2 text-sm font-bold">{title}</h3>
-                <p className="mt-1 text-xs leading-5 text-zinc-400">
-                  {description}
-                </p>
-              </div>
-            ))}
+        </div>
+        {reviews.length > 0 && (
+          <div className={styles.reviews}>
+            <StoreFeedbacks feedbacks={reviews} />
           </div>
-        </section>
-        <section className="pb-10">
-          <StoreFeedbacks feedbacks={reviews} />
-        </section>
-        <section className="shell pb-10">
-          <div className="help-banner">
+        )}
+        <div className="shell">
+          <section className={styles.help} aria-labelledby="ajuda-title">
             <div>
-              <p className="eyebrow">Estamos por aqui</p>
-              <h2 className="mt-2 text-xl font-bold sm:text-2xl">
-                Alguma dúvida antes de comprar?
-              </h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                Veja como funcionam o Pix, os produtos e a entrega.
+              <h2 id="ajuda-title">A gente te ajuda a escolher.</h2>
+              <p>
+                Dúvidas sobre um item, o Pix ou a entrega? Fale com a Cosmic.
               </p>
             </div>
-            <Link href="/ajuda" className="btn-secondary">
-              Central de ajuda <Icon name="arrow" className="h-4 w-4" />
-            </Link>
-          </div>
-        </section>
-        <section className="shell pb-6" aria-labelledby="conta-e-privacidade">
-          <div className="rounded-xl border border-white/10 bg-white/[.015] p-5">
-            <h2 id="conta-e-privacidade" className="text-sm font-bold">
-              Sua conta e sua privacidade
-            </h2>
-            <p className="mt-2 text-xs leading-6 text-zinc-400">
+            <div>
+              <Link href="/ajuda" className="btn-secondary">
+                Como comprar
+                <Icon name="arrow" className="h-4 w-4" />
+              </Link>
+              <Link href="/suporte" className="btn-secondary">
+                Falar com a equipe
+              </Link>
+            </div>
+          </section>
+          <section
+            className={styles.privacy}
+            aria-labelledby="conta-e-privacidade"
+          >
+            <h2 id="conta-e-privacidade">Sua conta e sua privacidade</h2>
+            <p>
               Google e Discord são utilizados para autenticação e identificação
               da sua conta. O Login Google utiliza somente dados básicos, como
               nome, e-mail, identificador e foto de perfil quando
               disponibilizada.
             </p>
-            <p className="mt-1 text-xs leading-6 text-zinc-400">
+            <p>
               A Cosmic Store não acessa sua senha, Gmail, Drive, contatos,
               calendário, fotos ou documentos. O Google é utilizado
               exclusivamente para login, sem geração de imagens, inteligência
               artificial ou outros serviços.
             </p>
-            <div className="mt-3 flex flex-wrap gap-5 text-xs text-violet-300">
+            <div className={styles.privacyLinks}>
               <Link href="/privacidade">Política de Privacidade ↗</Link>
               <Link href="/termos">Termos de uso ↗</Link>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </main>
       <SiteFooter />
     </div>
