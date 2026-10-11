@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
       ? [new URL("/storage/v1/object/public/product-images/**", supabaseUrl)]
       : [],
   },
+  async redirects() {
+    return [
+      { source: "/combos", destination: "/jogos", permanent: true },
+      { source: "/combo/:slug", destination: "/jogos", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

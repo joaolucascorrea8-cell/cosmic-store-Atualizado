@@ -81,9 +81,6 @@ export default function HeaderMobileMenu({
         <Link href="/#buscar" onClick={closeMenu} className={linkClass}>
           Buscar na loja
         </Link>
-        <Link href="/combos" onClick={closeMenu} className={linkClass}>
-          Combos
-        </Link>
         <Link href="/servidores" onClick={closeMenu} className={linkClass}>
           Servidores
         </Link>

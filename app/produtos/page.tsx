@@ -192,9 +192,6 @@ export default async function ProductsPage({
               </p>
             </div>
             <div className="flex gap-3">
-              <Link href="/combos" className="section-link">
-                Ver combos ↗
-              </Link>
               <Link href="/jogos" className="section-link">
                 Explorar jogos ↗
               </Link>

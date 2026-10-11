@@ -18,7 +18,6 @@ export default function StoreNav({
         ["/", "Início"],
         ["/jogos", "Jogos"],
         ["/robux", "Robux"],
-        ["/combos", "Combos"],
         ["/servidores", "Servidores"],
       ].map(([href, label]) => (
         <Link

@@ -1,5 +1,15 @@
 # Cosmic Store — reformulação da página inicial
 
+## Revisão — retirada de Combos da loja pública
+
+- Removido dos menus desktop/mobile, rodapé, atalhos da home, busca por serviços e link no catálogo.
+- /combos e /combo/[slug] agora redirecionam permanentemente para /jogos; /combos saiu do sitemap.
+- Administração, banco e histórico de pedidos permanecem disponíveis para compatibilidade com registros existentes.
+- Nenhuma migração ou variável nova.
+- Validação: build e lint aprovados, dois testes de busca aprovados e navegação desktop/mobile conferida; redirecionamentos HTTP 308 e sitemap verificados localmente.
+- Arquivos: app/components/StoreNav.tsx, app/components/HeaderMobileMenu.tsx, app/components/SiteFooter.tsx, app/produtos/page.tsx, app/sitemap.ts, app/combos/page.tsx, app/combo/[slug]/page.tsx, lib/storefront-search.ts, next.config.ts e tests/storefront-search.test.ts.
+
+
 ## Revisão final — home como apresentação da loja
 
 Esta revisão substitui a organização da home descrita no histórico abaixo.

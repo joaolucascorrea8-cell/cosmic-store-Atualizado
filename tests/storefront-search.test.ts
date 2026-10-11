@@ -37,7 +37,7 @@ test("busca encontra serviços existentes, com links distintos para Robux e cont
   );
   assert.deepEqual(
     matchingServices("combo").map((service) => service.href),
-    ["/combos"],
+    [],
   );
   assert.deepEqual(matchingServices("não existe"), []);
   assert.deepEqual(matchingServices("   "), []);

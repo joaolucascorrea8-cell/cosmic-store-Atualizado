@@ -27,7 +27,6 @@ export default function SiteFooter() {
             <Link href="/jogos">Jogos</Link>
             <Link href="/robux">Robux</Link>
             <Link href="/robux/contas">Contas com Robux</Link>
-            <Link href="/combos">Combos</Link>
             <Link href="/servidores">Servidores</Link>
             <Link href="/chat">Comunidade</Link>
             <a

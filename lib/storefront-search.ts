@@ -17,13 +17,6 @@ export const storeServices = [
     icon: "user",
   },
   {
-    href: "/combos",
-    name: "Combos",
-    description: "Vários itens em um pacote",
-    keywords: "combos combo pacotes ofertas",
-    icon: "package",
-  },
-  {
     href: "/servidores",
     name: "Servidores",
     description: "Encontre seu servidor VIP",

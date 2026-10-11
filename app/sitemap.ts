@@ -6,7 +6,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     "",
     "/produtos",
-    "/combos",
     "/jogos",
     "/robux",
     "/servidores",
