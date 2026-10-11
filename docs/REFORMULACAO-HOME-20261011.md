@@ -1,5 +1,19 @@
 # Cosmic Store — reformulação da página inicial
 
+## Revisão final — home como apresentação da loja
+
+Esta revisão substitui a organização da home descrita no histórico abaixo.
+
+- Prévia com até quatro jogos ativos, na ordem do Admin, e botão “Ver todos os jogos”.
+- Removidas da home a grade de produtos, os atalhos de categorias, o produto em destaque e a grade de combos. Combos continuam acessíveis pelos links existentes.
+- Robux e Contas com Robux ocupam dois blocos lado a lado.
+- Busca, avaliações, benefícios, ajuda e privacidade preservados.
+- A home consulta apenas jogos e avaliações; o catálogo completo continua nas páginas próprias.
+- Arquivos desta revisão: app/page.tsx, app/components/home/HomeOffers.tsx e app/components/home/Storefront.module.css.
+- Verificação: lint e build aprovados; navegação e busca verificadas com dados locais de teste; layouts 320, 390, 768, 1024 e 1440 sem overflow. Não houve teste de pagamento real.
+
+## Histórico da primeira entrega
+
 Entrega: 11/10/2026. Base: o ZIP fornecido nesta conversa.
 
 A página inicial foi transformada em uma vitrine: busca, formas de compra e jogos aparecem antes dos blocos institucionais. A identidade escura com roxo/lilás foi mantida, com mais espaço para as artes do catálogo.

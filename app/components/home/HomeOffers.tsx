@@ -1,24 +1,12 @@
-import Image from "next/image";
 import Link from "next/link";
-import { money } from "@/lib/catalog";
 import Icon from "../Icon";
 import styles from "./Storefront.module.css";
 
-type Props = {
-  featured?: {
-    name: string;
-    slug: string;
-    price: number;
-    image_url: string | null;
-  };
-  gameName?: string;
-};
-
-export default function HomeOffers({ featured, gameName }: Props) {
+export default function HomeOffers() {
   return (
     <section
-      className={`${styles.offers} ${!featured ? styles.offersTwo : ""}`}
-      aria-label="Robux, contas e destaque da loja"
+      className={styles.offers}
+      aria-label="Robux e contas com Robux"
     >
       <Link href="/robux" className={`${styles.offer} ${styles.robuxOffer}`}>
         <div className={styles.offerCopy}>
@@ -63,33 +51,6 @@ export default function HomeOffers({ featured, gameName }: Props) {
           </span>
         </div>
       </Link>
-      {featured && (
-        <Link
-          href={`/produto/${featured.slug}`}
-          className={`${styles.offer} ${styles.featuredOffer}`}
-        >
-          <span className={styles.offerKicker}>DESTAQUE COSMIC</span>
-          <div className={styles.featuredBody}>
-            <div className={styles.featuredArt}>
-              <Image
-                src={featured.image_url || "/images/products/placeholder.svg"}
-                alt=""
-                fill
-                sizes="(max-width: 639px) 130px, (max-width: 899px) 180px, 140px"
-                className="object-contain"
-              />
-            </div>
-            <div className={styles.featuredCopy}>
-              {gameName && <p>{gameName}</p>}
-              <h2>{featured.name}</h2>
-              <strong>{money(featured.price)}</strong>
-              <span className={styles.offerCta}>
-                Ver item <Icon name="arrow" className="h-4 w-4" />
-              </span>
-            </div>
-          </div>
-        </Link>
-      )}
     </section>
   );
 }
