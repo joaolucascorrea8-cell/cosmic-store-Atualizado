@@ -92,7 +92,7 @@ export default async function HistoryPage({
           Área
           <select name="tipo" defaultValue={type} className="admin-input mt-2">
             <option value="">Todas</option>
-            {Object.entries(entities).map(([id, name]) => (
+            {Object.entries(entities).filter(([id]) => id !== "combos").map(([id, name]) => (
               <option key={id} value={id}>
                 {name}
               </option>

@@ -180,16 +180,6 @@ function CouponEditor({
           ))}
         </select>
       )}
-      {scope === "all" && (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            name="include_combos"
-            type="checkbox"
-            defaultChecked={coupon?.include_combos}
-          />
-          Permitir também em combos
-        </label>
-      )}
       <label className="flex items-center gap-2 text-sm">
         <input
           name="is_active"
@@ -200,8 +190,7 @@ function CouponEditor({
       </label>
       <p className="text-xs leading-6 text-zinc-500">
         Um cupom por pedido. O mínimo considera o subtotal da compra; o desconto
-        afeta apenas os itens elegíveis. Combos são excluídos nos cupons de jogo
-        ou produto. O valor final mínimo é R$ 0,01. Pedidos gerados contam como
+        afeta apenas os itens elegíveis. O valor final mínimo é R$ 0,01. Pedidos gerados contam como
         uso; cancelar um pedido libera esse uso.
       </p>
       {state.error && (

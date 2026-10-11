@@ -162,13 +162,13 @@ export default async function ReportsPage({
               </div>
             </section>
             {[
-              ["Produtos e combos", report.products],
+              ["Itens vendidos", report.products],
               ["Jogos", report.games],
             ].map(([title, items]) => (
               <section className="admin-panel" key={String(title)}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-lg font-bold">{String(title)}</h2>
-                  {title === "Produtos e combos" && (
+                  {title === "Itens vendidos" && (
                     <ReportExport
                       period={from + "-" + to}
                       rows={[
@@ -214,8 +214,7 @@ export default async function ReportsPage({
                 </div>
                 <p className="mt-3 text-xs text-zinc-400">
                   Descontos são distribuídos proporcionalmente pelos itens.
-                  Combos aparecem separados para evitar contar os componentes
-                  duas vezes.
+                  O ranking considera os itens registrados em cada pedido.
                 </p>
               </section>
             ))}

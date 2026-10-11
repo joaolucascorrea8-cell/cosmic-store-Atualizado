@@ -1,5 +1,31 @@
 # Cosmic Store — reformulação da página inicial
 
+## Revisão atual — Combos descontinuado também no Admin
+
+Esta revisão substitui a indicação anterior de manter a função disponível no Admin.
+
+- Menu Combos e ação rápida Criar combo removidos do painel; ações rápidas ajustadas para quatro colunas no desktop.
+- Telas de criação, edição e divulgação retiradas. URLs antigas /admin/combos, seus caminhos internos e /admin/campanhas redirecionam para /admin.
+- Ações de salvar, ativar e divulgar combos desativadas. Módulos antigos são substituídos por versões inertes para que copiar o ZIP por cima também retire a função.
+- Opção de cupons para combos removida; formulários antigos não podem reativá-la.
+- Carrinhos antigos descartam combos e preservam produtos. Cotação e novos pedidos recusam combos; recompra de pedidos antigos inclui somente os produtos disponíveis, com aviso sobre o combo descontinuado.
+- Relatórios e histórico mantêm registros existentes, sem apresentar Combos como ferramenta disponível. Banco e migrações históricas preservados; não é necessário executar SQL.
+- Verificações: lint, TypeScript, 110 testes e build aprovados. Navegador local com sessão administrativa fictícia verificou painel desktop/mobile, cupons, redirecionamentos, carrinho salvo, cotação, recusa de novos pedidos de combo e recompra de produtos. Nenhum pagamento, e-mail ou mensagem real foi enviado.
+- A loja pública continua sem Combos, conforme a revisão anterior.
+
+### Aplicação e Git
+
+Copie o conteúdo da pasta cosmic-store do ZIP para o projeto, substituindo os arquivos. Preserve .git e .env.local. Não é necessário apagar manualmente diretórios: os arquivos antigos são substituídos por versões desativadas.
+
+```bash
+npm run build
+git add app lib tests next.config.ts docs
+git commit -m "Descontinua Combos na loja e no Admin"
+git push
+```
+
+### Histórico das revisões anteriores
+
 ## Revisão — retirada de Combos da loja pública
 
 - Removido dos menus desktop/mobile, rodapé, atalhos da home, busca por serviços e link no catálogo.

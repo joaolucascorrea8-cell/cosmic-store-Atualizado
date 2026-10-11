@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/combos", destination: "/jogos", permanent: true },
       { source: "/combo/:slug", destination: "/jogos", permanent: true },
+      { source: "/admin/combos/:path*", destination: "/admin", permanent: true },
+      { source: "/admin/campanhas/:path*", destination: "/admin", permanent: true },
     ];
   },
   async headers() {

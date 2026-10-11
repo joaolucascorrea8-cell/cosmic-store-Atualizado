@@ -146,6 +146,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Carrinho inválido." }, { status: 400 });
   }
 
+  if (body.items.some((item) => item && item.kind !== undefined && item.kind !== "product")) {
+    return NextResponse.json(
+      { error: "Combos não estão mais disponíveis. Atualize o carrinho." },
+      { status: 400 },
+    );
+  }
+
   const requested = body.items.map((item) => ({
     id:
       item && typeof item === "object" && typeof item.id === "string"

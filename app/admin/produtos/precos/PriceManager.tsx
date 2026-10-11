@@ -215,7 +215,7 @@ export default function PriceManager({
         </div>
         <p className="mt-4 text-sm text-zinc-400">
           Inclui produtos publicados e ocultos das categorias escolhidas.
-          Produtos protegidos manualmente e preços de combos ficam de fora.
+          Produtos protegidos manualmente ficam de fora.
           Nenhum pedido existente muda.
         </p>
         <button

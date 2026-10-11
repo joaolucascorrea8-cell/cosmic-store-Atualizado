@@ -30,8 +30,7 @@ export function livePageConfig(pathname: string): LivePageConfig | null {
     return { scopes: ["admin", "catalog"], tables: [], pollMs: 15000 };
   if (
     pathname === "/admin/produtos" ||
-    pathname === "/admin/catalogo" ||
-    pathname === "/admin/combos"
+    pathname === "/admin/catalogo"
   )
     return catalog;
   if (pathname === "/admin/avaliacoes")
@@ -57,9 +56,7 @@ export function livePageConfig(pathname: string): LivePageConfig | null {
     pathname === "/" ||
     pathname === "/jogos" ||
     pathname === "/produtos" ||
-    pathname === "/combos" ||
-    /^\/produto\/[^/]+$/.test(pathname) ||
-    /^\/combo\/[^/]+$/.test(pathname)
+    /^\/produto\/[^/]+$/.test(pathname)
   )
     return catalog;
   if (pathname === "/avaliacoes")
@@ -68,6 +65,8 @@ export function livePageConfig(pathname: string): LivePageConfig | null {
   // Dynamic game/category pages; exclude account, checkout, auth and legal routes.
   const fixed = [
     "admin",
+    "combo",
+    "combos",
     "api",
     "auth",
     "login",

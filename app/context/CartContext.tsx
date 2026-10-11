@@ -72,6 +72,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [cartLoaded, items]);
   function addToCart(input: CartProduct) {
+    if (input.kind !== undefined && input.kind !== "product") return;
     const product = {
       ...input,
       kind: input.kind ?? "product",

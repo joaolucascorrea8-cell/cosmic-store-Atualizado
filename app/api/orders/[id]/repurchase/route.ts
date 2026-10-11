@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { UUID_PATTERN } from "@/lib/catalog";
-import { comboMaxQuantity, type ComboNestedItem } from "@/lib/combos";
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -26,30 +25,16 @@ export async function GET(
       { error: "Pedido não encontrado." },
       { status: 404 },
     );
-  const lines = order.order_items ?? [],
-    ids = lines.flatMap((i) => (i.product_id ? [i.product_id] : [])),
-    combos = lines.flatMap((i) => (i.combo_id ? [i.combo_id] : []));
-  const [products, bundles] = await Promise.all([
-    ids.length
-      ? client
-          .from("products")
-          .select(
-            "id,name,slug,price,image_url,stock,unlimited_stock,is_active,categories(games(is_active))",
-          )
-          .in("id", ids)
-          .eq("is_active", true)
-      : Promise.resolve({ data: [], error: null }),
-    combos.length
-      ? client
-          .from("combos")
-          .select(
-            "id,name,slug,price,image_url,is_active,starts_at,ends_at,combo_items(quantity,products(id,name,stock,unlimited_stock,is_active,categories(games(is_active))))",
-          )
-          .in("id", combos)
-          .eq("is_active", true)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-  if (products.error || bundles.error)
+  const lines = order.order_items ?? [];
+  const ids = lines.flatMap((item) => item.product_id && !item.combo_id ? [item.product_id] : []);
+  const products = ids.length
+    ? await client
+        .from("products")
+        .select("id,name,slug,price,image_url,stock,unlimited_stock,is_active,categories(games(is_active))")
+        .in("id", ids)
+        .eq("is_active", true)
+    : { data: [], error: null };
+  if (products.error)
     return NextResponse.json(
       { error: "Não foi possível conferir os itens atuais." },
       { status: 500 },
@@ -61,7 +46,7 @@ export async function GET(
     slug: string;
     price: number;
     image_url: string | null;
-    kind: "product" | "combo";
+    kind: "product";
     quantity: number;
     stock: number;
     unlimited_stock: boolean;
@@ -74,30 +59,15 @@ export async function GET(
     return g?.is_active === true;
   };
   for (const line of lines) {
+    if (line.combo_id) {
+      warnings.push(`${line.product_name}: combos foram descontinuados.`);
+      continue;
+    }
     const product = products.data?.find((p) => p.id === line.product_id);
-    const combo = bundles.data?.find((c) => c.id === line.combo_id);
     let available = 0;
     if (product && gameActive(product.categories))
       available = product.unlimited_stock ? 99 : Math.min(99, product.stock);
-    if (
-      combo &&
-      (!combo.starts_at || new Date(combo.starts_at).getTime() <= Date.now()) &&
-      (!combo.ends_at || new Date(combo.ends_at).getTime() > Date.now())
-    ) {
-      const components = combo.combo_items.map((entry) => {
-        const p = Array.isArray(entry.products)
-          ? entry.products[0]
-          : entry.products;
-        return {
-          quantity: entry.quantity,
-          products: p
-            ? { ...p, is_active: p.is_active && gameActive(p.categories) }
-            : null,
-        };
-      });
-      available = comboMaxQuantity(components as ComboNestedItem[]);
-    }
-    const current = product ?? combo;
+    const current = product;
     if (!current || available < 1) {
       warnings.push(`${line.product_name}: indisponível.`);
       continue;
@@ -112,7 +82,7 @@ export async function GET(
       price: Number(current.price),
       image_url: current.image_url,
       quantity,
-      kind: product ? "product" : "combo",
+      kind: "product",
       stock: available,
       unlimited_stock: product?.unlimited_stock ?? false,
     });

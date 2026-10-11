@@ -226,7 +226,7 @@ export default async function AdminPage() {
             <p>Acesse diretamente as tarefas mais comuns.</p>
           </div>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Link className="admin-action" href="/admin/catalogo">
             ▦ <strong>Adicionar jogo</strong>
             <span>Jogos e categorias ↗</span>
@@ -237,10 +237,6 @@ export default async function AdminPage() {
           >
             ◈ <strong>Cadastrar item</strong>
             <span>Preço, imagem e estoque ↗</span>
-          </Link>
-          <Link className="admin-action" href="/admin/combos">
-            ✦ <strong>Criar combo</strong>
-            <span>Pacote + divulgação ↗</span>
           </Link>
           <Link className="admin-action" href="/admin/pedidos?status=pending">
             ▤ <strong>Revisar Pix</strong>

@@ -33,6 +33,7 @@ export function sanitizeCart(raw: unknown): CartItem[] {
     if (
       !entry ||
       typeof entry !== "object" ||
+      (entry.kind !== undefined && entry.kind !== "product") ||
       !UUID_PATTERN.test(entry.id) ||
       typeof entry.name !== "string" ||
       !Number.isFinite(entry.price) ||
@@ -50,7 +51,7 @@ export function sanitizeCart(raw: unknown): CartItem[] {
       (entry.stock === undefined && entry.max_quantity === undefined);
     const item: CartItem = {
       id: entry.id,
-      kind: entry.kind === "combo" ? "combo" : "product",
+      kind: "product",
       name: entry.name.slice(0, 120),
       slug: typeof entry.slug === "string" ? entry.slug : undefined,
       price: entry.price,
@@ -76,7 +77,7 @@ export function sanitizeCart(raw: unknown): CartItem[] {
 
 export function mergeRepurchase(current: CartItem[], incoming: CartItem[]) {
   let added = 0;
-  const items = [...current];
+  const items = sanitizeCart(current);
   for (const product of sanitizeCart(incoming)) {
     const index = items.findIndex((item) => cartKey(item) === cartKey(product));
     const previous = index >= 0 ? items[index].quantity : 0;

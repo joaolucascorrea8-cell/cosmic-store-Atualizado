@@ -17,7 +17,7 @@ test("busca por início das palavras, acentos e múltiplos termos", () => {
   assert.equal(matchesProductName("Dragon", "agon"), false);
   assert.equal(slugify("Spirit Física!"), "spirit-fisica");
 });
-test("carrinho separa combo e produto, limita quantidades e remove itens inválidos", () => {
+test("carrinho descarta combos antigos, limita quantidades e remove itens inválidos", () => {
   const base = {
     id,
     name: "Dragon",
@@ -34,9 +34,9 @@ test("carrinho separa combo e produto, limita quantidades e remove itens inváli
     { ...base, stock: 0 },
     base,
   ]);
-  assert.equal(cart.length, 2);
+  assert.equal(cart.length, 1);
   assert.equal(cart[0].quantity, 2);
-  assert.notEqual(cartKey(cart[0]), cartKey(cart[1]));
+  assert.equal(cartKey(cart[0]), `product:${id}`);
   assert.equal(maxQuantity({ ...base, stock: 0 }), 0);
   assert.equal(cartSignature(cart), cartSignature([...cart].reverse()));
   assert.equal(sanitizeCart([{ ...base, price: Infinity }]).length, 0);

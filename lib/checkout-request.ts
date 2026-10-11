@@ -5,7 +5,7 @@ export function checkoutItems(value: unknown) {
   const keys = new Set<string>();
   const items: {
     id: string;
-    kind: "product" | "combo";
+    kind: "product";
     quantity: number;
     unit_price: number;
   }[] = [];
@@ -21,10 +21,10 @@ export function checkoutItems(value: unknown) {
       typeof item.price !== "number" ||
       !Number.isFinite(item.price) ||
       item.price < 0 ||
-      (item.kind !== undefined && !["product", "combo"].includes(item.kind))
+      (item.kind !== undefined && item.kind !== "product")
     )
       return null;
-    const kind = item.kind === "combo" ? "combo" : "product";
+    const kind = "product";
     const key = `${kind}:${item.id}`;
     if (keys.has(key)) return null;
     keys.add(key);

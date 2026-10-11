@@ -114,7 +114,7 @@ export function readCouponForm(form: FormData) {
       ends_at: ends,
       game_id: scope === "game" ? target : null,
       product_id: scope === "product" ? target : null,
-      include_combos: scope === "all" && form.get("include_combos") === "on",
+      include_combos: false,
       is_active: form.get("is_active") === "on",
     },
   } as const;

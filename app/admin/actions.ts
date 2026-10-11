@@ -358,7 +358,6 @@ export async function saveGameOrder(gameIds: string[]) {
   revalidatePath("/produtos");
   revalidatePath("/admin/catalogo");
   revalidatePath("/admin/produtos");
-  revalidatePath("/admin/combos");
 
   return { error: null };
 }
@@ -407,7 +406,6 @@ export async function saveCategoryOrder(gameId: string, categoryIds: string[]) {
   revalidatePath("/produtos");
   revalidatePath("/admin/catalogo");
   revalidatePath("/admin/produtos");
-  revalidatePath("/admin/combos");
   if (game?.slug) revalidatePath(`/${game.slug}`);
 
   return { error: null };
@@ -463,7 +461,7 @@ export async function deleteProduct(formData: FormData) {
       deleteError.code === "P0001"
         ? deleteError.message
         : deleteError.code === "23503"
-          ? "Este produto faz parte de um combo. Remova-o do combo antes de excluir."
+          ? "Este produto possui vínculos no histórico da loja. Mantenha-o desativado para preservar os registros."
           : "Não foi possível excluir o produto. Tente novamente.",
     );
   }
