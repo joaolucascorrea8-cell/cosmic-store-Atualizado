@@ -45,7 +45,7 @@ export default async function Home() {
               <h1>
                 O próximo nível <span>é seu.</span>
               </h1>
-              <p>Itens para seus jogos, Robux e contas. Tudo na Cosmic.</p>
+              <p>Itens para seus jogos. Tudo na Cosmic.</p>
             </div>
             <StoreSearch />
           </div>

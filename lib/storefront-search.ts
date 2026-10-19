@@ -10,13 +10,6 @@ export const storeServices = [
     icon: "coins",
   },
   {
-    href: "/robux/contas",
-    name: "Contas com Robux",
-    description: "Contas prontas com saldo",
-    keywords: "contas conta robux saldo",
-    icon: "user",
-  },
-  {
     href: "/servidores",
     name: "Servidores",
     description: "Encontre seu servidor VIP",
