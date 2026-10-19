@@ -75,9 +75,6 @@ export default function HeaderMobileMenu({
         <Link href="/robux" onClick={closeMenu} className={linkClass}>
           Robux
         </Link>
-        <Link href="/robux/contas" onClick={closeMenu} className={linkClass}>
-          Contas com Robux
-        </Link>
         <Link href="/#buscar" onClick={closeMenu} className={linkClass}>
           Buscar na loja
         </Link>

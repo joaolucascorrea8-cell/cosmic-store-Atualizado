@@ -32,7 +32,9 @@ export default function OrderStatusActions({
                 disabled={pending}
                 confirm={value === "cancelled"
                   ? "Cancelar este pedido? O estoque baixado será devolvido."
-                  : undefined}
+                  : value === "paid"
+                    ? "Confirme somente se o Pix foi realmente recebido na conta da Cosmic. Isso também funciona sem comprovante anexado. Prosseguir?"
+                    : undefined}
                 className={`min-h-11 rounded-xl px-4 py-2 text-sm font-bold ${value === "paid" || value === "delivered" ? "bg-emerald-600" : value === "preparing_delivery" ? "bg-violet-600" : "bg-red-600"}`}
               >
                 {label}

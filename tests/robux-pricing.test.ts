@@ -28,12 +28,13 @@ test("sem taxa paga desconta 30%", () => {
   });
 });
 
-test("K Cosmic respeita piso e margem", () => {
-  assert.equal(cosmicRateFromSupplier(25, { minCosmicK: 34, marginPerThousand: 9 }), 34);
-  assert.equal(cosmicRateFromSupplier(26.3, { minCosmicK: 34, marginPerThousand: 9 }), 35.3);
+test("K Cosmic respeita piso de R$36 e preserva o acréscimo da cotação", () => {
+  assert.equal(cosmicRateFromSupplier(25, { minCosmicK: 36, marginPerThousand: 9 }), 36);
+  assert.equal(cosmicRateFromSupplier(26.3, { minCosmicK: 36, marginPerThousand: 9 }), 36);
+  assert.equal(cosmicRateFromSupplier(27.3, { minCosmicK: 36, marginPerThousand: 9 }), 36.3);
 });
 
-test("preço usa o valor bruto do GamePass", () => {
-  assert.equal(salePriceForGamepass(1429, 34), 48.59);
-  assert.equal(salePriceForGamepass(1000, 34), 34);
+test("1K sem taxa custa R$36 e a opção taxa paga mantém o cálculo automático", () => {
+  assert.equal(salePriceForGamepass(1000, 36), 36);
+  assert.equal(salePriceForGamepass(1429, 36), 51.44);
 });

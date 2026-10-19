@@ -20,8 +20,11 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/suporte");
   const { pedido } = await searchParams;
-  const { data: accountOrder } = pedido && UUID_PATTERN.test(pedido)
-    ? await supabase.from("orders").select("order_code,delivered_at").eq("id", pedido).eq("user_id", user.id).eq("order_type", "robux_account").maybeSingle()
+  // O link de suporte pode vir de qualquer pedido do usuário, não apenas de
+  // compras antigas de contas com Robux. A filtragem pelo usuário evita acesso
+  // a informações de pedidos de terceiros.
+  const { data: linkedOrder } = pedido && UUID_PATTERN.test(pedido)
+    ? await supabase.from("orders").select("order_code,delivered_at,order_type").eq("id", pedido).eq("user_id", user.id).maybeSingle()
     : { data: null };
 
   const [{ data: tickets }, { data: unread }] = await Promise.all([
@@ -70,7 +73,11 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
         <div className="mt-9 grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
           <section className="surface rounded-3xl p-6">
             <h2 className="text-xl font-black">Novo atendimento</h2>
-            <SupportForm orderCode={accountOrder?.order_code} deliveredAt={accountOrder?.delivered_at ? localDate(accountOrder.delivered_at) : undefined} />
+            <SupportForm
+              orderCode={linkedOrder?.order_code}
+              orderType={linkedOrder?.order_type}
+              deliveredAt={linkedOrder?.delivered_at ? localDate(linkedOrder.delivered_at) : undefined}
+            />
           </section>
 
           <section className="surface rounded-3xl p-6">

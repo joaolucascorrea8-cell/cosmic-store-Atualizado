@@ -49,7 +49,7 @@ export default function RobuxCalculator({
   const router = useRouter();
   const [amountText, setAmountText] = useState("1000");
   const [mode, setMode] = useState<RobuxPurchaseMode>("tax_paid");
-  const [cosmicK, setCosmicK] = useState(initialCosmicK ?? 34);
+  const [cosmicK, setCosmicK] = useState(initialCosmicK ?? 36);
   const [link, setLink] = useState("");
   const [validation, setValidation] = useState<Validation | null>(null);
   const [error, setError] = useState("");

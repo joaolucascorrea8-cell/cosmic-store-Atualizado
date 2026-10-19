@@ -40,12 +40,23 @@ export default function OrderChat({
   const [messages, setMessages] = useState(initialMessages);
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const keepAtBottom = useRef(true);
   const subscribedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => () => {
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+  }, [attachmentPreview]);
+
+  function clearAttachment() {
+    setAttachment(null);
+    setAttachmentPreview("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   const refresh = useCallback(async () => {
     try {
@@ -138,20 +149,22 @@ export default function OrderChat({
   function chooseAttachment(file: File | null) {
     setError("");
     if (!file) {
-      setAttachment(null);
+      clearAttachment();
       return;
     }
     if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) {
+      clearAttachment();
       setError("Envie uma imagem JPG, PNG ou WEBP.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     if (file.size > MAX_ATTACHMENT_BYTES) {
+      clearAttachment();
       setError("A imagem pode ter no máximo 3 MB.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
     setAttachment(file);
+    setAttachmentPreview(URL.createObjectURL(file));
   }
 
   async function send(event: FormEvent) {
@@ -178,8 +191,7 @@ export default function OrderChat({
         return;
       }
       setMessage("");
-      setAttachment(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      clearAttachment();
       await refresh();
     } catch {
       setError("Falha de conexão. Tente novamente.");
@@ -273,33 +285,35 @@ export default function OrderChat({
             />
           )}
           {attachment && (
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-violet-500/20 bg-violet-500/10 px-3 py-2 text-xs">
-              <span className="min-w-0 truncate">📎 {attachment.name}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setAttachment(null);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-                className="shrink-0 font-black text-zinc-300 hover:text-white"
-              >
-                Remover
-              </button>
+            <div className="mb-3 overflow-hidden rounded-2xl border border-violet-400/25 bg-violet-500/[.07] p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <strong className="block text-sm text-violet-100">{isAdmin ? "Imagem da entrega pronta" : "Imagem selecionada"}</strong>
+                  <span className="mt-1 block truncate text-xs text-zinc-400">{attachment.name}</span>
+                </div>
+                <button type="button" onClick={clearAttachment} disabled={sending} className="min-h-9 shrink-0 rounded-lg border border-white/10 px-3 text-xs font-bold text-zinc-300 hover:bg-white/10 disabled:opacity-50">
+                  Remover
+                </button>
+              </div>
+              {attachmentPreview && (
+                <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-black/20 p-2">
+                  <Image unoptimized src={attachmentPreview} alt="Prévia da imagem que será enviada" width={800} height={600} className="mx-auto max-h-64 w-auto rounded-lg object-contain" />
+                </div>
+              )}
+              {isAdmin && <p className="mt-3 text-xs leading-5 text-zinc-400">Confira a captura antes de enviar. A imagem ficará anexada a esta conversa e poderá ser usada como registro da entrega.</p>}
             </div>
           )}
           <div className="flex flex-col gap-2 sm:flex-row">
             <label
               className="grid min-h-12 cursor-pointer place-items-center rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-bold text-zinc-300 hover:bg-white/10"
-              title="Enviar imagem"
+              title={isAdmin ? "Anexar imagem da entrega" : "Anexar imagem"}
             >
-              📎 <span className="sr-only">Selecionar imagem</span>
+              <span>{attachment ? "Trocar imagem" : isAdmin ? "📷 Anexar entrega" : "📎 Anexar imagem"}</span>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                onChange={(event) =>
-                  chooseAttachment(event.target.files?.[0] ?? null)
-                }
+                onChange={(event) => chooseAttachment(event.target.files?.[0] ?? null)}
                 disabled={sending}
                 className="sr-only"
               />
@@ -323,8 +337,10 @@ export default function OrderChat({
               {sending ? "Enviando..." : "Enviar"}
             </button>
           </div>
-          <p className="mt-2 text-[11px] text-zinc-500">
-            Imagens JPG, PNG ou WEBP de até 3 MB.
+          <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+            {isAdmin
+              ? "Anexe a captura da entrega em JPG, PNG ou WEBP (até 3 MB). A prévia acima permite conferir o arquivo antes de enviar."
+              : "Você pode anexar uma imagem JPG, PNG ou WEBP de até 3 MB."}
           </p>
         </form>
       ) : (

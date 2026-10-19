@@ -13,7 +13,7 @@ export type RobuxSettings = RobuxPricingSettings & {
 
 export const DEFAULT_ROBUX_SETTINGS: RobuxSettings = {
   enabled: true,
-  minCosmicK: 34,
+  minCosmicK: 36,
   marginPerThousand: 9,
   maxSupplierK: 30,
   minMarginPerThousand: 7,

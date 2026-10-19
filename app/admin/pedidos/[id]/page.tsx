@@ -187,7 +187,10 @@ export default async function AdminOrderPage({
               ]
           : order.status === "awaiting_payment" ||
               order.status === "proof_rejected"
-            ? [["cancelled", "Cancelar pedido"]]
+            ? [
+                ["paid", "Confirmar pagamento manualmente"],
+                ["cancelled", "Cancelar pedido"],
+              ]
             : [];
   const canRetryPaymentEmail =
     ["paid", "preparing_delivery", "delivered"].includes(order.status) &&

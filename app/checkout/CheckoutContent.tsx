@@ -262,6 +262,9 @@ export default function CheckoutContent({
       setOrder(data.order);
       setOrderSignature(baseSignature);
       setQrCode(data.qrCode);
+      // O pedido já foi criado no servidor. Retire do carrinho apenas os itens
+      // que deram origem a este pedido, evitando que o cliente crie outro por engano.
+      if (draft.current.signature === baseSignature) clearCart();
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "Erro ao criar o pedido.",
@@ -594,15 +597,20 @@ export default function CheckoutContent({
             >
               {loading ? "Enviando comprovante…" : "Enviar comprovante →"}
             </button>
+            <p className="mt-4 rounded-xl border border-white/10 bg-white/[.025] p-3 text-xs leading-5 text-zinc-400">
+              Está com dificuldade para anexar o arquivo? Você pode continuar
+              sem enviar agora e voltar ao pedido depois. O pagamento continuará
+              pendente até a equipe confirmar que o Pix foi recebido.
+            </p>
             <Link
               href={`/pedidos/${order.id}`}
               className="btn-secondary mt-3 w-full"
             >
-              Acompanhar pedido
+              Enviar depois e acompanhar pedido
             </Link>
             <p className="mt-5 text-xs leading-6 text-zinc-500">
-              Guarde seu comprovante. Não envie senhas, códigos de acesso ou
-              dados bancários no chat.
+              Envie apenas o comprovante. Nunca compartilhe senhas, códigos de
+              acesso ou dados bancários no chat.
             </p>
           </section>
         </div>

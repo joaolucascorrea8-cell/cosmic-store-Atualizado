@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/require-admin";
 import { getRobuxSettings } from "@/lib/robux-settings";
 import { getByRobuxBalance, getByRobuxRates } from "@/lib/byrobux";
@@ -68,7 +67,6 @@ export default async function AdminRobuxPage() {
         <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-200">A API informou manutenção do catálogo.</p>
       )}
 
-      <Link href="/admin/robux/contas" className="mt-5 inline-block rounded-xl bg-violet-600 px-5 py-3 font-bold">Contas com Robux · catálogo e pedidos</Link>
 
       <RobuxSettingsForm settings={settings} />
 

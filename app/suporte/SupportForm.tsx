@@ -2,8 +2,8 @@
 import { useActionState, useEffect, useState } from "react";
 import { createSupportTicket, type SupportState } from "./actions";
 import { useRouter } from "next/navigation";
-export default function SupportForm({ orderCode, deliveredAt }: { orderCode?: string; deliveredAt?: string }) {
-  const key = orderCode ? `cosmic-support-account-${orderCode}` : "cosmic-support-draft-v1";
+export default function SupportForm({ orderCode, orderType, deliveredAt }: { orderCode?: string; orderType?: string; deliveredAt?: string }) {
+  const key = orderCode ? `cosmic-support-order-${orderCode}` : "cosmic-support-draft-v1";
   const router = useRouter();
   const [state, action, pending] = useActionState<SupportState, FormData>(
     createSupportTicket,
@@ -32,9 +32,12 @@ export default function SupportForm({ orderCode, deliveredAt }: { orderCode?: st
         } else {
           setId(crypto.randomUUID());
           if (orderCode) {
-            setSubject(`Conta com Robux · ${orderCode}`);
+            setSubject(`Ajuda com pedido · ${orderCode}`);
             setCategory("order");
-            setMessage(`Pedido: ${orderCode}${deliveredAt ? `\nEntrega liberada em: ${deliveredAt}` : ""}\n\nDescreva o problema ou seu pedido de reembolso:\n`);
+            const orderContext = orderType === "robux_account" && deliveredAt
+              ? `\nEntrega liberada em: ${deliveredAt}`
+              : "";
+            setMessage(`Pedido: ${orderCode}${orderContext}\n\nDescreva o problema com o pagamento, comprovante ou entrega:\n`);
           }
         }
       } catch {
@@ -63,7 +66,7 @@ export default function SupportForm({ orderCode, deliveredAt }: { orderCode?: st
   }, [state.destination, router, key]);
   return (
     <form action={action} className="mt-5 space-y-4">
-      {orderCode && <p className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-3 text-xs leading-6 text-zinc-400">Atendimento do pedido {orderCode}. Informe se o problema é senha inválida, saldo ausente ou Robux já gastos. Preserve o vídeo do primeiro acesso e informe se possui a gravação; a equipe orientará como enviá-la com segurança. Não inclua senhas nesta mensagem.</p>}
+      {orderCode && <p className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-3 text-xs leading-6 text-zinc-400">Este atendimento ficará associado ao pedido {orderCode}. Explique se precisa de ajuda com o pagamento, o comprovante ou a entrega. Não inclua senhas, códigos de acesso nem dados bancários nesta mensagem.</p>}
       <input type="hidden" name="request_id" value={id} />
       <div>
         <label htmlFor="support-subject" className="admin-label">

@@ -53,8 +53,8 @@ export default async function AccountRefundPage() {
           Política geral da loja
         </Link>{" "}
         ·{" "}
-        <Link href="/robux/contas" className="text-violet-300 underline">
-          Voltar às contas
+        <Link href="/robux" className="text-violet-300 underline">
+          Voltar à loja de Robux
         </Link>
       </p>
     </LegalPage>

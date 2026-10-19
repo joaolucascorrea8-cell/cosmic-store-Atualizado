@@ -266,16 +266,20 @@ export default async function OrderPage({
           {order.status === "awaiting_payment" && (
             <section className="mt-5 rounded-xl border border-violet-400/20 bg-violet-500/10 p-5">
               <h2 className="font-bold">Falta concluir o pagamento</h2>
-              <p className="mt-2 text-sm text-zinc-400">
-                Seu pedido já está salvo. Abra o Pix e envie o comprovante para
-                continuar.
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                Seu pedido já está salvo. Você pode abrir o Pix e anexar o
+                comprovante agora. Se estiver com dificuldade, não precisa
+                começar a compra de novo: fale com a equipe pelo suporte e
+                aguarde a conferência manual do pagamento.
               </p>
-              <Link
-                href={`/checkout?pedido=${id}`}
-                className="btn-primary mt-4"
-              >
-                Pagar com Pix e enviar comprovante
-              </Link>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href={`/checkout?pedido=${id}`} className="btn-primary">
+                  Abrir Pix e enviar comprovante
+                </Link>
+                <Link href={`/suporte?pedido=${id}`} className="btn-secondary">
+                  Preciso de ajuda
+                </Link>
+              </div>
             </section>
           )}
           {order.status === "proof_submitted" && (

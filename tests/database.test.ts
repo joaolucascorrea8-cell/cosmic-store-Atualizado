@@ -81,6 +81,40 @@ test("pedido é idempotente e confirma estoque uma única vez", async () => {
   assert.equal(await stock(ids.a), 9);
   assert.equal(await stock(ids.b), 9);
 });
+test("administrador pode confirmar pagamento sem comprovante e a ação fica auditada", async () => {
+  const first = await order(
+    [{ id: ids.a, kind: "product", quantity: 1, unit_price: 20 }],
+    20,
+  );
+  const before = (await db.query<{ proof_path: string | null; paid_at: string | null }>(
+    "select proof_path,paid_at from public.orders where id=$1",
+    [first.order.id],
+  )).rows[0];
+  assert.equal(before.proof_path, null);
+  assert.equal(before.paid_at, null);
+
+  await transition(first.order.id, "paid", "awaiting_payment");
+
+  const after = (await db.query<{ status: string; paid_at: string | null }>(
+    "select status,paid_at from public.orders where id=$1",
+    [first.order.id],
+  )).rows[0];
+  assert.equal(after.status, "paid");
+  assert.ok(after.paid_at);
+  assert.equal(await stock(ids.a), 9);
+  const event = (await db.query<{ details: { manual_without_proof: boolean } }>(
+    "select details from public.order_admin_events where order_id=$1 and action='status:paid'",
+    [first.order.id],
+  )).rows[0];
+  assert.equal(event.details.manual_without_proof, true);
+});
+
+test("migração define K mínimo de R$36 no Quick Buy sem alterar a tabela de preços históricos", async () => {
+  const row = (await db.query<{ min_cosmic_k: number }>(
+    "select min_cosmic_k from public.robux_settings where id=1",
+  )).rows[0];
+  assert.equal(Number(row.min_cosmic_k), 36);
+});
 test("falta de estoque desfaz toda a confirmação, inclusive baixa parcial e histórico", async () => {
   const first = await order();
   await submitted(first.order.id);

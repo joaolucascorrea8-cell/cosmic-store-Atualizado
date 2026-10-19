@@ -23,7 +23,7 @@ export default function RobuxSettingsForm({ settings }: { settings: RobuxSetting
         </label>
         <label className="text-sm font-bold">Margem adicionada ao K do fornecedor
           <input name="margin_per_thousand" type="number" step="0.01" min="0" required defaultValue={settings.marginPerThousand} className="admin-input mt-2" />
-          <span className="mt-2 block text-xs font-normal leading-5 text-zinc-500">Ex.: fornecedor K25 + margem 9 = K34.</span>
+          <span className="mt-2 block text-xs font-normal leading-5 text-zinc-500">Ex.: fornecedor K27 + margem 9 = K36; respeitando o K mínimo configurado.</span>
         </label>
         <label className="text-sm font-bold">K máximo aceito do fornecedor
           <input name="max_supplier_k" type="number" step="0.01" min="0.01" required defaultValue={settings.maxSupplierK} className="admin-input mt-2" />

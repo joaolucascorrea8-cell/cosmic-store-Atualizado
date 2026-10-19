@@ -239,6 +239,12 @@
   gap: 14px;
   margin-top: 30px;
 }
+.offers.singleOffer {
+  grid-template-columns: minmax(0, 1fr);
+}
+.singleOffer .offerCopy {
+  max-width: min(520px, 72%);
+}
 .offer {
   position: relative;
   isolation: isolate;
@@ -499,6 +505,9 @@
   .offers {
     grid-template-columns: 1fr 1fr;
   }
+  .offers.singleOffer {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .confidence {
     gap: 20px;
   }
@@ -623,6 +632,12 @@
   .offers {
     margin-top: 22px;
     gap: 10px;
+  }
+  .offers.singleOffer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .singleOffer .offerCopy {
+    max-width: min(520px, 72%);
   }
   .offer {
     min-height: 217px;
