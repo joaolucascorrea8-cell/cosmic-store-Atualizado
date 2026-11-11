@@ -62,13 +62,13 @@ export default function CatalogToolbar({
     params.estoque,
   );
   return (
-    <section aria-label="Busca e filtros" className="catalog-toolbar mb-6">
+    <section aria-label="Busca e filtros" aria-busy={pending} className="catalog-toolbar mb-6">
       <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
         <div>
           <label htmlFor="catalog-search" className="admin-label">
             {scoped ? "Buscar por nome" : "Buscar na loja"}
           </label>
-          <div className="relative">
+          <div className="catalog-search-field relative">
             <Icon
               name="search"
               className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-zinc-500"
@@ -76,7 +76,7 @@ export default function CatalogToolbar({
             <input
               id="catalog-search"
               type="search"
-              className="admin-input pl-10"
+              className="admin-input"
               placeholder={
                 scoped
                   ? "Busque seu próximo item…"
@@ -84,6 +84,11 @@ export default function CatalogToolbar({
               }
               value={query}
               maxLength={100}
+              autoComplete="off"
+              enterKeyHint="search"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") { event.preventDefault(); update({ q: query.trim() }); }
+              }}
               onChange={(e) => {
                 const value = e.target.value;
                 setQuery(value);

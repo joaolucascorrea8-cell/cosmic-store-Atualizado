@@ -16,6 +16,7 @@ export default function StoreNav({
     >
       {[
         ["/", "Início"],
+        ["/produtos", "Produtos"],
         ["/jogos", "Jogos"],
         ["/robux", "Robux"],
         ["/servidores", "Servidores"],
@@ -23,7 +24,7 @@ export default function StoreNav({
         <Link
           key={href}
           href={href}
-          aria-current={path === href ? "page" : undefined}
+          aria-current={(path === href || (href === "/produtos" && path.startsWith("/produto/"))) ? "page" : undefined}
         >
           {label}
         </Link>

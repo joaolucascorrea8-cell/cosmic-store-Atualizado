@@ -1508,3 +1508,7 @@ body {
 /* Identidade do item: informação de compra, não inferida pelo slug. */
 .product-identity { display: block; margin-top: .4rem; font-size: .75rem; line-height: 1.5; color: #c4b5e5; overflow-wrap: anywhere; }
 .product-identity strong { font-weight: 650; color: #d6c4f5; }
+
+/* A regra específica evita que o padding global de inputs cubra a lupa. */
+.catalog-search-field .admin-input { padding-inline-start: 2.75rem; }
+#catalog-search { scroll-margin-top: 6rem; }
