@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { allRows } from "@/lib/query-pages";
 import { parseProductCsv } from "@/lib/product-csv";
 import { slugify, UUID_PATTERN } from "@/lib/catalog";
+import { automaticProductSlug, persistWithUniqueSlug } from "@/lib/product-slug";
 import { readProductForm } from "@/lib/product-form";
 import { readRobuxRate, robuxPrice } from "@/lib/robux-pricing";
 import { operationError } from "@/lib/store-issues";
@@ -74,7 +75,7 @@ async function prepare(text: string, rate: string): Promise<ImportRow[]> {
     const form = new FormData();
     Object.entries({
       name: r.nome,
-      slug: slugify(r.nome).slice(0, 90).replace(/-+$/, ""),
+      slug: automaticProductSlug(matches[0].slug, r.nome, 90),
       category_id: cats[0].id,
       price:
         r.preco || (quantity ? robuxPrice(quantity, amount).toFixed(2) : ""),
@@ -126,10 +127,17 @@ export async function importProducts(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Confira a planilha." };
   }
-  const { data, error } = await createAdminClient(actor.id).rpc(
-    "ops_import_products",
-    { p_actor: actor.id, p_token: token, p_rows: rows },
-  );
+  const client = createAdminClient(actor.id);
+  // The RPC is atomic and token-idempotent. Retry a rolled-back slug race only.
+  const { result: { data, error } } = await persistWithUniqueSlug("lote", async (candidate) => {
+    const retry = candidate !== "lote";
+    return client.rpc("ops_import_products", {
+      p_actor: actor.id, p_token: token,
+      p_rows: retry ? rows.map((row) => ({ ...row,
+        slug: `${row.slug.slice(0, 77).replace(/-+$/, "")}-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`,
+      })) : rows,
+    });
+  });
   if (error)
     return { error: await operationError(error, "/admin/produtos/importar") };
   revalidatePath("/", "layout");

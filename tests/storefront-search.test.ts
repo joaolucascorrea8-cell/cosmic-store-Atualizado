@@ -22,14 +22,14 @@ test("busca da vitrine combina produto, categoria e jogo sem perder prefixos", (
   assert.equal(matchesCatalogSearch("dragon", "Dragon", undefined, null), true);
 });
 
-test("busca encontra serviços existentes, com links distintos para Robux e contas", () => {
+test("busca encontra serviços ativos e não promove contas descontinuadas", () => {
   assert.deepEqual(
     matchingServices("robux").map((service) => service.href),
-    ["/robux", "/robux/contas"],
+    ["/robux"],
   );
   assert.deepEqual(
     matchingServices("conta robux").map((service) => service.href),
-    ["/robux/contas"],
+    [],
   );
   assert.deepEqual(
     matchingServices("vip").map((service) => service.href),

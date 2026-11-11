@@ -1,6 +1,8 @@
 "use server";
 
+import { updateProductAtRevision } from "@/lib/product-update";
 import { readDeliveryHours } from "@/lib/store-service";
+import { automaticProductSlug, persistWithUniqueSlug } from "@/lib/product-slug";
 import { readProductForm } from "@/lib/product-form";
 import { parsePrice, UUID_PATTERN } from "@/lib/catalog";
 import { removeUnusedProductImage } from "@/lib/product-image-cleanup";
@@ -235,6 +237,7 @@ export async function updateCategoryImage(formData: FormData) {
 
 export async function updateProductQuick(input: {
   productId: string;
+  revision: number;
   stock: number;
   unlimitedStock: boolean;
   isActive: boolean;
@@ -248,6 +251,8 @@ export async function updateProductQuick(input: {
   const stock = Number(input?.stock ?? 0);
 
   if (!uuidRegex.test(productId)) return { error: "Produto inválido." };
+  if (!Number.isSafeInteger(input.revision) || input.revision < 0)
+    return { error: "Reabra o produto antes de salvar." };
   if (
     !input.unlimitedStock &&
     (!Number.isSafeInteger(stock) || stock < 0 || stock > 2147483647)
@@ -258,18 +263,12 @@ export async function updateProductQuick(input: {
   const price = input.price === undefined ? undefined : parsePrice(input.price);
   if (price === null) return { error: "Informe um preço válido." };
   const admin = createAdminClient(actor.id);
-  const { data: updated, error } = await admin
-    .from("products")
-    .update({
-      ...(price === undefined ? {} : { price }),
-      stock,
-      unlimited_stock: Boolean(input.unlimitedStock),
-      is_active: Boolean(input.isActive),
-    })
-    .eq("id", productId)
-    .select("id")
-    .maybeSingle();
+  const { data: updated, error } = await updateProductAtRevision(admin, productId, input.revision, {
+    ...(price === undefined ? {} : { price }),
+    stock, unlimited_stock: Boolean(input.unlimitedStock), is_active: Boolean(input.isActive),
+  });
 
+  if (!error && !updated) return { error: "O produto mudou desde que você abriu. Atualize a página antes de salvar." };
   if (error || !updated) {
     console.error("Erro ao atualizar produto rapidamente:", error?.code);
     return { error: "Não foi possível salvar estoque/status agora." };
@@ -279,7 +278,7 @@ export async function updateProductQuick(input: {
   revalidatePath("/admin/produtos");
   revalidatePath("/");
   revalidatePath("/produtos");
-  return { error: null };
+  return { error: null, revision: updated.ops_version };
 }
 
 export async function saveProductOrder(productIds: string[]) {
@@ -647,6 +646,7 @@ export type ProductEditorState = {
   success: string | null;
   id?: string;
   revision?: number;
+  slug?: string;
   locked?: boolean;
   rate?: number | null;
 };
@@ -669,7 +669,7 @@ export async function saveProduct(
   const admin = createAdminClient(actor.id);
   const { data: category, error: categoryError } = await admin
     .from("categories")
-    .select("id,slug")
+    .select("id,slug,game_id")
     .eq("id", values.category_id)
     .maybeSingle();
   if (categoryError || !category)
@@ -733,43 +733,28 @@ export async function saveProduct(
         error: "Não foi possível preparar a ordem do produto.",
         success: null,
       };
-    const baseSlug = values.slug;
-    let created = false;
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const slug =
-        attempt === 0
-          ? baseSlug
-          : attempt === 1
-            ? `${baseSlug.slice(0, 70)}-${category.slug}`.slice(0, 100)
-            : `${baseSlug.slice(0, 90)}-${attempt + 1}`;
-      const { data, error } = await admin
-        .from("products")
-        .insert({
-          ...values,
-          slug,
-          display_order: Number(last?.display_order ?? 0) + 10,
-        })
-        .select("id")
-        .single();
-      if (!error && data) {
-        savedId = data.id;
-        created = true;
-        break;
-      }
-      if (error?.code !== "23505" || form.get("auto_slug") !== "true")
-        return {
-          error:
-            error?.code === "23505"
-              ? "Este identificador já está em uso. Altere-o em Opções avançadas."
-              : "Não foi possível cadastrar o produto.",
-          success: null,
-        };
+    const automatic = form.get("auto_slug") !== "false";
+    let baseSlug = values.slug;
+    if (automatic) {
+      const { data: game, error: gameError } = await admin.from("games")
+        .select("slug").eq("id", category.game_id).maybeSingle();
+      if (gameError || !game) return { error: "O jogo não está disponível. Atualize a página.", success: null };
+      baseSlug = automaticProductSlug(game.slug, values.name);
     }
-    if (!created)
-      return {
-        error: "Não foi possível gerar um identificador único.",
-        success: null,
-      };
+    const { result, slug } = await persistWithUniqueSlug(baseSlug, (candidate) =>
+      admin.from("products").insert({ ...values, slug: candidate,
+        display_order: Number(last?.display_order ?? 0) + 10,
+      }).select("id,ops_version,pricing_locked,pricing_rate").single(), automatic);
+    if (result.error || !result.data) return {
+      error: result.error?.code === "23505"
+        ? "Não foi possível reservar esse identificador. Tente novamente ou use a geração automática."
+        : "Não foi possível cadastrar o produto.", success: null,
+    };
+    savedId = result.data.id;
+    savedRevision = result.data.ops_version;
+    savedLocked = result.data.pricing_locked;
+    savedRate = result.data.pricing_rate;
+    values.slug = slug;
   }
   if (old?.image_url !== values.image_url)
     await removeUnusedProductImage(old?.image_url);
@@ -786,6 +771,7 @@ export async function saveProduct(
     error: null,
     success: id ? "Produto atualizado." : "Produto cadastrado.",
     id: savedId,
+    slug: values.slug,
     revision: savedRevision,
     locked: savedLocked,
     rate: savedRate,
