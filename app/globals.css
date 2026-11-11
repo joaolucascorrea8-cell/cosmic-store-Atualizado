@@ -1526,3 +1526,13 @@ body {
   .catalog-filter-toggle { display: none; }
   .catalog-secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; }
 }
+
+.product-detail-layout { display: grid; grid-template-areas: "heading" "media" "info"; gap: 1.25rem; }
+.product-detail-heading { grid-area: heading; }
+.product-detail-layout .product-detail-art { grid-area: media; width: 100%; height: clamp(220px, 65vw, 280px); }
+.product-detail-info { grid-area: info; min-width: 0; }
+.product-purchase-box { box-shadow: 0 0 28px #8650db0a; }
+@media (min-width: 1024px) {
+  .product-detail-layout { grid-template-columns: 1fr .9fr; grid-template-areas: "media heading" "media info"; column-gap: 3rem; row-gap: 1.5rem; align-items: start; }
+  .product-detail-layout .product-detail-art { height: auto; aspect-ratio: 1; }
+}

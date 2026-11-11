@@ -149,23 +149,13 @@ export default async function ProductDetail({
           <span>/</span>
           <span className="text-zinc-200">{product.name}</span>
         </nav>
-        <div className="grid items-start gap-7 lg:grid-cols-[1fr_.9fr] lg:gap-12">
-          <div className="product-detail-art relative aspect-square overflow-hidden rounded-2xl border border-white/10">
-            <Image
-              src={product.image_url || "/images/products/placeholder.svg"}
-              alt={product.name}
-              fill
-              priority
-              sizes="(max-width:1024px) 100vw,50vw"
-              className="object-contain p-8 md:p-14"
-            />
-          </div>
-          <div className="lg:pt-4">
+        <div className="product-detail-layout" aria-labelledby="product-title">
+          <div className="product-detail-heading">
             <span className="inline-flex rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-violet-200">
               ITEM DIGITAL
             </span>
             <ProductIdentity context={{ game: product.game.name, category: product.category.name }} />
-            <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
+            <h1 id="product-title" className="mt-4 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
               {product.name}
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-400">
@@ -174,6 +164,47 @@ export default async function ProductDetail({
               </span>
               <span>Pagamento via Pix</span>
               <span>Suporte no site</span>
+            </div>
+          </div>
+          <div className="product-detail-art relative overflow-hidden rounded-2xl border border-white/10">
+            <Image
+              src={product.image_url || "/images/products/placeholder.svg"}
+              alt={product.name}
+              fill
+              priority
+              sizes="(max-width:1024px) 100vw,50vw"
+              className="object-contain p-4 md:p-8 lg:p-12"
+            />
+          </div>
+          <div className="product-detail-info">
+            <div className="product-purchase-box rounded-xl border border-violet-400/25 bg-[#17121f] p-5 sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Valor do item
+              </p>
+              <strong className="mt-2 block text-3xl font-black tracking-tight sm:text-4xl">
+                {Number(product.price).toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })}
+              </strong>
+              <p className="mt-2 text-xs text-zinc-500">
+                {product.unlimited_stock
+                  ? "Estoque ilimitado"
+                  : `${product.stock} unidades disponíveis`}
+              </p>
+              <p className="mt-3 text-xs leading-5 text-violet-200">
+                {estimatedHours ? deliveryText(estimatedHours) : "Consulte a equipe para combinar o prazo."}
+              </p>
+              <div className="mt-5">
+                <AddToCartButton produto={product} context={{ game: product.game.name, category: product.category.name }} />
+              </div>
+              {soldOut && (
+                <ProductPreferenceButton id={product.id} kind="restock" />
+              )}
+              <ProductPreferenceButton id={product.id} />
+              <Link href="/carrinho" className="btn-secondary mt-3 w-full">
+                Ir para o carrinho →
+              </Link>
             </div>
             <p className="mt-6 whitespace-pre-line text-sm leading-7 text-zinc-400 sm:text-base">
               {product.description ||
@@ -194,38 +225,7 @@ export default async function ProductDetail({
                 },
               ]}
             />
-            <div className="mt-8 rounded-xl border border-white/10 bg-[#17121f] p-5 sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Valor do item
-              </p>
-              <strong className="mt-2 block text-3xl font-black tracking-tight sm:text-4xl">
-                {Number(product.price).toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-              </strong>
-              <p className="mt-2 text-xs text-zinc-500">
-                {product.unlimited_stock
-                  ? "Estoque ilimitado"
-                  : `${product.stock} unidades disponíveis`}
-              </p>
-              <div className="mt-6">
-                <AddToCartButton produto={product} context={{ game: product.game.name, category: product.category.name }} />
-              </div>
-              {soldOut && (
-                <ProductPreferenceButton id={product.id} kind="restock" />
-              )}
-              <ProductPreferenceButton id={product.id} />
-              <Link href="/carrinho" className="btn-secondary mt-3 w-full">
-                Ir para o carrinho →
-              </Link>
-            </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs leading-6 text-zinc-400">
-                {estimatedHours
-                  ? deliveryText(estimatedHours)
-                  : "Consulte a equipe para combinar o prazo."}
-              </p>
               <ShareProduct
                 name={product.name}
                 path={`/produto/${product.slug}`}
