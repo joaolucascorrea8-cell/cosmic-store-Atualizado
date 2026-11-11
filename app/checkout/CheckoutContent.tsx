@@ -1,4 +1,7 @@
 "use client";
+import type { ProductContext } from "@/lib/product-context";
+import ProductIdentity from "@/app/components/ProductIdentity";
+import { useProductContexts } from "@/app/context/useProductContexts";
 import { couponCode, type CheckoutQuote } from "@/lib/coupons";
 import ServiceHours from "@/app/components/ServiceHours";
 import { deliveryText, type ServiceSettings } from "@/lib/store-service";
@@ -11,6 +14,7 @@ import { cartKey, cartSignature } from "@/lib/cart";
 import { money, UUID_PATTERN } from "@/lib/catalog";
 import { uploadProof as sendProof } from "@/lib/proof-upload";
 import FileDropZone from "@/app/components/FileDropZone";
+type ConfirmedItem = { product_id: string | null; product_name: string; quantity: number; unit_price: number; context: ProductContext | null };
 type CreatedOrder = {
   id: string;
   order_code: string;
@@ -46,6 +50,7 @@ export default function CheckoutContent({
 }) {
   const router = useRouter(),
     { items, cartLoaded, clearCart } = useCart();
+  const productContexts = useProductContexts(items.map(item => item.id));
   const [gameNickname, setGameNickname] = useState(""),
     [order, setOrder] = useState<CreatedOrder | null>(null),
     [qrCode, setQrCode] = useState(""),
@@ -54,6 +59,7 @@ export default function CheckoutContent({
     [error, setError] = useState(""),
     [copied, setCopied] = useState(false),
     [initialized, setInitialized] = useState(false);
+  const [confirmedItems, setConfirmedItems] = useState<ConfirmedItem[]>([]);
   const [orderSignature, setOrderSignature] = useState("");
   const [couponInput, setCouponInput] = useState("");
   const [quote, setQuote] = useState<{
@@ -174,6 +180,7 @@ export default function CheckoutContent({
             return;
           }
           setOrder(data.order);
+          setConfirmedItems(data.items ?? []);
           setOrderSignature(saved.signature ?? "");
           setQrCode(data.qrCode);
           setGameNickname(data.order.game_nickname ?? saved.nickname ?? "");
@@ -260,6 +267,7 @@ export default function CheckoutContent({
       draft.current = { ...draft.current, orderId: data.order.id };
       saveDraft(draft.current);
       setOrder(data.order);
+      setConfirmedItems(data.items ?? []);
       setOrderSignature(baseSignature);
       setQrCode(data.qrCode);
       // O pedido já foi criado no servidor. Retire do carrinho apenas os itens
@@ -394,8 +402,7 @@ export default function CheckoutContent({
               required
             />
             <p className="mt-2 text-xs text-zinc-500">
-              Conferiremos o nickname informado para realizar a entrega. Revise
-              antes de continuar.
+              Este nickname será usado para todos os itens deste pedido. Confira se ele identifica você nos jogos listados. Se precisar de nicknames diferentes, fale com a equipe antes de gerar o Pix.
             </p>
             <h3 className="mt-8 border-b border-white/10 pb-3 text-sm font-black">
               Itens da compra
@@ -408,6 +415,7 @@ export default function CheckoutContent({
                 >
                   <span className="text-zinc-300">
                     {item.quantity} × {item.name}
+                    <ProductIdentity context={productContexts.contexts[item.id]} loading={productContexts.loading} />
                   </span>
                   <strong className="shrink-0">
                     {money(item.price * item.quantity)}
@@ -533,6 +541,10 @@ export default function CheckoutContent({
         <div className="grid items-start gap-6 lg:grid-cols-[370px_1fr]">
           <section className="checkout-section text-center">
             <p className="eyebrow">PAGUE COM PIX</p>
+            {confirmedItems.length > 0 && <div className="mt-4 space-y-3 text-left" aria-label="Itens confirmados do pedido">
+              {confirmedItems.map((item, i) => <div key={`${item.product_id}-${i}`}><p className="text-sm font-bold">{item.quantity} × {item.product_name}</p><ProductIdentity context={item.context} /></div>)}
+              <p className="text-xs text-zinc-400">Identificação do catálogo atual. Os itens e valores do pedido permanecem registrados no histórico.</p>
+            </div>}
             <div className="mx-auto mt-5 max-w-[260px] rounded-xl bg-white p-3">
               <Image
                 src={qrCode}

@@ -1,3 +1,4 @@
+import { readOrderDisplayItems } from "@/lib/product-context-server";
 import {recordStoreIssue} from "@/lib/store-issues";
 import { couponCode } from "@/lib/coupons";
 import { NextResponse } from "next/server";
@@ -60,7 +61,7 @@ async function orderResponse(order: CreatedOrder) {
     errorCorrectionLevel: "M",
   });
   return NextResponse.json(
-    { order, qrCode },
+    { order, qrCode, items: await readOrderDisplayItems(await createClient(), order.id) },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

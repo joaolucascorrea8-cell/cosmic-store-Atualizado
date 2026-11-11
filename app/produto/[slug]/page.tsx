@@ -1,3 +1,4 @@
+import ProductIdentity from "@/app/components/ProductIdentity";
 import DeliveryInstructions from "@/app/components/DeliveryInstructions";
 import ProductPreferenceButton from "@/app/components/ProductPreferenceButton";
 import ShareProduct from "@/app/components/ShareProduct";
@@ -163,6 +164,7 @@ export default async function ProductDetail({
             <span className="inline-flex rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-violet-200">
               ITEM DIGITAL
             </span>
+            <ProductIdentity context={{ game: product.game.name, category: product.category.name }} />
             <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
               {product.name}
             </h1>
@@ -208,7 +210,7 @@ export default async function ProductDetail({
                   : `${product.stock} unidades disponíveis`}
               </p>
               <div className="mt-6">
-                <AddToCartButton produto={product} />
+                <AddToCartButton produto={product} context={{ game: product.game.name, category: product.category.name }} />
               </div>
               {soldOut && (
                 <ProductPreferenceButton id={product.id} kind="restock" />
@@ -268,7 +270,7 @@ export default async function ProductDetail({
             </div>
             <div className="product-grid mt-5">
               {related?.map((item) => (
-                <ProductCard key={item.id} produto={item} />
+                <ProductCard key={item.id} produto={item} context={{ game: product.game.name, category: product.category.name }} />
               ))}
             </div>
           </section>

@@ -1,3 +1,4 @@
+import { readOrderDisplayItems } from "@/lib/product-context-server";
 import { validateAccountOrder } from "@/lib/robux-accounts/service";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
@@ -47,7 +48,7 @@ export async function GET(
       })
     : "";
   return NextResponse.json(
-    { order, qrCode },
+    { order, qrCode, items: await readOrderDisplayItems(client, id) },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

@@ -128,7 +128,7 @@ export default async function CategoryPage({
         ) : products.length ? (
           <div className="product-grid">
             {products.slice((page - 1) * 24, page * 24).map((product) => (
-              <ProductCard key={product.id} produto={product} />
+              <ProductCard key={product.id} produto={product} context={{ game: game.name, category: category.name }} />
             ))}
           </div>
         ) : (

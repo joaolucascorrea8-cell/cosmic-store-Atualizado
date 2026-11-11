@@ -1504,3 +1504,7 @@ body {
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
+
+/* Identidade do item: informação de compra, não inferida pelo slug. */
+.product-identity { display: block; margin-top: .4rem; font-size: .75rem; line-height: 1.5; color: #c4b5e5; overflow-wrap: anywhere; }
+.product-identity strong { font-weight: 650; color: #d6c4f5; }

@@ -213,7 +213,7 @@ export default async function ProductsPage({
           ) : visible.length ? (
             <div className="product-grid mt-5">
               {pageProducts.map((product) => (
-                <ProductCard key={product.id} produto={product} />
+                <ProductCard key={product.id} produto={product} context={(() => { const category = categoryById.get(product.category_id); const game = category ? gameById.get(category.game_id) : null; return category && game ? { game: game.name, category: category.name } : null; })()} />
               ))}
             </div>
           ) : (

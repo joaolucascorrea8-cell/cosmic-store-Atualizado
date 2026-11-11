@@ -9,7 +9,7 @@ export default function StoreImage(props: ImageProps) {
   const [failed, setFailed] = useState<ImageProps["src"] | null>(null);
   const src = failed === props.src ? "/images/products/placeholder.svg" : props.src;
   const file = typeof src === "string" ? catalogImagePath(src, process.env.NEXT_PUBLIC_SUPABASE_URL) : null;
-  return <Image {...props} src={src}
+  return <Image {...props} alt={props.alt} src={src}
     loader={file ? ({ width }) => `/api/catalog-image?file=${encodeURIComponent(file)}&w=${Math.min(width, 1920)}` : props.loader}
     onError={(event) => { setFailed(props.src); props.onError?.(event); }} />;
 }
