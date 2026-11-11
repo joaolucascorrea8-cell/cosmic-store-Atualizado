@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CatalogCard from "@/app/components/CatalogCard";

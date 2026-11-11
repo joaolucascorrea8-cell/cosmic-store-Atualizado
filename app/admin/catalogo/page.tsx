@@ -1,5 +1,5 @@
 import DescriptionTemplateField from "./DescriptionTemplateField";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import CatalogFilter from "./CatalogFilter";
 import { allRows } from "@/lib/query-pages";
 import Link from "next/link";

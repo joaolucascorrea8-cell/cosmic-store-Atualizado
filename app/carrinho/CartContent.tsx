@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { useCart } from "@/app/context/CartContext";
 import { cartKey, maxQuantity } from "@/lib/cart";

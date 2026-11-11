@@ -1,0 +1,279 @@
+{
+  "date": "2026-11-11T17:15:56.906Z",
+  "runtime": "v24.22.1",
+  "method": "3 contextos frios por rota/viewport; Chromium, CPU 4x; sem throttling de rede; Supabase fictício local; métricas de laboratório, não dados de campo",
+  "results": [
+    {
+      "width": 390,
+      "route": "/",
+      "samples": [
+        {
+          "lcp": 764,
+          "cls": 0,
+          "events": [],
+          "ttfb": 156.1999999997206,
+          "brokenImages": 1,
+          "overflow": false,
+          "htmlBytes": 47220,
+          "apiReads": 4
+        },
+        {
+          "lcp": 744,
+          "cls": 0,
+          "events": [],
+          "ttfb": 47.5,
+          "brokenImages": 1,
+          "overflow": false,
+          "htmlBytes": 47220,
+          "apiReads": 4
+        },
+        {
+          "lcp": 668,
+          "cls": 0,
+          "events": [],
+          "ttfb": 20.600000000093132,
+          "brokenImages": 1,
+          "overflow": false,
+          "htmlBytes": 47220,
+          "apiReads": 4
+        }
+      ],
+      "medianTTFB": 47.5,
+      "medianLCP": 744,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": null
+    },
+    {
+      "width": 390,
+      "route": "/produtos",
+      "samples": [
+        {
+          "lcp": 812,
+          "cls": 0,
+          "events": [],
+          "ttfb": 44.799999999813735,
+          "brokenImages": 8,
+          "overflow": false,
+          "htmlBytes": 185161,
+          "apiReads": 10
+        },
+        {
+          "lcp": 708,
+          "cls": 0,
+          "events": [],
+          "ttfb": 41.8000000002794,
+          "brokenImages": 8,
+          "overflow": false,
+          "htmlBytes": 185161,
+          "apiReads": 10
+        },
+        {
+          "lcp": 916,
+          "cls": 0,
+          "events": [],
+          "ttfb": 34.3000000002794,
+          "brokenImages": 8,
+          "overflow": false,
+          "htmlBytes": 184921,
+          "apiReads": 10
+        }
+      ],
+      "medianTTFB": 41.8000000002794,
+      "medianLCP": 812,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": null
+    },
+    {
+      "width": 390,
+      "route": "/produto/dragon",
+      "samples": [
+        {
+          "lcp": 812,
+          "cls": 0,
+          "events": [
+            104,
+            104,
+            104
+          ],
+          "ttfb": 22.5,
+          "brokenImages": 5,
+          "overflow": false,
+          "htmlBytes": 65528,
+          "apiReads": 10
+        },
+        {
+          "lcp": 1196,
+          "cls": 0,
+          "events": [
+            80,
+            80,
+            80
+          ],
+          "ttfb": 39.5,
+          "brokenImages": 5,
+          "overflow": false,
+          "htmlBytes": 65438,
+          "apiReads": 10
+        },
+        {
+          "lcp": 1192,
+          "cls": 0,
+          "events": [
+            288,
+            288,
+            288
+          ],
+          "ttfb": 35.1999999997206,
+          "brokenImages": 5,
+          "overflow": false,
+          "htmlBytes": 65438,
+          "apiReads": 10
+        }
+      ],
+      "medianTTFB": 35.1999999997206,
+      "medianLCP": 1192,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": 288
+    },
+    {
+      "width": 1440,
+      "route": "/",
+      "samples": [
+        {
+          "lcp": 808,
+          "cls": 0,
+          "events": [],
+          "ttfb": 30.5,
+          "brokenImages": 1,
+          "overflow": false,
+          "htmlBytes": 47220,
+          "apiReads": 4
+        },
+        {
+          "lcp": 736,
+          "cls": 0,
+          "events": [],
+          "ttfb": 23.100000000093132,
+          "brokenImages": 1,
+          "overflow": false,
+          "htmlBytes": 47220,
+          "apiReads": 4
+        },
+        {
+          "lcp": 724,
+          "cls": 0,
+          "events": [],
+          "ttfb": 36.3000000002794,
+          "brokenImages": 1,
+          "overflow": false,
+          "htmlBytes": 47220,
+          "apiReads": 4
+        }
+      ],
+      "medianTTFB": 30.5,
+      "medianLCP": 736,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": null
+    },
+    {
+      "width": 1440,
+      "route": "/produtos",
+      "samples": [
+        {
+          "lcp": 844,
+          "cls": 0,
+          "events": [],
+          "ttfb": 29,
+          "brokenImages": 16,
+          "overflow": false,
+          "htmlBytes": 185737,
+          "apiReads": 4
+        },
+        {
+          "lcp": 880,
+          "cls": 0,
+          "events": [],
+          "ttfb": 20.899999999906868,
+          "brokenImages": 16,
+          "overflow": false,
+          "htmlBytes": 185161,
+          "apiReads": 28
+        },
+        {
+          "lcp": 752,
+          "cls": 0,
+          "events": [],
+          "ttfb": 36.60000000009313,
+          "brokenImages": 16,
+          "overflow": false,
+          "htmlBytes": 185161,
+          "apiReads": 28
+        }
+      ],
+      "medianTTFB": 29,
+      "medianLCP": 844,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": null
+    },
+    {
+      "width": 1440,
+      "route": "/produto/dragon",
+      "samples": [
+        {
+          "lcp": 644,
+          "cls": 0,
+          "events": [
+            120,
+            120,
+            120
+          ],
+          "ttfb": 16.299999999813735,
+          "brokenImages": 5,
+          "overflow": false,
+          "htmlBytes": 65648,
+          "apiReads": 22
+        },
+        {
+          "lcp": 668,
+          "cls": 0,
+          "events": [
+            152,
+            152,
+            152
+          ],
+          "ttfb": 22,
+          "brokenImages": 5,
+          "overflow": false,
+          "htmlBytes": 65648,
+          "apiReads": 22
+        },
+        {
+          "lcp": 796,
+          "cls": 0,
+          "events": [
+            96,
+            96,
+            96
+          ],
+          "ttfb": 38.09999999962747,
+          "brokenImages": 5,
+          "overflow": false,
+          "htmlBytes": 65528,
+          "apiReads": 22
+        }
+      ],
+      "medianTTFB": 22,
+      "medianLCP": 668,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": 152
+    }
+  ],
+  "checks": {
+    "sitemapStatus": 200,
+    "sitemapProduct": false,
+    "sitemapGame": false,
+    "sitemapCategory": false,
+    "productStructuredData": true,
+    "canonical": true
+  }
+}

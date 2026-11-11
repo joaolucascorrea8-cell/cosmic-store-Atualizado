@@ -1,0 +1,9 @@
+# Imagens do catálogo
+
+Causa: o otimizador nativo do Next 16 usa lookup/agents HTTP próprios, ignorando o transporte fetch/proxy que funciona para o SDK. Não foi habilitado dangerouslyAllowLocalIP nem desabilitada verificação TLS.
+
+Imagens do bucket público product-images agora usam loader específico com rota Node de transformação. Apenas arquivos PNG/JPEG/WebP no bucket configurado, sem URLs arbitrárias, traversal ou redirects. Limites: 5 MB, 20 milhões de pixels, oito segundos de origem e larguras discretas até 1920. Assinaturas de arquivo e decoder validados; SVG não é processado. WebP lossless preserva os pixels na dimensão original, retira metadados e não amplia imagens pequenas. O redimensionamento mantém proporção e orientação. Originais no Storage não são modificados. Imagens locais continuam no otimizador nativo.
+
+O componente mantém dimensões, sizes, lazy-loading, prioridade e estilos; falhas exibem placeholder local. Cache de sucesso: navegador uma hora, CDN um dia, stale-while-revalidate sete dias. Falhas não recebem cache de sucesso. Cadastros usam nomes UUID; se substituir um arquivo existente no Storage, respeitar TTL ou mudar a URL. A rota exige runtime Node/Sharp e deve ter limites/monitoramento no provedor; cache CDN real não foi certificado sem deploy.
+
+Testes: validação de origem/caminhos/larguras, upstream/limites/formato, igualdade RGBA após compressão e ausência de ampliação passaram. Build e navegação Chromium em 390/1440 px com imagens sintéticas passaram: zero imagens quebradas nas seis combinações rota/viewport após a correção, sem overflow. Resultado bruto de laboratório em qa/results/storefront-images.json; baseline anterior tinha imagens quebradas (fixture local bloqueado pelo otimizador nativo), portanto seus LCPs não representam a mesma completude visual. Não são métricas de campo.

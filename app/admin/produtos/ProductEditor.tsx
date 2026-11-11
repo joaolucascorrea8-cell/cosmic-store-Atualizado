@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveProduct, type ProductEditorState } from "../actions";

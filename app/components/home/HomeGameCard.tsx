@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import Icon from "../Icon";
 import styles from "./Storefront.module.css";

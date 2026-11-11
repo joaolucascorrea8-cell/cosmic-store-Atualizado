@@ -1,5 +1,5 @@
 import ProductPreferenceButton from "./ProductPreferenceButton";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import AddToCartButton from "@/app/components/AddToCartButton";
 

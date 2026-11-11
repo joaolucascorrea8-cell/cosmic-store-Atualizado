@@ -7,7 +7,7 @@ import { deliveryText } from "@/lib/store-service";
 import { cache } from "react";
 import type { Metadata } from "next";
 import ProductCard from "@/app/components/ProductCard";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SiteHeader from "@/app/components/SiteHeader";

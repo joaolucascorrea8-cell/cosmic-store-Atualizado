@@ -2,7 +2,7 @@
 import { couponCode, type CheckoutQuote } from "@/lib/coupons";
 import ServiceHours from "@/app/components/ServiceHours";
 import { deliveryText, type ServiceSettings } from "@/lib/store-service";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
