@@ -20,6 +20,7 @@ export default function ProductCard({ produto }: { produto: Product }) {
     <article className="product-tile group relative flex min-w-0 flex-col overflow-hidden">
       <Link
         href={`/produto/${produto.slug}`}
+        prefetch={false}
         className="product-tile-image relative block aspect-square overflow-hidden"
         aria-label={`Ver ${produto.name}`}
       >
@@ -42,6 +43,7 @@ export default function ProductCard({ produto }: { produto: Product }) {
       <div className="flex flex-1 flex-col p-4">
         <Link
           href={`/produto/${produto.slug}`}
+        prefetch={false}
           className="product-name line-clamp-2 min-h-11 text-sm font-bold leading-5 transition hover:text-violet-300 sm:text-base"
         >
           {produto.name}

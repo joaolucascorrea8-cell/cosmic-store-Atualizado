@@ -1,3 +1,4 @@
+import { loadCatalogPage } from "@/lib/catalog-page";
 import { hasCatalogVariants } from "@/lib/store-seo";
 import { allRows } from "@/lib/query-pages";
 import Link from "next/link";
@@ -40,18 +41,7 @@ export default async function ProductsPage({
 }) {
   const params = await searchParams;
   const client = await createClient();
-  const [productResult, categoryResult, gameResult] = await Promise.all([
-    allRows(
-      client
-        .from("products")
-        .select(
-          "id,name,slug,description,price,image_url,stock,unlimited_stock,category_id,display_order",
-        )
-        .eq("is_active", true)
-        .order("display_order", { ascending: true })
-        .order("name", { ascending: true })
-        .order("id"),
-    ),
+  const [categoryResult, gameResult] = await Promise.all([
     allRows(
       client
         .from("categories")
@@ -75,7 +65,6 @@ export default async function ProductsPage({
   const categories = (categoryResult.data ?? []).filter((category) =>
     games.some((game) => game.id === category.game_id),
   );
-  const products = productResult.data ?? [];
   const categoryById = new Map(
     categories.map((category) => [category.id, category]),
   );
@@ -88,6 +77,21 @@ export default async function ProductsPage({
       category.id === params.categoria &&
       (!effectiveGame || category.game_id === effectiveGame.id),
   );
+  // Preserve accent-aware prefix search and pt-BR name sorting. The common
+  // unsearched view uses bounded SQL pagination, stock/category and price filters.
+  const serverPaging = !q.trim() && !["nome", "nome-desc"].includes(params.ordem ?? "");
+  const categoryIds = params.jogo && !selectedGame ? [] : categories
+    .filter(c => (!selectedGame || c.game_id === selectedGame.id) && (!selectedCategory || c.id === selectedCategory.id)).map(c => c.id);
+  let productQuery = client.from("products")
+    .select("id,name,slug,description,price,image_url,stock,unlimited_stock,category_id,display_order", { count: "exact" })
+    .eq("is_active", true).in("category_id", categoryIds);
+  if (params.estoque === "1") productQuery = productQuery.or("unlimited_stock.eq.true,stock.gt.0");
+  if (params.ordem === "menor" || params.ordem === "maior") productQuery = productQuery.order("price", { ascending: params.ordem === "menor" });
+  productQuery = productQuery.order("display_order").order("name").order("id");
+  const requestedPage = pageNumber(params.pagina);
+  const paged = serverPaging ? await loadCatalogPage(productQuery, requestedPage) : null;
+  const productResult = paged ?? await allRows(productQuery);
+  const products = productResult.data ?? [];
   const discoveryLinks = q.trim()
     ? [
         ...matchingServices(q).map((service) => ({
@@ -148,10 +152,9 @@ export default async function ProductsPage({
       );
     });
 
-  const page = Math.min(
-    pageNumber(params.pagina),
-    Math.max(1, Math.ceil(visible.length / 24)),
-  );
+  const total = paged ? (paged.count ?? 0) : visible.length;
+  const page = paged ? paged.page : Math.min(requestedPage, Math.max(1, Math.ceil(total / 24)));
+  const pageProducts = paged ? visible : visible.slice((page - 1) * 24, page * 24);
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -193,8 +196,8 @@ export default async function ProductsPage({
             <div>
               <h2 className="font-black">Produtos</h2>
               <p className="mt-1 text-xs text-zinc-500">
-                {visible.length}{" "}
-                {visible.length === 1 ? "item encontrado" : "itens encontrados"}
+                {total}{" "}
+                {total === 1 ? "item encontrado" : "itens encontrados"}
               </p>
             </div>
             <div className="flex gap-3">
@@ -209,7 +212,7 @@ export default async function ProductsPage({
             </div>
           ) : visible.length ? (
             <div className="product-grid mt-5">
-              {visible.slice((page - 1) * 24, page * 24).map((product) => (
+              {pageProducts.map((product) => (
                 <ProductCard key={product.id} produto={product} />
               ))}
             </div>
@@ -230,7 +233,7 @@ export default async function ProductsPage({
           )}
           <Pagination
             page={page}
-            total={visible.length}
+            total={total}
             pathname="/produtos"
             params={params}
           />

@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "checks": [
+    "Prévia da home entrega a logo CS no head; imagem e favicon públicos retornam os arquivos corretos",
+    "Catálogo descontinuado retorna 410; páginas redirecionam sem sincronizar fornecedor",
+    "Envie a imagem da entrega no chat antes de concluir.",
+    "Salve o usuário e a senha da conta antes de concluir a entrega.",
+    "Pedido alterado por outro Admin não é sobrescrito",
+    "Não foi possível atualizar o pedido. Confira a atualização SQL.",
+    "Informe o motivo da recusa.",
+    "Chave válida libera o formulário; gravação vazia recusada; dados completos cifrados",
+    "Conta com credenciais conclui sem imagem após corrigir os dados"
+  ],
+  "scope": "HTTP/Server Actions reais; Supabase simulado; sem serviços externos, navegador ou banco de produção"
+}

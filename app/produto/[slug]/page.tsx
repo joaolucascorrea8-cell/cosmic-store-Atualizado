@@ -21,27 +21,14 @@ const getProduct = cache(async (slug: string) => {
   const client = await createClient();
   const { data: product, error } = await client
     .from("products")
-    .select(
-      "id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,category_id,delivery_hours,delivery_instructions",
-    )
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
+    .select("id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,category_id,delivery_hours,delivery_instructions,categories!inner(name,slug,game_id,games!inner(name,slug,is_active,delivery_hours,delivery_instructions))")
+    .eq("slug", slug).eq("is_active", true).eq("categories.games.is_active", true).maybeSingle();
   if (error) throw new Error("Não foi possível carregar o produto.");
   if (!product) return null;
-  const { data: category } = await client
-    .from("categories")
-    .select("name,slug,game_id")
-    .eq("id", product.category_id)
-    .maybeSingle();
-  if (!category) return null;
-  const { data: game } = await client
-    .from("games")
-    .select("name,slug,delivery_hours,delivery_instructions")
-    .eq("id", category.game_id)
-    .eq("is_active", true)
-    .maybeSingle();
-  return game ? { ...product, category, game } : null;
+  const { categories, ...values } = product;
+  const category = Array.isArray(categories) ? categories[0] : categories;
+  const game = Array.isArray(category?.games) ? category.games[0] : category?.games;
+  return category && game ? { ...values, category, game } : null;
 });
 export async function generateMetadata({
   params,

@@ -1,0 +1,72 @@
+{
+  "results": [
+    {
+      "name": "1 Dragon no King Legacy",
+      "status": "PASS",
+      "detail": "king-legacy-dragon"
+    },
+    {
+      "name": "2 Dragon no Blox Fruits",
+      "status": "PASS",
+      "detail": "blox-fruits-dragon"
+    },
+    {
+      "name": "3 segundo Dragon no King Legacy e salvar novamente",
+      "status": "PASS",
+      "detail": "king-legacy-dragon-16a4e18df779"
+    },
+    {
+      "name": "4 editar produto antigo preserva slug e UUID",
+      "status": "PASS",
+      "detail": "UUID e /produto/dragon preservados"
+    },
+    {
+      "name": "5 CSV com nomes repetidos entre jogos",
+      "status": "PASS",
+      "detail": "2 produtos novos ocultos; existentes preservados"
+    },
+    {
+      "name": "5b CSV duplicado na mesma categoria é recusado sem gravação",
+      "status": "PASS",
+      "detail": "regra atual explícita; importação atômica não iniciada"
+    },
+    {
+      "name": "6 duplicar produto antigo",
+      "status": "PASS",
+      "detail": "novo UUID, cópia oculta, estoque zero"
+    },
+    {
+      "name": "7 duas sessões: editor completo rejeita alteração desatualizada",
+      "status": "PASS",
+      "detail": "segunda sessão bloqueada sem sobrescrever preço"
+    },
+    {
+      "name": "7b duas sessões: edição rápida protege preço e estoque",
+      "status": "PASS",
+      "detail": "segunda sessão bloqueada no formulário rápido"
+    },
+    {
+      "name": "8 links antigos, carrinho, favoritos e pedidos",
+      "status": "PASS",
+      "detail": "URL antiga, UUID, favorito e snapshot histórico preservados"
+    },
+    {
+      "name": "9 identificadores correspondem aos jogos e são únicos",
+      "status": "PASS",
+      "detail": "8 identificadores verificados"
+    },
+    {
+      "name": "10 validação de preço e categoria + mensagem inline",
+      "status": "PASS",
+      "detail": "preço recusado no servidor; categoria obrigatória no navegador; nenhuma gravação"
+    },
+    {
+      "name": "10b identificador manual inválido é recusado no servidor",
+      "status": "PASS",
+      "detail": "erro inline; nenhuma gravação"
+    }
+  ],
+  "adapterErrors": [],
+  "browserErrors": [],
+  "externalRequests": []
+}
