@@ -215,32 +215,23 @@ function inlineError(html, message) {
   checks.push('Prévia da home entrega a logo CS no head; imagem e favicon públicos retornam os arquivos corretos');
 
   const catalogResponse = await fetch(base + '/api/robux/accounts/catalog?sort=value');
-  assert.equal(catalogResponse.status,200);
+  assert.equal(catalogResponse.status,410);
   const catalog = await catalogResponse.json();
-  assert.deepEqual(catalog.offers.map(o=>o.robux),[1000,1990,750,500,450,400,350]);
-  const expectedPrices = {350:15,400:16,450:17,500:18.55,750:26.27,1000:34,1990:67.66};
-  for (const o of catalog.offers) {
-    assert.equal(o.cosmicK,34);
-    assert.equal(o.price,expectedPrices[o.robux]);
-    assert.deepEqual(Object.keys(o).sort(),['available','cosmicK','id','options','price','robux']);
-  }
-  assert(!/supplier|margin|maskedId|quoteUrl|byrobux|pricing_rule/.test(JSON.stringify(catalog)));
-  checks.push('API pública usa preços por faixa, preserva K base e ordena pelo preço efetivo por Robux');
-
-  const attemptsBeforeAdmin = catalogSyncAttempts;
-  const adminCatalog = await fetch(base + '/admin/robux/contas', { headers: { Cookie: cookie } });
-  assert.equal(adminCatalog.status, 200);
-  const adminHtml = await adminCatalog.text();
-  assert(adminHtml.includes('Não é necessário apertar o botão.'));
-  assert(adminHtml.includes('K base Cosmic'));
-  for (let i = 0; i < 30 && catalogSyncAttempts === attemptsBeforeAdmin; i++) await new Promise(resolve => setTimeout(resolve, 50));
-  assert(catalogSyncAttempts > attemptsBeforeAdmin, 'O simples acesso do Admin deve iniciar a sincronização');
-  const previousAttempts = catalogSyncAttempts;
-  const nextView = await fetch(base + '/admin/robux/contas', { headers: { Cookie: cookie } });
-  await nextView.text();
-  for (let i = 0; i < 30 && catalogSyncAttempts === previousAttempts; i++) await new Promise(resolve => setTimeout(resolve, 50));
-  assert(catalogSyncAttempts > previousAttempts, 'A atualização do painel deve consultar novamente o controle de sincronização');
-  checks.push('Abrir/atualizar o Admin inicia a sincronização após a resposta sem clicar em Consultar');
+  assert.deepEqual(catalog.offers, []);
+  assert.equal(catalog.available, false);
+  assert.equal(catalog.total, 0);
+  assert.match(catalog.message, /não está mais disponível/);
+  assert.equal(catalogResponse.headers.get('cache-control'), 'no-store');
+  const retired = await fetch(base + '/robux/contas', { redirect: 'manual' });
+  const retiredHtml = await retired.text();
+  assert((retired.status === 307 && retired.headers.get('location') === '/robux') || (retired.status === 200 && retiredHtml.includes('url=/robux')));
+  const adminRetired = await fetch(base + '/admin/robux/contas', {
+    headers: { Cookie: cookie }, redirect: 'manual',
+  });
+  const adminRetiredHtml = await adminRetired.text();
+  assert((adminRetired.status === 307 && adminRetired.headers.get('location') === '/admin/robux') || (adminRetired.status === 200 && adminRetiredHtml.includes('url=/admin/robux')));
+  assert.equal(catalogSyncAttempts, 0, 'Catálogo retirado não deve consultar fornecedor');
+  checks.push('Catálogo descontinuado retorna 410; páginas redirecionam sem sincronizar fornecedor');
 
   let html = await submit(formData(await page(), 'status', 'delivered'));
   inlineError(html, 'Envie a imagem da entrega no chat antes de concluir.');
