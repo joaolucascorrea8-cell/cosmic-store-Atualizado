@@ -56,11 +56,11 @@ export async function generateMetadata({
     `${product.name} para ${product.game.name}. Pague com Pix e acompanhe a entrega na Cosmic Store.`
   ).slice(0, 160);
   return {
-    title: product.name,
+    title: `${product.name} · ${product.game.name}`,
     description,
     alternates: { canonical: `/produto/${product.slug}` },
     openGraph: {
-      title: product.name,
+      title: `${product.name} · ${product.game.name}`,
       description,
       images: product.image_url ? [product.image_url] : [],
     },
@@ -106,6 +106,9 @@ export default async function ProductDetail({
   const structured = {
     "@context": "https://schema.org",
     "@type": "Product",
+    "@id": new URL(`/produto/${product.slug}#product`, site).href,
+    sku: product.id,
+    category: `${product.game.name} · ${product.category.name}`,
     name: product.name,
     description: product.description || product.name,
     image: new URL(
@@ -121,13 +124,22 @@ export default async function ProductDetail({
       seller: { "@type": "Organization", name: "Cosmic Store" },
     },
   };
+  const breadcrumbs = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { name: "Início", path: "/" },
+      { name: product.game.name, path: `/${product.game.slug}` },
+      { name: product.category.name, path: `/${product.game.slug}/${product.category.slug}` },
+      { name: product.name, path: `/produto/${product.slug}` },
+    ].map((item, i) => ({ "@type": "ListItem", position: i + 1, name: item.name, item: new URL(item.path, site).href })),
+  };
   return (
     <div className="min-h-screen">
       <SiteHeader />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(structured).replace(/</g, "\\u003c"),
+          __html: JSON.stringify([structured, breadcrumbs]).replace(/</g, "\\u003c"),
         }}
       />
       <main

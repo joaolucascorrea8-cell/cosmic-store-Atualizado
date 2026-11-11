@@ -1,3 +1,4 @@
+import { hasCatalogVariants } from "@/lib/store-seo";
 import { allRows } from "@/lib/query-pages";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -31,14 +32,18 @@ const getCategory = cache(async (gameSlug: string, categorySlug: string) => {
 });
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ jogoSlug: string; categoriaSlug: string }>;
+  searchParams: Promise<CatalogParams>;
 }) {
   const p = await params,
     row = await getCategory(p.jogoSlug, p.categoriaSlug);
   return row
     ? {
         title: `${row.category.name} · ${row.game.name}`,
+        description: `Confira ${row.category.name} para ${row.game.name}, preços e disponibilidade na Cosmic Store.`,
+        ...(hasCatalogVariants(await searchParams) ? { robots: { index: false, follow: true } } : {}),
         alternates: { canonical: `/${p.jogoSlug}/${p.categoriaSlug}` },
       }
     : { title: "Categoria não encontrada", robots: { index: false } };

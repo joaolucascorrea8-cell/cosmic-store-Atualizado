@@ -1,3 +1,4 @@
+import { hasCatalogVariants } from "@/lib/store-seo";
 import { allRows } from "@/lib/query-pages";
 import Link from "next/link";
 import SiteHeader from "@/app/components/SiteHeader";
@@ -15,10 +16,15 @@ type Params = {
   estoque?: string;
   pagina?: string;
 };
-export const metadata = {
-  title: "Produtos",
-  alternates: { canonical: "/produtos" },
-};
+export async function generateMetadata({ searchParams }: { searchParams: Promise<Params> }) {
+  const params = await searchParams;
+  return {
+    title: "Produtos para Roblox",
+    description: "Explore itens para seus jogos de Roblox. Filtre por jogo, categoria, preço e disponibilidade na Cosmic Store.",
+    alternates: { canonical: "/produtos" },
+    ...(hasCatalogVariants(params) ? { robots: { index: false, follow: true } } : {}),
+  };
+}
 
 import { pageNumber } from "@/lib/catalog";
 import {
