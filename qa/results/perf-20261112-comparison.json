@@ -1,0 +1,307 @@
+{
+  "visual": [
+    {
+      "route": "/",
+      "width": 390,
+      "differentPixels": 0,
+      "totalPixels": 904800,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/jogos",
+      "width": 390,
+      "differentPixels": 0,
+      "totalPixels": 552630,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/blox-fruits",
+      "width": 390,
+      "differentPixels": 0,
+      "totalPixels": 643500,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/blox-fruits/frutas",
+      "width": 390,
+      "differentPixels": 0,
+      "totalPixels": 2441790,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/produtos",
+      "width": 390,
+      "differentPixels": 0,
+      "totalPixels": 2466750,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/produto/dragon",
+      "width": 390,
+      "differentPixels": 0,
+      "totalPixels": 1169610,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/",
+      "width": 1440,
+      "differentPixels": 0,
+      "totalPixels": 2514240,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/jogos",
+      "width": 1440,
+      "differentPixels": 0,
+      "totalPixels": 1656000,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/blox-fruits",
+      "width": 1440,
+      "differentPixels": 0,
+      "totalPixels": 1945440,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/blox-fruits/frutas",
+      "width": 1440,
+      "differentPixels": 0,
+      "totalPixels": 6265440,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/produtos",
+      "width": 1440,
+      "differentPixels": 0,
+      "totalPixels": 6289920,
+      "maximumChannelDelta": 0
+    },
+    {
+      "route": "/produto/dragon",
+      "width": 1440,
+      "differentPixels": 0,
+      "totalPixels": 3061440,
+      "maximumChannelDelta": 0
+    }
+  ],
+  "geometryAndTextIdentical": true,
+  "results": [
+    {
+      "width": 390,
+      "route": "/",
+      "before": {
+        "lcp": 824,
+        "ttfb": 40.89999999944121,
+        "cls": 0,
+        "htmlBytes": 46049,
+        "jsBytes": 221466
+      },
+      "after": {
+        "lcp": 660,
+        "ttfb": 36.200000000186265,
+        "cls": 0,
+        "htmlBytes": 46049,
+        "jsBytes": 221466
+      }
+    },
+    {
+      "width": 390,
+      "route": "/jogos",
+      "before": {
+        "lcp": 1084,
+        "ttfb": 36,
+        "cls": 0,
+        "htmlBytes": 30368,
+        "jsBytes": 222087
+      },
+      "after": {
+        "lcp": 688,
+        "ttfb": 27.90000000037253,
+        "cls": 0,
+        "htmlBytes": 30368,
+        "jsBytes": 222087
+      }
+    },
+    {
+      "width": 390,
+      "route": "/blox-fruits",
+      "before": {
+        "lcp": 1088,
+        "ttfb": 32.40000000037253,
+        "cls": 0,
+        "htmlBytes": 33543,
+        "jsBytes": 221466
+      },
+      "after": {
+        "lcp": 980,
+        "ttfb": 22,
+        "cls": 0,
+        "htmlBytes": 33543,
+        "jsBytes": 221466
+      }
+    },
+    {
+      "width": 390,
+      "route": "/blox-fruits/frutas",
+      "before": {
+        "lcp": 1124,
+        "ttfb": 26.09999999962747,
+        "cls": 0,
+        "htmlBytes": 166100,
+        "jsBytes": 224047
+      },
+      "after": {
+        "lcp": 1180,
+        "ttfb": 27.40000000037253,
+        "cls": 0,
+        "htmlBytes": 163719,
+        "jsBytes": 224047
+      }
+    },
+    {
+      "width": 390,
+      "route": "/produtos",
+      "before": {
+        "lcp": 832,
+        "ttfb": 29,
+        "cls": 0,
+        "htmlBytes": 166951,
+        "jsBytes": 224047
+      },
+      "after": {
+        "lcp": 656,
+        "ttfb": 33.5,
+        "cls": 0,
+        "htmlBytes": 163073,
+        "jsBytes": 224047
+      }
+    },
+    {
+      "width": 390,
+      "route": "/produto/dragon",
+      "before": {
+        "lcp": 964,
+        "ttfb": 32,
+        "cls": 0,
+        "htmlBytes": 63266,
+        "jsBytes": 223769
+      },
+      "after": {
+        "lcp": 980,
+        "ttfb": 39.10000000055879,
+        "cls": 0,
+        "htmlBytes": 61950,
+        "jsBytes": 223769
+      }
+    },
+    {
+      "width": 1440,
+      "route": "/",
+      "before": {
+        "lcp": 724,
+        "ttfb": 24.5,
+        "cls": 0,
+        "htmlBytes": 46049,
+        "jsBytes": 221466
+      },
+      "after": {
+        "lcp": 780,
+        "ttfb": 24.700000000186265,
+        "cls": 0,
+        "htmlBytes": 46049,
+        "jsBytes": 221466
+      }
+    },
+    {
+      "width": 1440,
+      "route": "/jogos",
+      "before": {
+        "lcp": 916,
+        "ttfb": 29.5,
+        "cls": 0,
+        "htmlBytes": 30368,
+        "jsBytes": 222087
+      },
+      "after": {
+        "lcp": 740,
+        "ttfb": 31.59999999962747,
+        "cls": 0,
+        "htmlBytes": 30368,
+        "jsBytes": 222087
+      }
+    },
+    {
+      "width": 1440,
+      "route": "/blox-fruits",
+      "before": {
+        "lcp": 980,
+        "ttfb": 22.5,
+        "cls": 0,
+        "htmlBytes": 33543,
+        "jsBytes": 221466
+      },
+      "after": {
+        "lcp": 1196,
+        "ttfb": 33.90000000037253,
+        "cls": 0,
+        "htmlBytes": 33543,
+        "jsBytes": 221466
+      }
+    },
+    {
+      "width": 1440,
+      "route": "/blox-fruits/frutas",
+      "before": {
+        "lcp": 1436,
+        "ttfb": 33.90000000037253,
+        "cls": 0,
+        "htmlBytes": 166100,
+        "jsBytes": 224047
+      },
+      "after": {
+        "lcp": 1348,
+        "ttfb": 28,
+        "cls": 0,
+        "htmlBytes": 163719,
+        "jsBytes": 224047
+      }
+    },
+    {
+      "width": 1440,
+      "route": "/produtos",
+      "before": {
+        "lcp": 1160,
+        "ttfb": 22.40000000037253,
+        "cls": 0,
+        "htmlBytes": 166951,
+        "jsBytes": 224047
+      },
+      "after": {
+        "lcp": 1092,
+        "ttfb": 35.5,
+        "cls": 0,
+        "htmlBytes": 163073,
+        "jsBytes": 224047
+      }
+    },
+    {
+      "width": 1440,
+      "route": "/produto/dragon",
+      "before": {
+        "lcp": 1068,
+        "ttfb": 29.09999999962747,
+        "cls": 0,
+        "htmlBytes": 63266,
+        "jsBytes": 223769
+      },
+      "after": {
+        "lcp": 1080,
+        "ttfb": 28.200000000186265,
+        "cls": 0,
+        "htmlBytes": 61950,
+        "jsBytes": 223769
+      }
+    }
+  ]
+}

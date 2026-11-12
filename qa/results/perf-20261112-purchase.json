@@ -1,0 +1,68 @@
+{
+  "results": [
+    {
+      "name": "esquema incompleto bloqueia emissão de Pix com HTTP 503",
+      "status": "PASS"
+    },
+    {
+      "name": "checkout real rejeita preço adulterado e sessão ausente",
+      "status": "PASS"
+    },
+    {
+      "name": "HTTP concorrente reserva última unidade, recupera retry e gera QR Pix fictício",
+      "status": "PASS"
+    },
+    {
+      "name": "painel recusa valor errado e confirma manualmente com referência do extrato",
+      "status": "PASS"
+    },
+    {
+      "name": "segundo pedido aceita comprovante sem confirmar banco e bloqueia referência duplicada",
+      "status": "PASS"
+    },
+    {
+      "name": "cancelar pagamento não cria reembolso; formulário registra devolução parcial uma vez",
+      "status": "PASS"
+    },
+    {
+      "name": "Game Pass local: criar, conferir Pix, executar com idempotência e concluir fornecedor",
+      "status": "PASS"
+    },
+    {
+      "name": "falha simulada de e-mail não desfaz pagamento nem entrega e fica recuperável",
+      "status": "PASS"
+    },
+    {
+      "name": "painel registra Pix tardio após cancelamento sem reabrir nem entregar novamente",
+      "status": "PASS"
+    },
+    {
+      "name": "cadastro com confirmação, reenvio e recuperação usam apenas Auth simulado",
+      "status": "PASS"
+    },
+    {
+      "name": "Google e Discord: início OAuth, callback PKCE e cancelamento com Auth simulado",
+      "status": "PASS"
+    },
+    {
+      "name": "cron recusa chamada sem segredo e executa manutenção isolada sem compras",
+      "status": "PASS"
+    },
+    {
+      "name": "pedido histórico de modalidade encerrada não emite outro Pix nem entra no checkout de produtos",
+      "status": "PASS"
+    },
+    {
+      "name": "relatório separa recebimentos, devoluções e cancelamento; datas inválidas têm mensagem segura",
+      "status": "PASS"
+    },
+    {
+      "name": "cliente no navegador: carrinho, checkout, Pix e upload de comprovante até o histórico",
+      "status": "PASS"
+    }
+  ],
+  "adapterErrors": [],
+  "browserErrors": [],
+  "externalRequests": [],
+  "isolation": "Next compilado, HTTP Supabase local/PGlite, fornecedor local idempotente, SMTP desconfigurado intencionalmente; sem pagamentos ou notificações externas"
+}

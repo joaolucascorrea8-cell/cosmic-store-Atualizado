@@ -101,6 +101,22 @@
    await a.getByPlaceholder('Nova senha',{exact:true}).fill('OutraSenhaFicticia123!');await a.getByPlaceholder('Confirmar nova senha').fill('OutraSenhaFicticia123!');await a.locator('button[type=submit]').click();await a.getByText('Senha alterada com sucesso!').waitFor();
    await authContext.close();
  });
+ if(process.argv.includes('--oauth'))await check('Google e Discord: início OAuth, callback PKCE e cancelamento com Auth simulado',async()=>{
+   for(const provider of ['google','discord']){
+     const oauthContext=await context();await oauthContext.clearCookies();const oauthPage=await oauthContext.newPage();let authorization;
+     await oauthContext.route(api+'/auth/v1/authorize?**',route=>{authorization=new URL(route.request().url());return route.fulfill({status:200,contentType:'text/html',body:'<title>Provedor OAuth simulado</title>'});});
+     await oauthPage.goto(base+'/login?next=%2Fpedidos',{waitUntil:'networkidle'});
+     await oauthPage.getByRole('button',{name:'Continuar com '+(provider==='google'?'Google':'Discord'),exact:true}).click();
+     await oauthPage.waitForURL(url=>url.pathname==='/auth/v1/authorize');assert.equal(authorization.searchParams.get('provider'),provider);
+     const redirect=new URL(authorization.searchParams.get('redirect_to'));assert.equal(redirect.origin,base);assert.equal(redirect.pathname,'/auth/callback');assert.equal(redirect.searchParams.get('next'),'/pedidos');
+     if(provider==='discord')assert.equal(authorization.searchParams.get('scopes'),'identify email guilds.join');
+     await oauthPage.goto(base+'/auth/callback?provider='+provider+'&code=local-code&next=%2Fpedidos',{waitUntil:'networkidle'});
+     assert.ok(['/pedidos','/conta'].includes(new URL(oauthPage.url()).pathname));assert.ok((await oauthContext.cookies()).some(c=>c.name==='sb-127-auth-token'));
+     await oauthPage.goto(base+'/auth/callback?provider='+provider+'&error=access_denied&next=https%3A%2F%2Fevil.example',{waitUntil:'networkidle'});
+     assert.equal(new URL(oauthPage.url()).origin,base);assert.equal(new URL(oauthPage.url()).pathname,'/login');assert.equal(new URL(oauthPage.url()).searchParams.get('auth_error'),'oauth_cancelled');
+     await oauthContext.close();
+   }
+ });
  await check('cron recusa chamada sem segredo e executa manutenção isolada sem compras',async()=>{
    assert.equal((await fetch(base+'/api/maintenance/chat-attachments')).status,401);const before=executions.size;
    const response=await fetch(base+'/api/maintenance/chat-attachments',{headers:{Authorization:'Bearer local-cron-test'}});assert.equal(response.status,200,await response.text());assert.equal(executions.size,before);
@@ -129,6 +145,6 @@
  });
  for(const width of [390,1440]){await p.setViewportSize({width,height:900});await p.goto(base+'/admin/pedidos/'+first,{waitUntil:'networkidle'});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);fs.mkdirSync('/workspace/scratch/cosmic-final',{recursive:true});await p.screenshot({path:'/workspace/scratch/cosmic-final/financeiro-'+width+'.png',fullPage:true});}
  await ctx.close();const report={results,adapterErrors,browserErrors,externalRequests:[...new Set(externalRequests)],isolation:'Next compilado, HTTP Supabase local/PGlite, fornecedor local idempotente, SMTP desconfigurado intencionalmente; sem pagamentos ou notificações externas'};
- fs.writeFileSync(path.join(root,'qa/results/final-purchase-http.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
+ fs.writeFileSync(path.resolve(root,process.argv.find(x=>x.startsWith('--report='))?.slice(9)??'qa/results/final-purchase-http.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
  if(results.some(r=>r.status==='FAIL')||adapterErrors.length||browserErrors.length)process.exitCode=1;
 }finally{if(browser)await browser.close();if(app&&app.exitCode===null){app.kill();await once(app,'exit')}if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}if(db)await db.close()}})().catch(e=>{console.error(e.stack);process.exitCode=1});

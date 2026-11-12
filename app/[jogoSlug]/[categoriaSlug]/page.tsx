@@ -1,4 +1,5 @@
 import { hasCatalogVariants } from "@/lib/store-seo";
+import { loadCatalogPage } from "@/lib/catalog-page";
 import { allRows } from "@/lib/query-pages";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,20 +16,17 @@ import CatalogToolbar, {
 export const dynamic = "force-dynamic";
 const getCategory = cache(async (gameSlug: string, categorySlug: string) => {
   const client = await createClient();
-  const { data: game } = await client
-    .from("games")
-    .select("id,name,slug")
-    .eq("slug", gameSlug)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!game) return null;
-  const { data: category } = await client
+  const { data: row } = await client
     .from("categories")
-    .select("id,name,slug")
+    .select("id,name,slug,games!inner(id,name,slug)")
     .eq("slug", categorySlug)
-    .eq("game_id", game.id)
+    .eq("games.slug", gameSlug)
+    .eq("games.is_active", true)
     .maybeSingle();
-  return category ? { game, category } : null;
+  if (!row) return null;
+  const { games, ...category } = row;
+  const game = Array.isArray(games) ? games[0] : games;
+  return game ? { game, category } : null;
 });
 export async function generateMetadata({
   params,
@@ -61,18 +59,22 @@ export default async function CategoryPage({
   if (!row) notFound();
   const { game, category } = row,
     client = await createClient();
-  const { data, error } = await allRows(
-    client
+  // A busca por prefixos/acentos e a ordenação pt-BR continuam no caminho completo.
+  // A listagem comum mantém o mesmo resultado, transferindo só a página solicitada.
+  const serverPaging = !(q.q ?? "").trim() && !["nome", "nome-desc"].includes(q.ordem ?? "");
+  let query = client
       .from("products")
       .select(
         "id,name,slug,description,price,image_url,stock,unlimited_stock,display_order",
+        serverPaging ? { count: "exact" } : {},
       )
       .eq("category_id", category.id)
-      .eq("is_active", true)
-      .order("display_order")
-      .order("name")
-      .order("id"),
-  );
+      .eq("is_active", true);
+  if (q.estoque === "1") query = query.or("unlimited_stock.eq.true,stock.gt.0");
+  if (q.ordem === "menor" || q.ordem === "maior") query = query.order("price", { ascending: q.ordem === "menor" });
+  query = query.order("display_order").order("name").order("id");
+  const paged = serverPaging ? await loadCatalogPage(query, pageNumber(q.pagina)) : null;
+  const { data, error } = paged ?? await allRows(query);
   const products = (data ?? [])
     .filter(
       (product) =>
@@ -90,7 +92,8 @@ export default async function CategoryPage({
               ? b.name.localeCompare(a.name, "pt-BR")
               : Number(a.display_order) - Number(b.display_order),
     );
-  const page = Math.min(
+  const total = paged?.count ?? products.length;
+  const page = paged?.page ?? Math.min(
     pageNumber(q.pagina),
     Math.max(1, Math.ceil(products.length / 24)),
   );
@@ -119,7 +122,7 @@ export default async function CategoryPage({
         </div>
         <CatalogToolbar games={[game]} categories={[]} params={q} scoped />
         <p className="mb-5 text-xs text-zinc-400">
-          {products.length} produtos encontrados
+          {total} produtos encontrados
         </p>
         {error ? (
           <div role="alert" className="admin-error">
@@ -127,7 +130,7 @@ export default async function CategoryPage({
           </div>
         ) : products.length ? (
           <div className="product-grid">
-            {products.slice((page - 1) * 24, page * 24).map((product) => (
+            {(paged ? products : products.slice((page - 1) * 24, page * 24)).map((product) => (
               <ProductCard key={product.id} produto={product} context={{ game: game.name, category: category.name }} />
             ))}
           </div>
@@ -142,7 +145,7 @@ export default async function CategoryPage({
         <div className="pb-12">
           <Pagination
             page={page}
-            total={products.length}
+            total={total}
             pathname={`/${p.jogoSlug}/${p.categoriaSlug}`}
             params={q}
           />

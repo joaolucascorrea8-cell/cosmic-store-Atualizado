@@ -1,0 +1,50 @@
+{
+  "label": "after",
+  "baseCommit": "fa6bc17df8e3ecfa4f88bf9a8e75eb2c398588dd",
+  "method": "Regressões HTTP locais, sem navegação do browser; dados fictícios e latência artificial de 120ms",
+  "results": [],
+  "navigation": [],
+  "httpRender": [],
+  "images": {
+    "sourceReads": 1,
+    "trials": [
+      {
+        "ms": 203,
+        "bytes": 52402
+      },
+      {
+        "ms": 7,
+        "bytes": 52402
+      },
+      {
+        "ms": 3,
+        "bytes": 52402
+      },
+      {
+        "ms": 7,
+        "bytes": 52402
+      },
+      {
+        "ms": 4,
+        "bytes": 52402
+      }
+    ]
+  },
+  "snapshots": [],
+  "publicChecks": [
+    "categoria mantém páginas 24/24/12 sem duplicação",
+    "busca por prefixo e acento preservada",
+    "ordenação pt-BR preservada",
+    "ordenação numérica por preço preservada",
+    "filtro de estoque preservado",
+    "jogo inativo não expõe categoria, inclusive em resposta 404 transmitida por streaming",
+    "slugs de categoria iguais e contagens respeitam o jogo"
+  ],
+  "checks": {
+    "freshPriceAndStock": true,
+    "privateHtml": true,
+    "noProductPrefetchFlood": null,
+    "noBrowserErrors": null,
+    "noExternalRequests": null
+  }
+}

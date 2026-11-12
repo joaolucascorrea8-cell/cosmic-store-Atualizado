@@ -1,0 +1,117 @@
+{
+  "label": "after",
+  "baseCommit": "fa6bc17df8e3ecfa4f88bf9a8e75eb2c398588dd",
+  "method": "5 leituras HTTP por rota até o HTML completo; latência artificial de 120ms por chamada REST/Storage local; sem navegação do browser",
+  "results": [],
+  "navigation": [],
+  "httpRender": [
+    {
+      "route": "/",
+      "trials": [
+        279,
+        145,
+        143,
+        142,
+        139
+      ],
+      "medianMs": 143
+    },
+    {
+      "route": "/jogos",
+      "trials": [
+        152,
+        137,
+        251,
+        173,
+        141
+      ],
+      "medianMs": 152
+    },
+    {
+      "route": "/blox-fruits",
+      "trials": [
+        272,
+        258,
+        258,
+        256,
+        256
+      ],
+      "medianMs": 258
+    },
+    {
+      "route": "/blox-fruits/frutas",
+      "trials": [
+        286,
+        349,
+        271,
+        262,
+        260
+      ],
+      "medianMs": 271
+    },
+    {
+      "route": "/produtos",
+      "trials": [
+        266,
+        267,
+        267,
+        285,
+        261
+      ],
+      "medianMs": 267
+    },
+    {
+      "route": "/produto/dragon",
+      "trials": [
+        266,
+        259,
+        260,
+        259,
+        263
+      ],
+      "medianMs": 260
+    }
+  ],
+  "images": {
+    "sourceReads": 1,
+    "trials": [
+      {
+        "ms": 186,
+        "bytes": 52402
+      },
+      {
+        "ms": 5,
+        "bytes": 52402
+      },
+      {
+        "ms": 3,
+        "bytes": 52402
+      },
+      {
+        "ms": 3,
+        "bytes": 52402
+      },
+      {
+        "ms": 3,
+        "bytes": 52402
+      }
+    ]
+  },
+  "snapshots": [],
+  "publicChecks": [
+    "categoria mantém páginas 24/24/12 sem duplicação",
+    "busca por prefixo e acento preservada",
+    "ordenação pt-BR preservada",
+    "ordenação numérica por preço preservada",
+    "filtro de estoque preservado",
+    "jogo inativo não expõe categoria, inclusive em resposta 404 transmitida por streaming",
+    "slugs de categoria iguais e contagens respeitam o jogo"
+  ],
+  "checks": {
+    "freshPriceAndStock": true,
+    "privateHtml": true,
+    "noProductPrefetchFlood": null,
+    "noBrowserErrors": null,
+    "noExternalRequests": null
+  }
+}

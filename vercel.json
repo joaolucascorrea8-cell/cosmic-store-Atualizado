@@ -1,7 +1,8 @@
 {
   "git": {
     "deploymentEnabled": {
-      "audit/cosmic-store-20261111": false
+      "audit/cosmic-store-20261111": false,
+      "perf/cosmic-store-20261112": false
     }
   },
   "crons": [

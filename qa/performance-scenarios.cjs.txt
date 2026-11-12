@@ -1,0 +1,89 @@
+const trace=[],errors=[],external=[];
+server.on('request',(req,res)=>{const started=performance.now();res.once('finish',()=>{const u=new URL(req.url,api);if(u.pathname.startsWith('/rest/v1/'))trace.push({path:u.pathname,query:u.search,durationMs:Math.round(performance.now()-started)});});});
+const routes=['/','/jogos','/blox-fruits','/blox-fruits/frutas','/produtos','/produto/dragon'];
+const output=path.resolve(root,'../scratch/cosmic-performance',label);fs.mkdirSync(output,{recursive:true});
+const median=values=>values.filter(v=>v!==null).sort((a,b)=>a-b)[Math.floor(values.length/2)]??null;
+const snapshots=[];
+const profileBrowser=!process.argv.includes('--checks-only')&&!process.argv.includes('--http-only');
+for(const width of (profileBrowser?[390,1440]:[]))for(const route of routes){
+ const samples=[];
+ for(let run=0;run<3;run++){
+  const ctx=await browser.newContext({viewport:{width,height:900}});
+  await ctx.route('**/*',r=>{const u=new URL(r.request().url());if(!['127.0.0.1','localhost'].includes(u.hostname)){external.push(u.origin);return r.abort();}return r.continue();});
+  const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));
+  await p.addInitScript(()=>{
+   window.__perf={lcp:null,cls:0,events:[],longTasks:[]};
+   new PerformanceObserver(list=>{for(const e of list.getEntries())window.__perf.lcp=e.startTime}).observe({type:'largest-contentful-paint',buffered:true});
+   new PerformanceObserver(list=>{for(const e of list.getEntries())if(!e.hadRecentInput)window.__perf.cls+=e.value}).observe({type:'layout-shift',buffered:true});
+   new PerformanceObserver(list=>{for(const e of list.getEntries())if(e.interactionId)window.__perf.events.push(e.duration)}).observe({type:'event',durationThreshold:16,buffered:true});
+   new PerformanceObserver(list=>{for(const e of list.getEntries())window.__perf.longTasks.push(e.duration)}).observe({type:'longtask',buffered:true});
+  });
+  const cdp=await ctx.newCDPSession(p);await cdp.send('Emulation.setCPUThrottlingRate',{rate:4});
+  trace.length=0;readRows=[];
+  const response=await p.goto(base+route,{waitUntil:'networkidle'});assert.equal(response.status(),200);
+  await p.getByRole('heading',{level:1}).waitFor();await p.waitForTimeout(150);
+  const data=await p.evaluate(()=>{
+   const nav=performance.getEntriesByType('navigation')[0],resources=performance.getEntriesByType('resource');
+   const scripts=resources.filter(x=>x.initiatorType==='script');
+   return {...window.__perf,ttfb:nav.responseStart,domComplete:nav.domComplete,htmlDecodedBytes:nav.decodedBodySize,jsTransferBytes:scripts.reduce((n,x)=>n+x.encodedBodySize,0),jsDecodedBytes:scripts.reduce((n,x)=>n+x.decodedBodySize,0),jsRequests:scripts.length,imageBytes:resources.filter(x=>x.initiatorType==='img').reduce((n,x)=>n+x.encodedBodySize,0),imageRequests:resources.filter(x=>x.initiatorType==='img').length,overflow:document.documentElement.scrollWidth>innerWidth};
+  });
+  samples.push({...data,queries:[...trace],productReads:[...readRows]});
+  if(run===0){
+   await p.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(async img=>{img.loading='eager';try{await img.decode()}catch{}}));});
+   const snapshot=await p.locator('main').evaluate(el=>({text:el.innerText,layout:[...el.querySelectorAll('h1,h2,h3,article,input,button,img')].map(e=>{const r=e.getBoundingClientRect();return {tag:e.tagName,label:e.getAttribute('alt')||e.getAttribute('aria-label')||e.textContent?.trim(),x:r.x,y:r.y,width:r.width,height:r.height}}),broken:[...el.querySelectorAll('img')].filter(i=>!i.naturalWidth).length}));
+   assert.equal(snapshot.broken,0);assert.equal(data.overflow,false);
+   const name=(route==='/'?'home':route.slice(1).replaceAll('/','-'))+'-'+width;
+   await p.screenshot({path:path.join(output,name+'.png'),fullPage:true,animations:'disabled'});
+   snapshots.push({width,route,...snapshot});
+  }
+  if(route==='/produto/dragon'){
+   await p.getByRole('button',{name:/^Adicionar Dragon(?: · .*?)? ao carrinho$/}).click();await p.waitForTimeout(80);
+   const cart=await p.evaluate(()=>JSON.parse(localStorage.getItem('cosmic-cart')));assert.equal(cart[0].id,products[0].id);assert.equal(cart[0].price,20);
+  }
+  if(route==='/jogos'){await p.getByLabel('Buscar jogo').fill('Blox');await p.waitForTimeout(80);}
+  samples.at(-1).interactionDurations=await p.evaluate(()=>window.__perf.events);
+  await ctx.close();
+ }
+ results.push({width,route,medianTTFB:median(samples.map(x=>x.ttfb)),medianLCP:median(samples.map(x=>x.lcp)),medianCLS:median(samples.map(x=>x.cls)),medianDomComplete:median(samples.map(x=>x.domComplete)),medianHtmlBytes:median(samples.map(x=>x.htmlDecodedBytes)),medianJsBytes:median(samples.map(x=>x.jsTransferBytes)),maxObservedInteractionMs:Math.max(0,...samples.flatMap(x=>x.interactionDurations)),samples});
+ console.log(JSON.stringify({width,route,medianLCP:results.at(-1).medianLCP,queries:samples[0].queries.map(x=>x.path),productRows:samples[0].productReads.map(x=>x.rows)}));
+}
+// Navegação real por Link, sem pré-carregar todos os produtos do catálogo.
+const navigation=[];
+for(const width of (profileBrowser?[390,1440]:[])){
+ const ctx=await browser.newContext({viewport:{width,height:900}});const p=await ctx.newPage();
+ await ctx.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());
+ await p.goto(base+'/produtos',{waitUntil:'networkidle'});
+ const prefetches=[];p.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/produto/'))prefetches.push(r.url());});
+ await p.waitForTimeout(300);assert.equal(prefetches.length,0);
+ const started=performance.now();await p.getByRole('link',{name:'Dragon',exact:true}).first().click();await p.locator('#product-title').waitFor();
+ navigation.push({width,catalogToProductMs:Math.round(performance.now()-started),productPrefetchesBeforeClick:0});await ctx.close();
+}
+const httpRender=[];
+if(process.argv.includes('--http-only'))for(const route of routes){const trials=[];for(let n=0;n<5;n++){const started=performance.now();const response=await fetch(base+route);assert.equal(response.status,200);await response.text();trials.push(Math.round(performance.now()-started));}httpRender.push({route,trials,medianMs:median(trials)});}
+const publicChecks=[];
+async function pageHtml(route){const r=await fetch(base+route);assert.equal(r.status,200,route);return r.text();}
+const productLinks=html=>[...new Set([...html.matchAll(/href="(\/produto\/[^"?#]+)/g)].map(m=>m[1]))];
+const categoryPath='/blox-fruits/frutas';
+const firstPage=productLinks(await pageHtml(categoryPath)),secondPage=productLinks(await pageHtml(categoryPath+'?pagina=2')),lastPage=productLinks(await pageHtml(categoryPath+'?pagina=999'));
+assert.equal(firstPage.length,24);assert.equal(secondPage.length,24);assert.equal(lastPage.length,12);assert.equal(firstPage.filter(x=>secondPage.includes(x)).length,0);publicChecks.push('categoria mantém páginas 24/24/12 sem duplicação');
+assert.deepEqual(productLinks(await pageHtml(categoryPath+'?q=DR%C3%81G')),['/produto/dragon']);publicChecks.push('busca por prefixo e acento preservada');
+assert.equal(productLinks(await pageHtml(categoryPath+'?ordem=nome-desc'))[0],'/produto/fruta-9');publicChecks.push('ordenação pt-BR preservada');
+assert.equal(productLinks(await pageHtml(categoryPath+'?ordem=maior'))[0],'/produto/fruta-59');publicChecks.push('ordenação numérica por preço preservada');
+products[0].stock=0;assert.ok(!productLinks(await pageHtml(categoryPath+'?estoque=1')).includes('/produto/dragon'));products[0].stock=10;publicChecks.push('filtro de estoque preservado');
+game.is_active=false;const hidden=await fetch(base+categoryPath);const hiddenHtml=await hidden.text();assert.ok([200,404].includes(hidden.status));assert.equal(productLinks(hiddenHtml).length,0);assert.match(hiddenHtml,/noindex/);game.is_active=true;publicChecks.push('jogo inativo não expõe categoria, inclusive em resposta 404 transmitida por streaming');
+const otherGame={...game,id:'30000000-0000-4000-8000-000000000002',slug:'king-legacy',name:'King Legacy'};
+const otherCategory={...cat,id:'40000000-0000-4000-8000-000000000002',game_id:otherGame.id};fixtureGames.push(otherGame);fixtureCategories.push(otherCategory);
+products[1].category_id=otherCategory.id;
+assert.deepEqual(productLinks(await pageHtml('/king-legacy/frutas')),['/produto/fruta-1']);assert.ok(!productLinks(await pageHtml(categoryPath)).includes('/produto/fruta-1'));
+const gamePage=await pageHtml('/blox-fruits');assert.match(gamePage,/59 produtos/);
+products[1].category_id=cat.id;fixtureGames.pop();fixtureCategories.pop();publicChecks.push('slugs de categoria iguais e contagens respeitam o jogo');
+// Dados comerciais devem continuar frescos entre requisições, inclusive após imagens em cache.
+const original={price:products[0].price,stock:products[0].stock};products[0].price=37;products[0].stock=0;
+const changed=await fetch(base+'/produto/dragon');const html=await changed.text();assert.ok(html.includes('37.00')&&html.includes('OutOfStock'));assert.ok(!/public|s-maxage/i.test(changed.headers.get('cache-control')||''));
+Object.assign(products[0],original);
+const imageTrials=[];let sourceReads=0;server.on('request',req=>{if(req.url.startsWith('/storage/'))sourceReads++;});
+for(let n=0;n<5;n++){const started=performance.now();const r=await fetch(base+'/api/catalog-image?file=benchmark.png&w=640');assert.equal(r.status,200);imageTrials.push({ms:Math.round(performance.now()-started),bytes:(await r.arrayBuffer()).byteLength});}
+assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
+const method=profileBrowser?'36 navegações em contextos frios; servidor em execução; Chromium, CPU 4x; viewport 390/1440; latência artificial de 120ms por chamada REST/Storage local; INP de campo não medido':process.argv.includes('--http-only')?'5 leituras HTTP por rota até o HTML completo; latência artificial de 120ms por chamada REST/Storage local; sem navegação do browser':'Regressões HTTP locais, sem navegação do browser; dados fictícios e latência artificial de 120ms';
+const report={label,baseCommit:'fa6bc17df8e3ecfa4f88bf9a8e75eb2c398588dd',method,results,navigation,httpRender,images:{sourceReads,trials:imageTrials},snapshots,publicChecks,checks:{freshPriceAndStock:true,privateHtml:true,noProductPrefetchFlood:profileBrowser?true:null,noBrowserErrors:profileBrowser?true:null,noExternalRequests:profileBrowser?true:null}};
+fs.writeFileSync(path.join(root,'qa/results/perf-20261112-'+label+(process.argv.includes('--checks-only')?'-checks':process.argv.includes('--http-only')?'-http':'')+'.json'),JSON.stringify(report,null,2)+'\n');
