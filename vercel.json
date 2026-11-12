@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "audit/cosmic-store-20261111": false
+    }
+  },
   "crons": [
     {
       "path": "/api/maintenance/chat-attachments",
