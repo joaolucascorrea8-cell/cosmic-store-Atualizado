@@ -1,4 +1,12 @@
-# Atualização atual: Robux e operação da loja
+# Cosmic Store — revisão final
+
+O estado atual está documentado em [FINAL-REVISAO.md](docs/FINAL-REVISAO.md), com testes, commits e pendências de publicação. Consulte também o [roteiro de homologação e Vercel](docs/FINAL-OPERACAO-E-VERCEL.md).
+
+Pix permanece manual, com conferência do extrato. Novas vendas de Robux usam exclusivamente Game Pass. As sete migrations `202611120001` a `202611120007` estão preparadas para revisão e não foram aplicadas no banco real. O build local utiliza Supabase fictício e não deve ser implantado. O push da branch de auditoria não autoriza deploy ou merge para main.
+
+As seções abaixo são documentação histórica. Não reaplique migrations antigas sobre o esquema novo.
+
+# Atualização anterior: Robux e operação da loja
 
 Comece por [ATUALIZACAO-OPERACAO-E-ROBUX.md](./ATUALIZACAO-OPERACAO-E-ROBUX.md). Esta entrega acrescenta reajuste por Robux com prévia e reversão, importação CSV, instruções de entrega, notas privadas, responsáveis, respostas rápidas editáveis, relatórios, histórico, diagnóstico e backup local.
 

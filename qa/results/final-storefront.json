@@ -1,0 +1,290 @@
+{
+  "catalogReadRows": [
+    {
+      "rows": 24,
+      "offset": 0,
+      "limit": 24
+    }
+  ],
+  "queryProfile": [
+    "/rest/v1/products",
+    "/rest/v1/products"
+  ],
+  "date": "2026-11-12T04:51:19.383Z",
+  "runtime": "v24.22.1",
+  "method": "3 contextos frios por rota/viewport; Chromium, CPU 4x; sem throttling de rede; Supabase fictício local; métricas de laboratório, não dados de campo",
+  "results": [
+    {
+      "width": 390,
+      "route": "/",
+      "samples": [
+        {
+          "lcp": 1116,
+          "cls": 0,
+          "events": [],
+          "ttfb": 208,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 45655,
+          "apiReads": 4
+        },
+        {
+          "lcp": 440,
+          "cls": 0,
+          "events": [],
+          "ttfb": 26.90000000037253,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 45655,
+          "apiReads": 4
+        },
+        {
+          "lcp": 860,
+          "cls": 0,
+          "events": [],
+          "ttfb": 31.200000000186265,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 45655,
+          "apiReads": 4
+        }
+      ],
+      "medianTTFB": 31.200000000186265,
+      "medianLCP": 860,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": null
+    },
+    {
+      "width": 390,
+      "route": "/produtos",
+      "samples": [
+        {
+          "lcp": 796,
+          "cls": 0,
+          "events": [],
+          "ttfb": 39.40000000037253,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 178141,
+          "apiReads": 4
+        },
+        {
+          "lcp": 824,
+          "cls": 0,
+          "events": [],
+          "ttfb": 48.09999999962747,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 178141,
+          "apiReads": 4
+        },
+        {
+          "lcp": 772,
+          "cls": 0,
+          "events": [],
+          "ttfb": 33,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 178141,
+          "apiReads": 4
+        }
+      ],
+      "medianTTFB": 39.40000000037253,
+      "medianLCP": 796,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": null
+    },
+    {
+      "width": 390,
+      "route": "/produto/dragon",
+      "samples": [
+        {
+          "lcp": 816,
+          "cls": 0,
+          "events": [
+            64,
+            64,
+            64
+          ],
+          "ttfb": 36.299999999813735,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 64910,
+          "apiReads": 8
+        },
+        {
+          "lcp": 832,
+          "cls": 0,
+          "events": [
+            56,
+            56,
+            56
+          ],
+          "ttfb": 24.40000000037253,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 64910,
+          "apiReads": 8
+        },
+        {
+          "lcp": 704,
+          "cls": 0,
+          "events": [
+            56,
+            56,
+            56
+          ],
+          "ttfb": 51.69999999925494,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 64910,
+          "apiReads": 8
+        }
+      ],
+      "medianTTFB": 36.299999999813735,
+      "medianLCP": 816,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": 64
+    },
+    {
+      "width": 1440,
+      "route": "/",
+      "samples": [
+        {
+          "lcp": 744,
+          "cls": 0,
+          "events": [],
+          "ttfb": 33.799999999813735,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 45655,
+          "apiReads": 4
+        },
+        {
+          "lcp": 876,
+          "cls": 0,
+          "events": [],
+          "ttfb": 34.59999999962747,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 45655,
+          "apiReads": 4
+        },
+        {
+          "lcp": 800,
+          "cls": 0,
+          "events": [],
+          "ttfb": 28.600000000558794,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 45655,
+          "apiReads": 4
+        }
+      ],
+      "medianTTFB": 33.799999999813735,
+      "medianLCP": 800,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": null
+    },
+    {
+      "width": 1440,
+      "route": "/produtos",
+      "samples": [
+        {
+          "lcp": 756,
+          "cls": 0,
+          "events": [],
+          "ttfb": 32.299999999813735,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 178141,
+          "apiReads": 4
+        },
+        {
+          "lcp": 756,
+          "cls": 0,
+          "events": [],
+          "ttfb": 31.5,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 178141,
+          "apiReads": 4
+        },
+        {
+          "lcp": 836,
+          "cls": 0,
+          "events": [],
+          "ttfb": 28.200000000186265,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 178141,
+          "apiReads": 4
+        }
+      ],
+      "medianTTFB": 31.5,
+      "medianLCP": 756,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": null
+    },
+    {
+      "width": 1440,
+      "route": "/produto/dragon",
+      "samples": [
+        {
+          "lcp": 828,
+          "cls": 0,
+          "events": [
+            128,
+            128,
+            128
+          ],
+          "ttfb": 25.5,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 64910,
+          "apiReads": 8
+        },
+        {
+          "lcp": 700,
+          "cls": 0,
+          "events": [
+            104,
+            104,
+            104
+          ],
+          "ttfb": 21.299999999813735,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 64910,
+          "apiReads": 8
+        },
+        {
+          "lcp": 680,
+          "cls": 0,
+          "events": [
+            120,
+            120,
+            120
+          ],
+          "ttfb": 28.59999999962747,
+          "brokenImages": 0,
+          "overflow": false,
+          "htmlBytes": 64910,
+          "apiReads": 8
+        }
+      ],
+      "medianTTFB": 25.5,
+      "medianLCP": 700,
+      "medianCLS": 0,
+      "maxObservedInteractionMs": 128
+    }
+  ],
+  "checks": {
+    "sitemapStatus": 200,
+    "sitemapProduct": true,
+    "sitemapGame": true,
+    "sitemapCategory": true,
+    "productStructuredData": true,
+    "canonical": true
+  }
+}
