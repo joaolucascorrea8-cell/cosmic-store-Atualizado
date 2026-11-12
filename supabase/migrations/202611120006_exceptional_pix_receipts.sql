@@ -1,5 +1,7 @@
 -- Recebimentos excepcionais: Pix tardio, divergente ou repetido. Apenas registros manuais.
 -- Nenhum status de entrega, estoque ou pagamento anterior é reescrito.
+-- PostgREST inclui id no ON CONFLICT de upsert. RLS exige que continue igual a auth.uid().
+grant update(id) on public.profiles to authenticated;
 create table if not exists public.order_additional_payments (
  id uuid primary key, order_id uuid not null references public.orders(id) on delete restrict,
  amount numeric(12,2) not null check(amount>0),

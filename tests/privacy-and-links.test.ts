@@ -1,4 +1,4 @@
-import { after, before, test } from "node:test";
+import { after, before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import type { PGlite } from "@electric-sql/pglite";
 import { createDatabase, ids } from "./fixture";
@@ -7,6 +7,7 @@ import { gamePassLink } from "../lib/gamepass-link";
 let db: PGlite;
 before(async () => { db = await createDatabase(); });
 after(async () => { await db.close(); });
+beforeEach(async () => { await db.exec("reset role"); });
 test("Game Pass aceita apenas Roblox HTTPS, um alvo e ID consistente", () => {
   assert.deepEqual(gamePassLink("https://www.roblox.com/pt-br/game-pass/123456/Exemplo?x=1"), { id: "123456", url: "https://www.roblox.com/game-pass/123456" });
   for (const link of ["http://www.roblox.com/game-pass/123", "https://roblox.com.evil.invalid/game-pass/123", "https://user:password@roblox.com/game-pass/123", "https://roblox.com:8443/game-pass/123", "https://roblox.com/catalog/123", "https://roblox.com/game-pass/123\nhttps://roblox.com/game-pass/456", "https://127.0.0.1/game-pass/123"]) assert.equal(gamePassLink(link), null);
@@ -17,7 +18,8 @@ test("nickname/avatar continuam disponíveis sem expor nem permitir forjar vínc
   await assert.rejects(db.query("select discord_id from public.profiles"), /permission denied/);
   await assert.rejects(db.query("select auth_provider from public.profiles"), /permission denied/);
   await assert.rejects(db.query("update public.profiles set discord_id='123' where id=$1", [ids.user]), /permission denied/);
-  await db.query("update public.profiles set nickname='ClienteTeste' where id=$1", [ids.user]);
+  await db.query("insert into public.profiles(id,nickname,avatar_url,onboarding_completed) values($1,'ClienteTeste',null,true) on conflict(id) do update set id=excluded.id,nickname=excluded.nickname,avatar_url=excluded.avatar_url,onboarding_completed=excluded.onboarding_completed", [ids.user]);
+  await assert.rejects(db.query("update public.profiles set id=$1 where id=$2", [ids.admin, ids.user]), /row-level security/);
   const result = await db.query("update public.profiles set nickname='OutroNome' where id=$1 returning id", [ids.admin]);
   assert.equal(result.rows.length, 0);
   await db.exec("reset role");
