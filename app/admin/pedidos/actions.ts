@@ -49,13 +49,24 @@ export async function updateOrderStatus(
   }
   const rejectionReason = String(formData.get("rejection_reason") ?? "").trim();
   const expected = String(formData.get("expected_status") ?? before.status);
-  const { data: result, error } = await admin.rpc("transition_store_order", {
+  const transitionArgs = {
     p_order_id: orderId,
     p_admin_id: adminUser.id,
     p_status: status,
     p_expected_status: expected,
     p_reason: rejectionReason,
-  });
+  };
+  const { data: result, error } = status === "paid"
+    ? await admin.rpc("confirm_manual_store_payment", {
+        p_order_id: orderId,
+        p_admin_id: adminUser.id,
+        p_expected_status: expected,
+        p_amount: Number(String(formData.get("received_amount") ?? "").replace(",", ".")),
+        p_bank_reference: String(formData.get("bank_reference") ?? ""),
+        p_bank_verified: formData.get("bank_verified") === "on",
+        p_exception_reason: String(formData.get("exception_reason") ?? ""),
+      })
+    : await admin.rpc("transition_store_order", transitionArgs);
   if (error) {
     // Recusas de validação são respostas do formulário, não erros de renderização.
     if (error.code !== "P0001") {
@@ -174,4 +185,25 @@ export async function updateOrderChat(formData: FormData) {
     });
   revalidatePath(`/admin/pedidos/${orderId}`);
   revalidatePath(`/pedidos/${orderId}`);
+}
+
+export async function recordOrderRefund(
+  _previous: OrderStatusFormState,
+  formData: FormData,
+): Promise<OrderStatusFormState> {
+  const user = await requireAdmin();
+  const orderId = String(formData.get("order_id") ?? "");
+  const token = String(formData.get("refund_token") ?? "");
+  if (!UUID_PATTERN.test(orderId) || !UUID_PATTERN.test(token)) return { error: "Operação inválida." };
+  const { error } = await createAdminClient().rpc("record_manual_store_refund", {
+    p_order_id: orderId, p_admin_id: user.id, p_token: token,
+    p_amount: Number(String(formData.get("amount") ?? "").replace(",", ".")),
+    p_bank_reference: String(formData.get("bank_reference") ?? ""),
+    p_reason: String(formData.get("reason") ?? ""),
+    p_bank_verified: formData.get("bank_verified") === "on",
+  });
+  if (error) return { error: error.code === "P0001" ? error.message : "Não foi possível registrar a devolução. Confira antes de tentar novamente." };
+  revalidatePath(`/admin/pedidos/${orderId}`);
+  revalidatePath(`/pedidos/${orderId}`);
+  return { error: null, success: "Devolução registrada. Nenhuma transferência é executada pelo site." };
 }

@@ -289,7 +289,7 @@ export async function sendOrderStatusEmail(
       eyebrow: "Pagamento confirmado",
       title: "Recebemos seu pagamento! 💜",
       intro:
-        "Seu comprovante foi confirmado com sucesso e sua compra já está na etapa de preparação para entrega.",
+        "A equipe conferiu o recebimento do Pix no extrato bancário e confirmou seu pagamento. Sua compra já pode seguir para a preparação da entrega.",
       order,
       extra:
         '<p style="margin:0;color:#d4d4d8;font-size:15px;line-height:1.65;">Agora é só acompanhar o pedido pela loja. Quando houver uma atualização importante, ela também aparecerá na sua conta.</p>',

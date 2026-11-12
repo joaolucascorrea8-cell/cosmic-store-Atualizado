@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { PGlite } from "@electric-sql/pglite";
-import { createDatabase, ids } from "./fixture";
+import { createDatabase, ids, confirmPayment } from "./fixture";
 import { robuxPrice, readRobuxRate } from "../lib/robux-pricing";
 import { parseProductCsv, exportCsv } from "../lib/product-csv";
 let db: PGlite;
@@ -345,15 +345,16 @@ test("automação fecha apenas pedido sem comprovante e sem atividade, uma únic
     Number(
       await scalar("select stock r from public.products where id=$1", [ids.a]),
     ),
-    10,
+    7,
   );
 });
 test("relatórios usam pagamentos e desconto rateado; interesse é agregado sem expor clientes", async () => {
   const o = await order();
   await db.query(
-    "update public.orders set total=18,subtotal=20,discount_total=2,coupon_code='TESTE',paid_at=now(),status='paid' where id=$1",
+    "update public.orders set total=18,subtotal=20,discount_total=2,coupon_code='TESTE' where id=$1",
     [o.order.id],
   );
+  await confirmPayment(db, o.order.id, "awaiting_payment");
   const r = await scalar<{
     revenue: number;
     products: { revenue: number }[];

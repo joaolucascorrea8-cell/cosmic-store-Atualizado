@@ -22,6 +22,7 @@ import OrderStatusWatcher from "./OrderStatusWatcher";
 import OrderProgress from "./OrderProgress";
 import RobuxStatusWatcher from "./RobuxStatusWatcher";
 import AccountDelivery from "./AccountDelivery";
+import OrderRefundSummary from "@/app/components/OrderRefundSummary";
 
 type RobuxOrderRow = {
   mode: string;
@@ -265,6 +266,7 @@ export default async function OrderPage({
             </section>
           )}
 
+          {order.paid_at && <OrderRefundSummary orderId={id} total={Number(order.total)} cancelled={order.status === "cancelled"} />}
           {!isRobux && !isAccount && ["delivered", "cancelled"].includes(order.status) && (
             <RepurchaseButton orderId={id} />
           )}

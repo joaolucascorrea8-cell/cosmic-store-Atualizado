@@ -2,7 +2,7 @@ import { before, after, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { PGlite } from "@electric-sql/pglite";
-import { createDatabase, ids } from "./fixture";
+import { createDatabase, ids, confirmPayment } from "./fixture";
 let db: PGlite;
 before(async () => {
   db = await createDatabase();
@@ -46,6 +46,7 @@ async function order(
   return rows[0].result;
 }
 async function transition(id: string, status: string, expected: string) {
+  if (status === "paid") return confirmPayment(db, id, expected);
   return db.query(
     "select public.transition_store_order($1,$2,$3,$4,'Motivo de teste')",
     [id, ids.admin, status, expected],

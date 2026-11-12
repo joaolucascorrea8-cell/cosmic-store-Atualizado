@@ -2,7 +2,7 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { PGlite } from "@electric-sql/pglite";
-import { createDatabase, ids } from "./fixture";
+import { createDatabase, ids, confirmPayment } from "./fixture";
 let db: PGlite;
 before(async () => {
   db = await createDatabase();
@@ -34,6 +34,7 @@ async function transition(
   expected = "proof_submitted",
   admin = ids.admin,
 ) {
+  if (status === "paid") return confirmPayment(db, id, expected, admin);
   return db.query<{ result: { changed: boolean } }>(
     "select public.transition_store_order($1,$2,$3,$4,'Motivo de teste') as result",
     [id, admin, status, expected],
@@ -115,24 +116,14 @@ test("migração define K mínimo de R$36 no Quick Buy sem alterar a tabela de p
   )).rows[0];
   assert.equal(Number(row.min_cosmic_k), 36);
 });
-test("falta de estoque desfaz toda a confirmação, inclusive baixa parcial e histórico", async () => {
-  const first = await order();
-  await submitted(first.order.id);
+test("falta de estoque desfaz toda a criação, inclusive reserva parcial e histórico", async () => {
   await db.query("update public.products set stock=0 where id=$1", [ids.b]);
   await assert.rejects(
-    transition(first.order.id, "paid"),
+    order(),
     /Estoque insuficiente/,
   );
   assert.equal(await stock(ids.a), 10);
-  assert.equal(
-    (
-      await db.query<{ status: string }>(
-        "select status from public.orders where id=$1",
-        [first.order.id],
-      )
-    ).rows[0].status,
-    "proof_submitted",
-  );
+  assert.equal((await db.query("select * from public.orders")).rows.length, 0);
   assert.equal(
     (await db.query("select * from public.order_admin_events")).rows.length,
     0,
@@ -373,6 +364,7 @@ test("pedido anterior à atualização continua confirmando e restaurando estoqu
   assert.equal(await stock(ids.a), 10);
 });
 test("paginação consulta pedidos além dos primeiros 25 e ajusta última página", async () => {
+  await db.exec("update public.products set stock=100");
   for (let i = 0; i < 31; i++) await order();
   const query =
     "select public.list_store_orders('cliente','','recent',$1) as result";

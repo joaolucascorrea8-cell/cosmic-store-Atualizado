@@ -1,0 +1,13 @@
+# Checkout, Pix manual e devoluções
+
+O Pix continua sem gateway e sem confirmação automática. O administrador confere o crédito no banco, informa o valor e a referência da transação e declara a conferência. Um anexo nunca confirma pagamento. Sem anexo, a exceção precisa de justificativa. A mesma referência bancária não confirma dois pedidos.
+
+As migrations `202611120001` e `202611120002` foram preparadas para revisão, não executadas em produção. Aplicar apenas em homologação isolada primeiro, com backup verificado e autorização específica antes do banco real. Código e migrations precisam ser disponibilizados de forma coordenada: a confirmação antiga é bloqueada pela nova proteção SQL. Não reexecutar migrations antigas após as novas.
+
+Novos pedidos da loja reservam estoque na mesma transação que grava os itens. `products.stock` passa a representar unidades disponíveis; `stock_reserved_at` distingue a reserva dos pedidos históricos. Confirmar pagamento não desconta novamente; cancelar libera uma única vez. Pedidos anteriores não são reescritos e continuam com a proteção de estoque na confirmação. Se houver pedidos antigos não pagos disputando estoque, revisar a disponibilidade antes de orientar o pagamento.
+
+A expiração continua obedecendo à configuração existente (opt-in, 24 a 720 horas). Não ativamos nem alteramos essa regra. Reservas sem comprovante são liberadas quando essa rotina já autorizada cancela o pedido; sem expiração habilitada, a equipe deve revisar e cancelar pedidos abandonados. Não pagar um Pix de pedido cancelado: pagamentos tardios devem ser tratados pelo suporte e conferidos no extrato.
+
+Cancelar não devolve dinheiro. Devoluções parciais ou integrais só são registradas após a transferência realizada fora do site. O registro tem token idempotente, referência única, responsável e limite acumulado igual ao total pago. Não altera estoque nem status do pedido. O cliente vê valores, sem acesso às referências bancárias. Registros anteriores não recebem confirmações ou devoluções presumidas.
+
+Testes: baseline com 126 testes; regressões incluem disputa da última unidade, retry, cancelamento, expiração, conferência falsa/incompleta, referência repetida, permissões e devolução parcial/integral. Todos usam PGlite em memória, sem pagamentos ou clientes reais. PGlite serializa chamadas: o teste concorrente confirma a invariância nesse executor, mas uma homologação com duas conexões PostgreSQL continua necessária antes da produção.

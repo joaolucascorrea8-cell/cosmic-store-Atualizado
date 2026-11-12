@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { PGlite } from "@electric-sql/pglite";
-import { createDatabase, ids } from "./fixture";
+import { createDatabase, ids, confirmPayment } from "./fixture";
 import {
   encryptCredentials,
   decryptCredentials,
@@ -73,10 +73,7 @@ async function paid(id: string) {
     "update public.orders set status='proof_submitted' where id=$1",
     [id],
   );
-  await db.query(
-    "select public.transition_store_order($1,$2,'paid','proof_submitted','')",
-    [id, ids.admin],
-  );
+  await confirmPayment(db, id);
 }
 async function acquired(id: string) {
   await paid(id);

@@ -17,6 +17,7 @@ import {
   updateOrderChat,
 } from "../actions";
 import OrderStatusActions from "../OrderStatusActions";
+import RefundForm from "../RefundForm";
 import PendingButton from "../../components/PendingButton";
 import RobuxStatusWatcher from "@/app/pedidos/[id]/RobuxStatusWatcher";
 import { executeRobuxOrder } from "@/app/admin/robux/actions";
@@ -93,6 +94,10 @@ export default async function AdminOrderPage({
     .eq("id", id)
     .maybeSingle();
   if (!order) notFound();
+  const { data: refunds, error: refundError } = await admin.from("order_refunds")
+    .select("id,amount,bank_reference,reason,created_at").eq("order_id", id).order("created_at");
+  const refunded = (refunds ?? []).reduce((sum, refund) => sum + Math.round(Number(refund.amount) * 100), 0) / 100;
+  const remaining = Math.max(0, Math.round((Number(order.total) - refunded) * 100) / 100);
   const {
     data: { user },
   } = await (await createClient()).auth.getUser();
@@ -365,9 +370,20 @@ export default async function AdminOrderPage({
               orderId={id}
               status={order.status}
               buttons={buttons}
+              total={Number(order.total)}
+              hasProof={Boolean(order.proof_path)}
             />
           </section>
         )}
+        {order.paid_at && <section className="mt-6 rounded-2xl border border-violet-500/20 bg-[#111122] p-4 sm:p-6">
+          <h2 className="font-black">Devoluções financeiras</h2>
+          {refundError ? <p role="alert" className="mt-3 text-amber-200">Não foi possível consultar o registro financeiro. Confira a migration antes de registrar devoluções.</p> : <>
+            <p className="mt-2 text-sm text-zinc-300">Devolvido: R$ {refunded.toFixed(2).replace(".", ",")} · Saldo pago não devolvido: R$ {remaining.toFixed(2).replace(".", ",")}</p>
+            {order.status === "cancelled" && remaining > 0 && <p className="mt-3 text-sm text-amber-200">Cancelamento não confirma reembolso. Confira a devolução pendente no banco.</p>}
+            {(refunds ?? []).map(refund => <p key={refund.id} className="mt-3 break-words text-sm text-zinc-400">R$ {Number(refund.amount).toFixed(2).replace(".", ",")} · {refund.bank_reference} · {refund.reason}</p>)}
+            {remaining > 0 && <RefundForm key={`${id}:${refunded}`} orderId={id} token={crypto.randomUUID()} remaining={remaining} />}
+          </>}
+        </section>}
         {(canRetryPaymentEmail || canRetryDeliveryEmail) && (
           <section className="mt-6 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 sm:p-5">
             <h2 className="font-black text-amber-100">E-mail pendente</h2>

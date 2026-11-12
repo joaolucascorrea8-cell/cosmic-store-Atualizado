@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 export const ids = {
   user: "10000000-0000-4000-8000-000000000001",
   admin: "20000000-0000-4000-8000-000000000002",
@@ -10,6 +11,14 @@ export const ids = {
   b: "50000000-0000-4000-8000-000000000002",
   combo: "60000000-0000-4000-8000-000000000001",
 };
+// Simula conferência manual; nunca consulta banco/serviço financeiro externo.
+export async function confirmPayment(db: PGlite, id: string, expected = "proof_submitted", actor = ids.admin) {
+  return db.query<{ result: { changed: boolean } }>(
+    `select public.confirm_manual_store_payment($1,$2,$3,(select total from public.orders where id=$1),
+      coalesce((select bank_reference from public.order_payment_confirmations where order_id=$1),$4),true,'Conferência fictícia no extrato de teste') result`,
+    [id, actor, expected, `TEST-${randomUUID()}`],
+  );
+}
 export async function createDatabase(through?: string) {
   const db = new PGlite();
   await db.exec(`
