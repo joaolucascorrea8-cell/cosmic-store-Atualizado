@@ -150,68 +150,23 @@ export async function executeRobuxOrder(formData: FormData) {
         `Saldo ByRobux insuficiente. Disponível: ${Number(balance.balanceBrl).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}; custo atual: ${Number(item.priceBrl).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`,
       );
 
-    let requestId = String(details.supplier_request_id);
-    if (details.supplier_status === "CANCELLED") {
-      requestId = crypto.randomUUID();
-      const { error: resetError } = await admin
-        .from("robux_orders")
-        .update({
-          supplier_request_id: requestId,
-          supplier_batch_id: null,
-          supplier_order_id: null,
-          supplier_status: "NOT_STARTED",
-          supplier_error_code: null,
-          supplier_error_message: null,
-          executed_at: null,
-          last_checked_at: null,
-          completed_at: null,
-        })
-        .eq("order_id", orderId)
-        .eq("supplier_status", "CANCELLED");
-      if (resetError) throw resetError;
-    }
-
-    const execution = await executeByRobux({
-      requestId,
-      links: [details.gamepass_url],
+    // A trava e a chave idempotente são persistidas ANTES da chamada externa.
+    // Após timeout, recuperar usa a mesma chave; CANCELLED só gira a chave sob lock.
+    const { data: claimed, error: claimError } = await admin.rpc("claim_gamepass_execution", {
+      p_order_id: orderId, p_admin_id: user.id, p_expected_request: details.supplier_request_id,
     });
-    const now = new Date().toISOString();
-    const { error: saveError } = await admin
-      .from("robux_orders")
-      .update({
-        supplier_batch_id: execution.batchId,
-        supplier_status: "PENDING",
-        supplier_rate_at_execute: supplierK,
-        supplier_cost_at_execute: Number(item.priceBrl),
-        supplier_error_code: null,
-        supplier_error_message: null,
-        executed_by: user.id,
-        executed_at: now,
-        last_checked_at: now,
-      })
-      .eq("order_id", orderId);
-    if (saveError) throw saveError;
-
-    if (order.status === "paid") {
-      const { data: transition, error: transitionError } = await admin.rpc(
-        "transition_store_order",
-        {
-          p_order_id: orderId,
-          p_admin_id: user.id,
-          p_status: "preparing_delivery",
-          p_expected_status: "paid",
-          p_reason: "",
-        },
-      );
-      if (transitionError) throw transitionError;
-      if (transition?.changed) {
-        await notifyCustomer(
-          order.user_id,
-          "Compra do GamePass iniciada",
-          `O pagamento do pedido ${order.order_code} foi confirmado e a compra do seu GamePass já foi enviada para processamento.`,
-          `/pedidos/${orderId}`,
-        ).catch(() => undefined);
-      }
+    if (claimError || !claimed?.supplier_request_id) throw new Error(claimError?.code === "P0001" ? claimError.message : "Não foi possível reservar a tentativa de compra.");
+    const requestId = String(claimed.supplier_request_id);
+    const execution = await executeByRobux({ requestId, links: [details.gamepass_url] });
+    const { data: transition, error: saveError } = await admin.rpc("finish_gamepass_execution", {
+      p_order_id: orderId, p_admin_id: user.id, p_request: requestId,
+      p_batch: execution.batchId, p_rate: supplierK, p_cost: Number(item.priceBrl),
+    });
+    if (saveError) throw new Error("O envio pode ter sido aceito. Recupere a mesma tentativa antes de cancelar ou iniciar outra compra.");
+    if (transition?.changed) {
+      await notifyCustomer(order.user_id, "Compra do GamePass iniciada",
+        `A compra do GamePass do pedido ${order.order_code} foi enviada para processamento.`,
+        `/pedidos/${orderId}`).catch(() => undefined);
     }
   } catch (error) {
     const message = friendlyByRobuxError(error);

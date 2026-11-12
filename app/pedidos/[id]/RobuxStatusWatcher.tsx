@@ -14,7 +14,7 @@ export default function RobuxStatusWatcher({
   const status = useRef(initialSupplierStatus);
 
   const sync = useCallback(async () => {
-    if (status.current !== "PENDING") return;
+    if (!["PENDING", "COMPLETED"].includes(status.current)) return;
     try {
       const response = await fetch(`/api/robux/orders/${orderId}/status`, {
         cache: "no-store",
@@ -31,7 +31,8 @@ export default function RobuxStatusWatcher({
   }, [orderId, router]);
 
   useEffect(() => {
-    if (status.current !== "PENDING") return;
+    status.current = initialSupplierStatus;
+    if (!["PENDING", "COMPLETED"].includes(status.current)) return;
     void sync();
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void sync();
@@ -46,7 +47,7 @@ export default function RobuxStatusWatcher({
       window.removeEventListener("focus", visible);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [sync]);
+  }, [sync, initialSupplierStatus]);
 
   return null;
 }

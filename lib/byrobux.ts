@@ -1,4 +1,5 @@
 import "server-only";
+import { findSupplierBatch } from "./provider-order-search";
 
 export type ByRobuxRateResponse = {
   robuxRateBrlPerThousand: number;
@@ -306,8 +307,7 @@ export function listByRobuxOrders(page = 1, limit = 50) {
 }
 
 export async function findByRobuxOrderByBatchId(batchId: string) {
-  const first = await listByRobuxOrders(1, 50);
-  return first.orders.find((order) => order.batchId === batchId) ?? null;
+  return findSupplierBatch(batchId, listByRobuxOrders);
 }
 
 export function friendlyByRobuxError(error: unknown) {
