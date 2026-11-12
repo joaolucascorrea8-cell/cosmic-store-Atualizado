@@ -1,0 +1,117 @@
+{
+  "label": "before",
+  "baseCommit": "fa6bc17df8e3ecfa4f88bf9a8e75eb2c398588dd",
+  "method": "5 leituras HTTP por rota até o HTML completo; latência artificial de 120ms por chamada REST/Storage local; sem navegação do browser",
+  "results": [],
+  "navigation": [],
+  "httpRender": [
+    {
+      "route": "/",
+      "trials": [
+        308,
+        270,
+        152,
+        142,
+        139
+      ],
+      "medianMs": 152
+    },
+    {
+      "route": "/jogos",
+      "trials": [
+        160,
+        149,
+        141,
+        143,
+        141
+      ],
+      "medianMs": 143
+    },
+    {
+      "route": "/blox-fruits",
+      "trials": [
+        391,
+        387,
+        472,
+        386,
+        389
+      ],
+      "medianMs": 389
+    },
+    {
+      "route": "/blox-fruits/frutas",
+      "trials": [
+        430,
+        396,
+        452,
+        409,
+        402
+      ],
+      "medianMs": 409
+    },
+    {
+      "route": "/produtos",
+      "trials": [
+        275,
+        275,
+        293,
+        369,
+        278
+      ],
+      "medianMs": 278
+    },
+    {
+      "route": "/produto/dragon",
+      "trials": [
+        400,
+        382,
+        382,
+        451,
+        392
+      ],
+      "medianMs": 392
+    }
+  ],
+  "images": {
+    "sourceReads": 5,
+    "trials": [
+      {
+        "ms": 208,
+        "bytes": 52402
+      },
+      {
+        "ms": 183,
+        "bytes": 52402
+      },
+      {
+        "ms": 178,
+        "bytes": 52402
+      },
+      {
+        "ms": 180,
+        "bytes": 52402
+      },
+      {
+        "ms": 180,
+        "bytes": 52402
+      }
+    ]
+  },
+  "snapshots": [],
+  "publicChecks": [
+    "categoria mantém páginas 24/24/12 sem duplicação",
+    "busca por prefixo e acento preservada",
+    "ordenação pt-BR preservada",
+    "ordenação numérica por preço preservada",
+    "filtro de estoque preservado",
+    "jogo inativo não expõe categoria, inclusive em resposta 404 transmitida por streaming",
+    "slugs de categoria iguais e contagens respeitam o jogo"
+  ],
+  "checks": {
+    "freshPriceAndStock": true,
+    "privateHtml": true,
+    "noProductPrefetchFlood": null,
+    "noBrowserErrors": null,
+    "noExternalRequests": null
+  }
+}
