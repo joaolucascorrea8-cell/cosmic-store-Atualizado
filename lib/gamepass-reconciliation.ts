@@ -136,7 +136,7 @@ export async function reconcileGamePassOrder(id: string) {
       ? rawSupplierStatus
       : "PENDING";
     const now = new Date().toISOString();
-    const { data: updated } = await admin
+    const { data: updated, error: updateError } = await admin
       .from("robux_orders")
       .update({
         supplier_order_id: supplierOrder.id,
@@ -155,6 +155,7 @@ export async function reconcileGamePassOrder(id: string) {
       .select("order_id")
       .maybeSingle();
 
+    if (updateError) throw new Error("A resposta do fornecedor não pôde ser registrada. Tente sincronizar novamente.");
     if (!updated) {
       return NextResponse.json({
         status: supplierStatus,

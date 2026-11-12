@@ -13,6 +13,7 @@ import { getRobuxSettings } from "@/lib/robux-settings";
 import { effectiveMarginPerThousand } from "@/lib/robux-pricing";
 import { notifyCustomer } from "@/lib/notifications";
 import { UUID_PATTERN } from "@/lib/catalog";
+import { gamePassLink } from "@/lib/gamepass-link";
 
 export type RobuxSettingsState = { error?: string; success?: string };
 
@@ -101,7 +102,7 @@ export async function executeRobuxOrder(formData: FormData) {
   const { data: order, error: orderError } = await admin
     .from("orders")
     .select(
-      "id,user_id,order_code,status,total,order_type,robux_orders(order_id,gamepass_url,gamepass_robux,supplier_request_id,supplier_batch_id,supplier_status,executed_by)",
+      "id,user_id,order_code,status,total,order_type,robux_orders(order_id,gamepass_url,gamepass_id,gamepass_robux,supplier_request_id,supplier_batch_id,supplier_status,executed_by)",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -121,9 +122,12 @@ export async function executeRobuxOrder(formData: FormData) {
     throw new Error("As compras de Robux estão pausadas nas configurações.");
 
   try {
+    const parsedLink = gamePassLink(details.gamepass_url);
+    if (!parsedLink || parsedLink.id !== String(details.gamepass_id)) throw new Error("O link do pedido não corresponde ao Game Pass registrado. Revise antes de comprar.");
     const quote = await calculateByRobux(details.gamepass_url);
     const item = quote.items?.[0];
-    if (!item || item.error || Number(item.robux) !== Number(details.gamepass_robux))
+    if (!item || item.error || String(item.id) !== parsedLink.id || Number(item.robux) !== Number(details.gamepass_robux)
+      || !Number.isFinite(Number(item.priceBrl)) || Number(item.priceBrl) < 0)
       throw new Error(
         "O GamePass mudou ou não pôde ser validado. Confira o link antes de executar.",
       );

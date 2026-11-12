@@ -55,11 +55,11 @@ type ComboRow = {
 };
 
 async function orderResponse(order: CreatedOrder) {
-  const qrCode = await QRCode.toDataURL(order.pix_payload, {
+  const qrCode = ["awaiting_payment", "proof_rejected"].includes(order.status) ? await QRCode.toDataURL(order.pix_payload, {
     width: 440,
     margin: 2,
     errorCorrectionLevel: "M",
-  });
+  }) : "";
   return NextResponse.json(
     { order, qrCode, items: await readOrderDisplayItems(await createClient(), order.id) },
     { headers: { "Cache-Control": "private, no-store" } },

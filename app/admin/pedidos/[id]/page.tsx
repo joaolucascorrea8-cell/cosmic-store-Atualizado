@@ -367,7 +367,7 @@ export default async function AdminOrderPage({
               </p>
             )}
             <OrderStatusActions
-              key={`${id}:${order.status}`}
+              key={id}
               orderId={id}
               status={order.status}
               buttons={buttons}
@@ -382,7 +382,7 @@ export default async function AdminOrderPage({
             <p className="mt-2 text-sm text-zinc-300">Devolvido: R$ {refunded.toFixed(2).replace(".", ",")} · Saldo pago não devolvido: R$ {remaining.toFixed(2).replace(".", ",")}</p>
             {order.status === "cancelled" && remaining > 0 && <p className="mt-3 text-sm text-amber-200">Cancelamento não confirma reembolso. Confira a devolução pendente no banco.</p>}
             {(refunds ?? []).map(refund => <p key={refund.id} className="mt-3 break-words text-sm text-zinc-400">R$ {Number(refund.amount).toFixed(2).replace(".", ",")} · {refund.bank_reference} · {refund.reason}</p>)}
-            {remaining > 0 && <RefundForm key={`${id}:${refunded}`} orderId={id} token={crypto.randomUUID()} remaining={remaining} />}
+            {remaining > 0 && <RefundForm key={id} orderId={id} token={crypto.randomUUID()} remaining={remaining} />}
           </>}
         </section>}
         {(canRetryPaymentEmail || canRetryDeliveryEmail) && (

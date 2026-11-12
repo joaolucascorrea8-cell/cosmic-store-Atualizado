@@ -95,6 +95,8 @@ export default function LoginPage() {
     null,
   );
   const [error, setError] = useState("");
+  const [confirmationPending, setConfirmationPending] = useState(false);
+  const [notice, setNotice] = useState("");
   const [email, setEmail] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -236,6 +238,7 @@ export default function LoginPage() {
   async function submitEmail() {
     setLoading(true);
     setError("");
+    setNotice("");
 
     try {
       const supabase = createClient();
@@ -256,14 +259,15 @@ export default function LoginPage() {
           );
           return;
         }
-        if (password.length < 6) {
-          setError("A senha precisa ter pelo menos 6 caracteres.");
+        if (password.length < 8) {
+          setError("A senha precisa ter pelo menos 8 caracteres.");
           return;
         }
 
         const { data, error: registerError } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath())}` },
         });
 
         if (registerError) {
@@ -285,9 +289,8 @@ export default function LoginPage() {
         }
 
         if (!data.session) {
-          setError(
-            "A conta foi criada, mas a entrada automática ainda está bloqueada pela confirmação de e-mail no Supabase. Desative Confirm email para usar o cadastro direto.",
-          );
+          setConfirmationPending(true);
+          setNotice("Confira seu e-mail para confirmar o cadastro e depois entre na loja. Veja também a pasta de spam.");
           return;
         }
 
@@ -305,8 +308,9 @@ export default function LoginPage() {
       if (loginError) {
         const code = authErrorCode(loginError);
         if (code === "email_not_confirmed") {
+          setConfirmationPending(true);
           setError(
-            "Esta é uma conta antiga ainda marcada como e-mail não confirmado. Peça ajuda à equipe para liberar a conta.",
+            "Confirme seu e-mail antes de entrar. Se necessário, solicite outro link abaixo.",
           );
           return;
         }
@@ -595,7 +599,7 @@ export default function LoginPage() {
                       setCapsLock(event.getModifierState("CapsLock"))
                     }
                     required
-                    minLength={6}
+                    minLength={mode === "register" ? 8 : 6}
                     autoComplete={
                       mode === "login" ? "current-password" : "new-password"
                     }
@@ -655,6 +659,17 @@ export default function LoginPage() {
               Precisa de ajuda para entrar? →
             </Link>
 
+            {notice && <p role="status" className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 text-sm text-violet-100">{notice}</p>}
+            {confirmationPending && <button type="button" disabled={busy} className="mt-3 min-h-11 w-full rounded-xl border border-violet-400/30 px-4 py-2 text-sm font-bold text-violet-200" onClick={async () => {
+              if (!email.trim() || busy) return;
+              setLoading(true);
+              try {
+                const { error: resendError } = await createClient().auth.resend({ type: "signup", email: email.trim().toLowerCase(), options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath())}` } });
+                if (resendError) setError("Não foi possível reenviar agora. Aguarde um momento e tente novamente.");
+                else { setError(""); setNotice("Se houver um cadastro pendente para esse e-mail, enviaremos outro link de confirmação."); }
+              } catch { setError("Erro de conexão. Tente novamente."); }
+              finally { setLoading(false); }
+            }}>Reenviar confirmação de e-mail</button>}
             {error && (
               <p
                 role="alert"
