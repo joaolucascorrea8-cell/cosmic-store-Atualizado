@@ -40,7 +40,7 @@ export async function updateOrderStatus(
   if (before.order_type === "robux") {
     if (["preparing_delivery", "delivered"].includes(status))
       return { error: "A entrega de Robux é controlada pela integração. Use o botão Comprar e entregar." };
-    if (status === "cancelled" && ["PENDING", "COMPLETED"].includes(robux?.supplier_status ?? ""))
+    if (status === "cancelled" && ["SUBMITTING", "PENDING", "COMPLETED"].includes(robux?.supplier_status ?? ""))
       return { error: "Não cancele um pedido enquanto a compra do GamePass está em processamento ou já foi concluída." };
   }
   if (before.order_type === "robux_account" && ["paid", "preparing_delivery"].includes(status)) {
@@ -145,7 +145,8 @@ export async function resendOrderEmail(formData: FormData) {
   if (!UUID_PATTERN.test(orderId) || !["payment", "delivery"].includes(kind))
     throw new Error("E-mail inválido.");
 
-  await sendOrderStatusEmail(orderId, kind);
+  if (formData.get("checked_provider") !== "on") throw new Error("Confira os envios no provedor antes de reenviar.");
+  await sendOrderStatusEmail(orderId, kind, true);
   revalidatePath(`/admin/pedidos/${orderId}`);
 }
 

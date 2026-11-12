@@ -235,6 +235,7 @@ async function recordEmailDelivery({
 export async function sendOrderStatusEmail(
   orderId: string,
   kind: OrderEmailKind,
+  manualRetry = false,
 ) {
   const admin = createAdminClient();
   const order = await getOrder(orderId);
@@ -252,104 +253,107 @@ export async function sendOrderStatusEmail(
     throw new Error("O pedido ainda não foi marcado como entregue.");
   }
 
-  let attachment: NotificationAttachment | undefined;
-  const subject =
-    kind === "payment"
-      ? `✅ Pagamento confirmado — ${order.order_code}`
-      : order.order_type === "robux"
-        ? `🎮 GamePass comprado — ${order.order_code}`
-        : `🎉 Pedido entregue — ${order.order_code}`;
-
-  // Usa também o histórico como segunda trava contra duplicidade caso o e-mail
-  // tenha sido aceito e o timestamp do pedido não tenha sido salvo por algum erro raro.
-  const { data: previousDelivery } = await admin
-    .from("notification_deliveries")
-    .select("id")
-    .eq("user_id", order.user_id)
-    .eq("link", `/pedidos/${order.id}`)
-    .eq("channel", "email")
-    .eq("status", "sent")
-    .eq("title", subject)
-    .limit(1)
-    .maybeSingle();
-  if (previousDelivery) {
-    await admin
-      .from("orders")
-      .update({ [sentColumn]: new Date().toISOString() })
-      .eq("id", orderId)
-      .is(sentColumn, null);
-    return { sent: false, alreadySent: true as const };
+  const { data: lease, error: claimError } = await admin.rpc("claim_order_email", {
+    p_order_id: orderId, p_kind: kind, p_manual_retry: manualRetry,
+  });
+  if (claimError) throw new Error("Não foi possível reservar o envio do e-mail. O pedido foi preservado.");
+  if (!lease) return { sent: false, alreadySent: false as const };
+  let attemptedSend = false;
+  async function finish(status: "sent" | "failed" | "uncertain", message = "") {
+    const { error } = await admin.rpc("finish_order_email", {
+      p_order_id: orderId, p_kind: kind, p_token: lease, p_status: status, p_error: message,
+    });
+    if (error) throw new Error("Não foi possível registrar o resultado do e-mail. Confira o provedor antes de reenviar.");
   }
-
-  const to = await getCustomerEmail(order.user_id);
-  let html: string;
-
-  if (kind === "payment") {
-    html = baseTemplate({
-      eyebrow: "Pagamento confirmado",
-      title: "Recebemos seu pagamento! 💜",
-      intro:
-        "A equipe conferiu o recebimento do Pix no extrato bancário e confirmou seu pagamento. Sua compra já pode seguir para a preparação da entrega.",
-      order,
-      extra:
-        '<p style="margin:0;color:#d4d4d8;font-size:15px;line-height:1.65;">Agora é só acompanhar o pedido pela loja. Quando houver uma atualização importante, ela também aparecerá na sua conta.</p>',
-      buttonLabel: "Acompanhar meu pedido",
-    });
-  } else if (order.order_type === "robux") {
-    html = baseTemplate({
-      eyebrow: "GamePass comprado",
-      title: "A compra do seu GamePass foi concluída! 🎮",
-      intro:
-        "A Cosmic concluiu a compra do GamePass. Agora a liberação dos Robux depende do período de pendência do Roblox.",
-      order,
-      extra:
-        '<div style="margin:0;padding:16px;border-radius:14px;background:#123024;border:1px solid #166534;color:#dcfce7;font-size:15px;line-height:1.65;">⏳ <strong>Robux pendentes:</strong> após a compra do GamePass, o Roblox pode manter os Robux pendentes por alguns dias. Normalmente informamos uma estimativa de 3 a 7 dias, mas o prazo final é controlado pelo Roblox.</div>',
-      buttonLabel: "Acompanhar meus Robux",
-    });
-  } else if (order.order_type === "robux_account") {
-    html = baseTemplate({
-      eyebrow: "Conta entregue",
-      title: "Sua conta com Robux está pronta!",
-      intro: "Os dados de acesso estão disponíveis na área privada do seu pedido. Entre na Cosmic Store para consultar seu usuário, senha e instruções.",
-      order,
-      extra: '<p style="color:#d4d4d8;font-size:15px;line-height:1.65;">Prepare a gravação do primeiro acesso, confira o saldo e relate qualquer problema pelo suporte. Por segurança, os dados da conta ficam disponíveis somente no pedido.</p>',
-      buttonLabel: "Acessar minha conta entregue",
-    });
-  } else {
-    attachment = (await getLatestAdminDeliveryAttachment(orderId)) ?? undefined;
-    if (!attachment)
-      throw new Error(
-        "Nenhuma imagem de entrega enviada pela equipe foi encontrada neste pedido.",
-      );
-    html = baseTemplate({
-      eyebrow: "Entrega concluída",
-      title: "Seu pedido foi entregue! 🎉",
-      intro:
-        "Sua compra foi concluída com sucesso. A imagem de confirmação da entrega está anexada a este e-mail.",
-      order,
-      extra:
-        '<div style="margin:0;padding:16px;border-radius:14px;background:#1d1430;border:1px solid #4c1d95;color:#ddd6fe;font-size:15px;line-height:1.65;">📸 <strong>Comprovante da entrega:</strong> enviamos a imagem utilizada pela equipe como anexo deste e-mail. Se precisar de ajuda, o histórico do pedido continua disponível na Cosmic Store.</div>',
-      buttonLabel: "Ver pedido e avaliar",
-    });
-  }
-
+  let subject = `Atualização do pedido ${order.order_code}`;
   try {
+    let attachment: NotificationAttachment | undefined;
+    subject =
+      kind === "payment"
+        ? `✅ Pagamento confirmado — ${order.order_code}`
+        : order.order_type === "robux"
+          ? `🎮 GamePass comprado — ${order.order_code}`
+          : `🎉 Pedido entregue — ${order.order_code}`;
+
+    // Usa também o histórico como segunda trava contra duplicidade caso o e-mail
+    // tenha sido aceito e o timestamp do pedido não tenha sido salvo por algum erro raro.
+    const { data: previousDelivery } = await admin
+      .from("notification_deliveries")
+      .select("id")
+      .eq("user_id", order.user_id)
+      .eq("link", `/pedidos/${order.id}`)
+      .eq("channel", "email")
+      .eq("status", "sent")
+      .eq("title", subject)
+      .limit(1)
+      .maybeSingle();
+    if (previousDelivery) {
+      await finish("sent");
+      return { sent: false, alreadySent: true as const };
+    }
+
+    const to = await getCustomerEmail(order.user_id);
+    let html: string;
+
+    if (kind === "payment") {
+      html = baseTemplate({
+        eyebrow: "Pagamento confirmado",
+        title: "Recebemos seu pagamento! 💜",
+        intro:
+          "A equipe conferiu o recebimento do Pix no extrato bancário e confirmou seu pagamento. Sua compra já pode seguir para a preparação da entrega.",
+        order,
+        extra:
+          '<p style="margin:0;color:#d4d4d8;font-size:15px;line-height:1.65;">Agora é só acompanhar o pedido pela loja. Quando houver uma atualização importante, ela também aparecerá na sua conta.</p>',
+        buttonLabel: "Acompanhar meu pedido",
+      });
+    } else if (order.order_type === "robux") {
+      html = baseTemplate({
+        eyebrow: "GamePass comprado",
+        title: "A compra do seu GamePass foi concluída! 🎮",
+        intro:
+          "A Cosmic concluiu a compra do GamePass. Agora a liberação dos Robux depende do período de pendência do Roblox.",
+        order,
+        extra:
+          '<div style="margin:0;padding:16px;border-radius:14px;background:#123024;border:1px solid #166534;color:#dcfce7;font-size:15px;line-height:1.65;">⏳ <strong>Robux pendentes:</strong> após a compra do GamePass, o Roblox pode manter os Robux pendentes por alguns dias. Normalmente informamos uma estimativa de 3 a 7 dias, mas o prazo final é controlado pelo Roblox.</div>',
+        buttonLabel: "Acompanhar meus Robux",
+      });
+    } else if (order.order_type === "robux_account") {
+      html = baseTemplate({
+        eyebrow: "Conta entregue",
+        title: "Sua conta com Robux está pronta!",
+        intro: "Os dados de acesso estão disponíveis na área privada do seu pedido. Entre na Cosmic Store para consultar seu usuário, senha e instruções.",
+        order,
+        extra: '<p style="color:#d4d4d8;font-size:15px;line-height:1.65;">Prepare a gravação do primeiro acesso, confira o saldo e relate qualquer problema pelo suporte. Por segurança, os dados da conta ficam disponíveis somente no pedido.</p>',
+        buttonLabel: "Acessar minha conta entregue",
+      });
+    } else {
+      attachment = (await getLatestAdminDeliveryAttachment(orderId)) ?? undefined;
+      if (!attachment)
+        throw new Error(
+          "Nenhuma imagem de entrega enviada pela equipe foi encontrada neste pedido.",
+        );
+      html = baseTemplate({
+        eyebrow: "Entrega concluída",
+        title: "Seu pedido foi entregue! 🎉",
+        intro:
+          "Sua compra foi concluída com sucesso. A imagem de confirmação da entrega está anexada a este e-mail.",
+        order,
+        extra:
+          '<div style="margin:0;padding:16px;border-radius:14px;background:#1d1430;border:1px solid #4c1d95;color:#ddd6fe;font-size:15px;line-height:1.65;">📸 <strong>Comprovante da entrega:</strong> enviamos a imagem utilizada pela equipe como anexo deste e-mail. Se precisar de ajuda, o histórico do pedido continua disponível na Cosmic Store.</div>',
+        buttonLabel: "Ver pedido e avaliar",
+      });
+    }
+
+    attemptedSend = true;
     await sendEmail(to, subject, html, attachment);
-    const sentAt = new Date().toISOString();
-    const { error: updateError } = await admin
-      .from("orders")
-      .update({ [sentColumn]: sentAt })
-      .eq("id", orderId)
-      .is(sentColumn, null);
-    if (updateError)
-      console.error(
-        `[order-email] E-mail enviado, mas não foi possível registrar ${sentColumn}:`,
-        updateError.message,
-      );
+    await finish("sent");
     await recordEmailDelivery({ order, title: subject, status: "sent" });
     return { sent: true, alreadySent: false as const };
   } catch (error) {
     const message = cleanIssueMessage(error);
+    // SMTP pode aceitar uma mensagem e perder a resposta. Não reenviar automaticamente
+    // quando o resultado for ambíguo; exigir conferência administrativa do provedor.
+    await finish(attemptedSend ? "uncertain" : "failed", message).catch(() => undefined);
     await recordStoreIssue("email", error, "/admin/pedidos/[id]");
     await recordEmailDelivery({
       order,

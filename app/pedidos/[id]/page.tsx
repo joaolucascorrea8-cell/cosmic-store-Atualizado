@@ -137,7 +137,7 @@ export default async function OrderPage({
         initialStatus={order.status}
         initialChatClosedAt={order.chat_closed_at}
       />
-      {isRobux && supplierStatus === "PENDING" && (
+      {isRobux && (supplierStatus === "PENDING" || (supplierStatus === "COMPLETED" && order.status !== "delivered")) && (
         <RobuxStatusWatcher orderId={id} initialSupplierStatus={supplierStatus} />
       )}
       <main

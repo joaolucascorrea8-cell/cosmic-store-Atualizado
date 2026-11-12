@@ -183,7 +183,7 @@ export default async function AdminOrderPage({
             ]
         : order.status === "preparing_delivery"
           ? isRobux
-            ? ["PENDING", "COMPLETED"].includes(supplierStatus)
+            ? ["SUBMITTING", "PENDING", "COMPLETED"].includes(supplierStatus)
               ? []
               : [["cancelled", "Cancelar pedido"]]
             : [
@@ -296,16 +296,17 @@ export default async function AdminOrderPage({
         {order.order_type === "robux_account" && <AccountOrderPanel orderId={id} status={order.status} />}
         {isRobux && robuxOrder && (
           <section className="mt-6 rounded-2xl border border-violet-500/20 bg-violet-500/[.055] p-4 sm:p-6">
-            {supplierStatus === "PENDING" && (
+            {(supplierStatus === "PENDING" || (supplierStatus === "COMPLETED" && order.status !== "delivered")) && (
               <RobuxStatusWatcher orderId={id} initialSupplierStatus={supplierStatus} />
             )}
+            {supplierStatus === "SUBMITTING" && <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">O envio ainda não teve resposta confirmada. Após dois minutos, use Comprar e entregar para recuperar a mesma tentativa, com a mesma chave idempotente. Não faça outra compra nem cancele antes de reconciliar com o fornecedor.</p>}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[.16em] text-violet-300">Entrega automática · ByRobux</p>
                 <h2 className="mt-1 text-xl font-black">Pedido de Robux</h2>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-black ${supplierStatus === "COMPLETED" ? "bg-emerald-500/15 text-emerald-300" : supplierStatus === "PENDING" ? "bg-violet-500/15 text-violet-200" : supplierStatus === "CANCELLED" || supplierStatus === "FAILED" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-zinc-300"}`}>
-                {supplierStatus === "NOT_STARTED" ? "Aguardando execução" : supplierStatus === "PENDING" ? "Processando" : supplierStatus === "COMPLETED" ? "GamePass comprado" : supplierStatus === "CANCELLED" ? "Cancelado pelo fornecedor" : "Falha"}
+                {supplierStatus === "NOT_STARTED" ? "Aguardando execução" : supplierStatus === "SUBMITTING" ? "Aguardando confirmação do envio" : supplierStatus === "PENDING" ? "Processando" : supplierStatus === "COMPLETED" ? "GamePass comprado" : supplierStatus === "CANCELLED" ? "Cancelado pelo fornecedor" : "Falha"}
               </span>
             </div>
 
@@ -396,6 +397,7 @@ export default async function AdminOrderPage({
                 <form action={resendOrderEmail}>
                   <input type="hidden" name="order_id" value={id} />
                   <input type="hidden" name="email_kind" value="payment" />
+                  <label className="mb-3 flex items-start gap-2 text-sm"><input name="checked_provider" type="checkbox" required className="mt-1" />Conferi o histórico do Gmail para evitar envio duplicado.</label>
                   <PendingButton className="min-h-11 rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-black">
                     Reenviar e-mail de pagamento
                   </PendingButton>
@@ -405,6 +407,7 @@ export default async function AdminOrderPage({
                 <form action={resendOrderEmail}>
                   <input type="hidden" name="order_id" value={id} />
                   <input type="hidden" name="email_kind" value="delivery" />
+                  <label className="mb-3 flex items-start gap-2 text-sm"><input name="checked_provider" type="checkbox" required className="mt-1" />Conferi o histórico do Gmail para evitar envio duplicado.</label>
                   <PendingButton className="min-h-11 rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-black">
                     Reenviar e-mail de entrega
                   </PendingButton>

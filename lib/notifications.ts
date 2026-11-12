@@ -1,4 +1,5 @@
-import {cleanIssueMessage} from "./store-issues";
+import { cleanIssueMessage, recordStoreIssue } from "./store-issues";
+import { notificationFetch } from "./notification-http";
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -69,13 +70,16 @@ export async function notifyAdminDiscord(message: string) {
   const webhook = process.env.DISCORD_ADMIN_WEBHOOK_URL;
   if (!webhook) return;
   const mention = process.env.DISCORD_ADMIN_MENTION?.trim();
-  await fetch(webhook, {
+  await notificationFetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       content: `${mention ? `${mention} ` : ""}${message}`,
       allowed_mentions: { parse: ["roles", "users"] },
     }),
+  }).catch(async error => {
+    await recordStoreIssue("discord", error, "/admin/pedidos");
+    throw error;
   });
 }
 
@@ -90,7 +94,7 @@ export async function sendDiscordDm(
   if (!token) throw new Error("DISCORD_BOT_TOKEN não configurado.");
   if (!discordId) throw new Error("O perfil do cliente não possui discord_id.");
 
-  const channelResponse = await fetch(
+  const channelResponse = await notificationFetch(
     "https://discord.com/api/v10/users/@me/channels",
     {
       method: "POST",
@@ -139,13 +143,13 @@ export async function sendDiscordDm(
       new Blob([buffer], { type: attachment.contentType }),
       attachment.filename,
     );
-    messageResponse = await fetch(endpoint, {
+    messageResponse = await notificationFetch(endpoint, {
       method: "POST",
       headers: { Authorization: `Bot ${token}` },
       body: form,
     });
   } else {
-    messageResponse = await fetch(endpoint, {
+    messageResponse = await notificationFetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bot ${token}`,
@@ -196,7 +200,7 @@ export async function notifyCustomer(
       const channels = ["notificação interna", "Discord"];
       console.error(
         `[notifyCustomer] Falha em ${channels[index]} para o usuário ${userId}:`,
-        result.reason,
+        cleanIssueMessage(result.reason),
       );
     }
   });
