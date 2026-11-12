@@ -1,0 +1,25 @@
+// Perfil adicional, inteiramente local. Reutiliza a fixture pública do executor existente.
+const fs = require('node:fs');
+const path = require('node:path');
+const Module = require('node:module');
+const root = path.resolve(__dirname, '..');
+const label = process.argv.find(x => x.startsWith('--label='))?.slice(8) || 'before';
+if (!['before', 'after'].includes(label)) throw new Error('Use --label=before ou --label=after');
+let source = fs.readFileSync(path.join(__dirname, 'check-storefront.cjs'), 'utf8');
+const start = source.indexOf('for(const width of [390,1440])');
+const end = source.indexOf('}finally{if(browser)', start);
+source = source.slice(0, start) + fs.readFileSync(path.join(__dirname, 'performance-scenarios.cjs.txt'), 'utf8') + source.slice(end);
+source = source.replace("image=await sharp({create:{width:1200,height:1200,channels:4,background:'#8b5cf6'}}).png().toBuffer();", "image=fs.readFileSync(path.join(root,'public/images/products/20560-perm-dragon-blox-fruits.png'));");
+source = source.replace('http.createServer((req,res)=>', 'http.createServer(async(req,res)=>');
+source = source.replace("const u=new URL(req.url,api);", "const u=new URL(req.url,api);if(u.pathname.startsWith('/rest/v1/')||u.pathname.startsWith('/storage/'))await new Promise(r=>setTimeout(r,120));");
+source = source.replace('const products=', 'const fixtureGames=[game],fixtureCategories=[cat];const products=');
+source = source.replace("table==='games'?[game]:table==='categories'?[cat]", "table==='games'?fixtureGames:table==='categories'?fixtureCategories.map(c=>({...c,games:fixtureGames.find(g=>g.id===c.game_id)}))");
+source = source.replace('products.map(p=>({...p,categories:{...cat,games:game}}))', 'products.map(p=>{const c=fixtureCategories.find(c=>c.id===p.category_id);return {...p,categories:{...c,games:fixtureGames.find(g=>g.id===c?.game_id)}}})');
+source = source.replace("if(table==='products')readRows.push", "if(u.searchParams.has('select')){const fields=u.searchParams.get('select').split(/,(?![^()]*\\))/).map(x=>x.split(/[!(]/)[0]);rows=rows.map(row=>Object.fromEntries(fields.filter(k=>k in row).map(k=>[k,row[k]])));}if(table==='products')readRows.push");
+source = source.replace("rows=rows.slice(offset,offset+limit);", "if(offset>0&&offset>=rows.length&&String(req.headers.prefer).includes('count=exact')){res.statusCode=416;res.setHeader('Content-Range','*/'+rows.length);return res.end(JSON.stringify({code:'PGRST103',message:'Range fora do intervalo'}));}rows=rows.slice(offset,offset+limit);");
+source = source.replace("await child([path.join(root,'node_modules/next/dist/bin/next'),'build']", "if(!process.argv.includes('--skip-build'))await child([path.join(root,'node_modules/next/dist/bin/next'),'build']");
+source = source.replace("browser=await require('./chromium.cjs')();", `browser=await require('./chromium.cjs')();const label=${JSON.stringify(label)};`);
+const compiled = new Module(__filename, module);
+compiled.filename = __filename;
+compiled.paths = module.paths;
+compiled._compile(source, __filename);

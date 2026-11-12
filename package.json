@@ -16,6 +16,7 @@
     "test:orders": "node qa/check-admin-order-actions.cjs",
     "test:ux": "node qa/check-ux.cjs --stage=4",
     "test:storefront": "node qa/check-storefront.cjs --performance",
+    "test:performance": "node qa/check-performance.cjs",
     "test:postgres": "node --import tsx qa/check-postgres.cjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm test",
