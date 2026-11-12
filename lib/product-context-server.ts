@@ -1,11 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { productContext, type ProductContext } from "./product-context";
-export async function readProductContexts(client: SupabaseClient, ids: string[]) {
+export async function readProductContexts(client: SupabaseClient, ids: string[], includeInactive = false) {
   const contexts: Record<string, ProductContext> = {};
   if (!ids.length) return { contexts, error: false };
-  const { data, error } = await client.from("products")
+  let query = client.from("products")
     .select("id,categories!inner(name,games!inner(name,is_active))")
-    .in("id", [...new Set(ids)].slice(0, 40)).eq("is_active", true).eq("categories.games.is_active", true);
+    .in("id", [...new Set(ids)].slice(0, 40));
+  if (!includeInactive) query = query.eq("is_active", true).eq("categories.games.is_active", true);
+  const { data, error } = await query;
   for (const row of data ?? []) { const context = productContext(row); if (context) contexts[row.id] = context; }
   return { contexts, error: Boolean(error) };
 }

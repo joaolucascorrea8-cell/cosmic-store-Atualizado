@@ -18,6 +18,8 @@ import {
 } from "../actions";
 import OrderStatusActions from "../OrderStatusActions";
 import RefundForm from "../RefundForm";
+import ProductIdentity from "@/app/components/ProductIdentity";
+import { readProductContexts } from "@/lib/product-context-server";
 import { orderFinance } from "@/lib/order-finance";
 import PendingButton from "../../components/PendingButton";
 import RobuxStatusWatcher from "@/app/pedidos/[id]/RobuxStatusWatcher";
@@ -93,11 +95,13 @@ export default async function AdminOrderPage({
   const { data: order } = await admin
     .from("orders")
     .select(
-      "*,order_items(product_name,unit_price,quantity,delivery_instructions),profiles(nickname),robux_orders(*)",
+      "*,order_items(product_id,product_name,unit_price,quantity,delivery_instructions),profiles(nickname),robux_orders(*)",
     )
     .eq("id", id)
     .maybeSingle();
   if (!order) notFound();
+  const { contexts: itemContexts } = await readProductContexts(admin,
+    (order.order_items ?? []).flatMap((item: { product_id?: string | null }) => item.product_id ? [item.product_id] : []), true);
   const { data: refunds, error: refundError } = await admin.from("order_refunds")
     .select("id,amount,bank_reference,reason,created_at").eq("order_id", id).order("created_at");
   const { data: receipts, error: receiptError } = await admin.from("order_additional_payments")
@@ -252,6 +256,7 @@ export default async function AdminOrderPage({
             {order.order_items?.map(
               (
                 item: {
+                  product_id: string | null;
                   product_name: string;
                   unit_price: number;
                   quantity: number;
@@ -259,8 +264,9 @@ export default async function AdminOrderPage({
                 index: number,
               ) => (
                 <div key={index} className="flex justify-between gap-4">
-                  <span>
+                  <span className="min-w-0 break-words">
                     {item.quantity}× {item.product_name}
+                    {item.product_id && <ProductIdentity context={itemContexts[item.product_id]} />}
                   </span>
                   <strong className="shrink-0">
                     {(Number(item.unit_price) * item.quantity).toLocaleString(
@@ -272,6 +278,7 @@ export default async function AdminOrderPage({
               ),
             )}
           </div>
+          {order.order_type === "store" && <p className="mt-3 text-xs text-zinc-400">Jogo e categoria do catálogo atual; nomes e valores permanecem como registrados no pedido. Confira também as instruções de entrega.</p>}
           <div className="my-5 border-t border-white/10" />
           <OrderDiscount
             subtotal={order.subtotal}

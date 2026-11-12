@@ -30,7 +30,10 @@
  });
  async function paymentForm(id,amount,reference){await p.goto(base+'/admin/pedidos/'+id,{waitUntil:'networkidle'});const form=p.locator('form').filter({has:p.getByRole('heading',{name:'Conferência manual do Pix'})});await form.locator('[name=received_amount]').fill(String(amount));await form.locator('[name=bank_reference]').fill(reference);const reason=form.locator('[name=exception_reason]');if(await reason.count())await reason.fill('Conferência fictícia no extrato local');await form.locator('[name=bank_verified]').check();await form.getByRole('button',{name:'Confirmar pagamento',exact:true}).click();}
  await check('painel recusa valor errado e confirma manualmente com referência do extrato',async()=>{
+   await db.query('update products set is_active=false where id=$1',[ids.a]);
    await paymentForm(first,19,'BANK-HTTP-FIRST');await p.getByRole('alert').filter({hasText:'valor recebido'}).waitFor();
+   assert.match(await p.locator('[data-product-context]').first().innerText(),/Blox Fruits.*Permanentes/);
+   await db.query('update products set is_active=true where id=$1',[ids.a]);
    assert.equal((await row('select status from orders where id=$1',[first])).status,'awaiting_payment');
    await paymentForm(first,20,'BANK-HTTP-FIRST');await waitStatus(first,'paid');
    assert.equal((await row('select status from orders where id=$1',[first])).status,'paid');
