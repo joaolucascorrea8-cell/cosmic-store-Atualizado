@@ -1,3 +1,4 @@
+import { readOrderDisplayItems } from "@/lib/product-context-server";
 import {recordStoreIssue} from "@/lib/store-issues";
 import { couponCode } from "@/lib/coupons";
 import { NextResponse } from "next/server";
@@ -5,6 +6,7 @@ import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPixPayload } from "@/lib/pix";
+import { checkoutReady } from "@/lib/checkout-readiness";
 import {
   createAdminNotifications,
   notifyAdminDiscord,
@@ -22,6 +24,7 @@ type CreatedOrder = {
   status: string;
   total: number;
   pix_payload: string;
+  order_type?: string;
 };
 type ProductRow = {
   id: string;
@@ -54,13 +57,14 @@ type ComboRow = {
 };
 
 async function orderResponse(order: CreatedOrder) {
-  const qrCode = await QRCode.toDataURL(order.pix_payload, {
+  if (order.order_type && order.order_type !== "store") return NextResponse.json({ error: "Esta sessão pertence a outra modalidade. Abra o pedido original para acompanhar." }, { status: 409 });
+  const qrCode = ["awaiting_payment", "proof_rejected"].includes(order.status) ? await QRCode.toDataURL(order.pix_payload, {
     width: 440,
     margin: 2,
     errorCorrectionLevel: "M",
-  });
+  }) : "";
   return NextResponse.json(
-    { order, qrCode },
+    { order, qrCode, items: await readOrderDisplayItems(await createClient(), order.id) },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }
@@ -120,10 +124,11 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+  if (!(await checkoutReady())) return NextResponse.json({ error: "As compras estão temporariamente indisponíveis. Não faça o Pix agora; se já pagou, procure o suporte." }, { status: 503 });
   const existing = await admin
     .from("orders")
     .select(
-      "id,order_code,status,total,pix_payload,subtotal,discount_total,coupon_code,delivery_hours",
+      "id,order_code,status,total,pix_payload,subtotal,discount_total,coupon_code,delivery_hours,order_type",
     )
     .eq("user_id", user.id)
     .eq("checkout_token", token)

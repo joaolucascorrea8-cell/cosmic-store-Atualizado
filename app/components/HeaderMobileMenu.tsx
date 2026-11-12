@@ -69,13 +69,16 @@ export default function HeaderMobileMenu({
         <Link href="/" onClick={closeMenu} className={linkClass}>
           Início
         </Link>
+        <Link href="/produtos" onClick={closeMenu} className={linkClass}>
+          Produtos
+        </Link>
         <Link href="/jogos" onClick={closeMenu} className={linkClass}>
           Jogos
         </Link>
         <Link href="/robux" onClick={closeMenu} className={linkClass}>
           Robux
         </Link>
-        <Link href="/#buscar" onClick={closeMenu} className={linkClass}>
+        <Link href="/produtos#catalog-search" onClick={closeMenu} className={linkClass}>
           Buscar na loja
         </Link>
         <Link href="/servidores" onClick={closeMenu} className={linkClass}>

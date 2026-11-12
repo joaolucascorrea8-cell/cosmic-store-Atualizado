@@ -1,5 +1,7 @@
+import ProductIdentity from "./ProductIdentity";
+import { productLabel, type ProductContext } from "@/lib/product-context";
 import ProductPreferenceButton from "./ProductPreferenceButton";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import AddToCartButton from "@/app/components/AddToCartButton";
 
@@ -14,14 +16,15 @@ type Product = {
   unlimited_stock?: boolean;
 };
 
-export default function ProductCard({ produto }: { produto: Product }) {
+export default function ProductCard({ produto, context }: { produto: Product; context?: ProductContext | null }) {
   const soldOut = !produto.unlimited_stock && Number(produto.stock ?? 0) <= 0;
   return (
     <article className="product-tile group relative flex min-w-0 flex-col overflow-hidden">
       <Link
         href={`/produto/${produto.slug}`}
+        prefetch={false}
         className="product-tile-image relative block aspect-square overflow-hidden"
-        aria-label={`Ver ${produto.name}`}
+        aria-label={`Ver ${productLabel(produto.name, context)}`}
       >
         <Image
           src={produto.image_url || "/images/products/placeholder.svg"}
@@ -42,10 +45,12 @@ export default function ProductCard({ produto }: { produto: Product }) {
       <div className="flex flex-1 flex-col p-4">
         <Link
           href={`/produto/${produto.slug}`}
+        prefetch={false}
           className="product-name line-clamp-2 min-h-11 text-sm font-bold leading-5 transition hover:text-violet-300 sm:text-base"
         >
           {produto.name}
         </Link>
+        <ProductIdentity context={context} />
         <p className="product-description mt-1 line-clamp-2 min-h-9 text-xs leading-[1.15rem] text-zinc-500">
           {produto.description || "Item digital para o seu jogo."}
         </p>
@@ -56,7 +61,7 @@ export default function ProductCard({ produto }: { produto: Product }) {
               currency: "BRL",
             })}
           </p>
-          <AddToCartButton produto={produto} compact />
+          <AddToCartButton produto={produto} context={context} compact />
         </div>
       </div>
     </article>

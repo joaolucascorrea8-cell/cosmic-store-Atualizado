@@ -44,3 +44,12 @@ next-env.d.ts
 # Backups contêm dados privados
 /backups/
 !.env.backup.example
+
+# Artefatos locais de homologação
+/scratch/
+/test-results/
+/playwright-report/
+*.log
+*.key
+*.p12
+*.pfx

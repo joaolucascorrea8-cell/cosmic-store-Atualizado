@@ -45,7 +45,7 @@ export default function SupportForm({ orderCode, orderType, deliveredAt }: { ord
       }
       setLoaded(true);
     });
-  }, [key, orderCode, deliveredAt]);
+  }, [key, orderCode, orderType, deliveredAt]);
   useEffect(() => {
     if (loaded)
       try {

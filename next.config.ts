@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import { deploymentIssues } from "./lib/deployment-config";
+
+if (process.env.VERCEL === "1") {
+  const issues = deploymentIssues(process.env);
+  if (issues.length) throw new Error(`Configuração de hospedagem inválida: ${issues.join(" ")}`);
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 

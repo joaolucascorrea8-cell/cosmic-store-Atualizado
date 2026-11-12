@@ -2,14 +2,24 @@
   "name": "cosmic-store",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "node --import tsx --test --test-concurrency=1 tests/*.test.ts",
+    "test:admin": "node --import tsx qa/check-admin-catalog.cjs",
+    "test:purchase": "node --import tsx qa/check-purchase.cjs",
+    "test:orders": "node qa/check-admin-order-actions.cjs",
+    "test:ux": "node qa/check-ux.cjs --stage=4",
+    "test:storefront": "node qa/check-storefront.cjs --performance",
+    "test:postgres": "node --import tsx qa/check-postgres.cjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm test",
+    "verify:production": "node --import tsx scripts/verify-production.ts",
     "backup": "node --import tsx scripts/backup.ts",
     "backup:verify": "node --import tsx scripts/backup-verify.ts",
     "backup:restore-storage": "node --import tsx scripts/restore-storage.ts"
@@ -17,11 +27,11 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
-    "next": "16.3.8",
+    "next": "16.4.6",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "sharp": "^0.35.4"
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
@@ -31,7 +41,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.6",
+    "playwright": "1.62.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

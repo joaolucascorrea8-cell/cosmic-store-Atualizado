@@ -1,3 +1,5 @@
+import ProductIdentity from "@/app/components/ProductIdentity";
+import { readProductContexts } from "@/lib/product-context-server";
 import DeliveryInstructions from "@/app/components/DeliveryInstructions";
 import OrderDiscount from "@/app/components/OrderDiscount";
 import RepurchaseButton from "./RepurchaseButton";
@@ -20,6 +22,7 @@ import OrderStatusWatcher from "./OrderStatusWatcher";
 import OrderProgress from "./OrderProgress";
 import RobuxStatusWatcher from "./RobuxStatusWatcher";
 import AccountDelivery from "./AccountDelivery";
+import OrderRefundSummary from "@/app/components/OrderRefundSummary";
 
 type RobuxOrderRow = {
   mode: string;
@@ -58,13 +61,14 @@ export default async function OrderPage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_type,order_items(product_name,unit_price,quantity,delivery_instructions),robux_orders(mode,requested_robux,gamepass_robux,net_robux,gamepass_url,gamepass_id,roblox_username,quoted_cosmic_k,supplier_status,supplier_error_message,executed_at,completed_at)",
+      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_type,order_items(product_id,product_name,unit_price,quantity,delivery_instructions),robux_orders(mode,requested_robux,gamepass_robux,net_robux,gamepass_url,gamepass_id,roblox_username,quoted_cosmic_k,supplier_status,supplier_error_message,executed_at,completed_at)",
     )
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
   if (!order) notFound();
 
+  const { contexts: itemContexts } = await readProductContexts(supabase, (order.order_items ?? []).flatMap(item => item.product_id ? [item.product_id] : []));
   const isAccount = order.order_type === "robux_account";
   const { data: accountPolicy } = isAccount ? await supabase.from("robux_account_policy_acceptances").select("policy_body,accepted_at").eq("order_id", id).maybeSingle() : { data: null };
   const { data: accountDetails } = isAccount ? await supabase.from("robux_account_order_details").select("robux,cosmic_k,sale_price,fulfillment_status").eq("order_id", id).maybeSingle() : { data: null };
@@ -133,7 +137,7 @@ export default async function OrderPage({
         initialStatus={order.status}
         initialChatClosedAt={order.chat_closed_at}
       />
-      {isRobux && supplierStatus === "PENDING" && (
+      {isRobux && (supplierStatus === "PENDING" || (supplierStatus === "COMPLETED" && order.status !== "delivered")) && (
         <RobuxStatusWatcher orderId={id} initialSupplierStatus={supplierStatus} />
       )}
       <main
@@ -196,10 +200,12 @@ export default async function OrderPage({
             </div>
             <div className="my-5 border-t border-white/10" />
             <div className="space-y-3">
+              <p className="text-xs text-zinc-400">Jogo e categoria do catálogo atual; os nomes e valores abaixo são os registrados no pedido.</p>
               {order.order_items?.map((item, index) => (
                 <div key={index} className="flex justify-between gap-3 text-sm">
                   <span>
                     {item.quantity}× {item.product_name}
+                    <ProductIdentity context={itemContexts[item.product_id ?? ""]} />
                   </span>
                   <strong>
                     {(Number(item.unit_price) * item.quantity).toLocaleString(
@@ -260,10 +266,12 @@ export default async function OrderPage({
             </section>
           )}
 
+          <OrderRefundSummary orderId={id} total={Number(order.total)} paid={Boolean(order.paid_at)} cancelled={order.status === "cancelled"} />
           {!isRobux && !isAccount && ["delivered", "cancelled"].includes(order.status) && (
             <RepurchaseButton orderId={id} />
           )}
-          {order.status === "awaiting_payment" && (
+          {isAccount && ["awaiting_payment", "proof_rejected"].includes(order.status) && <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-5 text-sm text-amber-100">Esta modalidade foi descontinuada. Não faça um novo Pix para este pedido. Se já pagou, envie o comprovante ou procure o suporte para a conferência.</p>}
+          {!isAccount && order.status === "awaiting_payment" && (
             <section className="mt-5 rounded-xl border border-violet-400/20 bg-violet-500/10 p-5">
               <h2 className="font-bold">Falta concluir o pagamento</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-400">

@@ -1,0 +1,63 @@
+{
+  "runtime": "v24.22.1",
+  "versions": {
+    "next": "16.4.6",
+    "react": "19.2.8",
+    "sharp": "0.35.5",
+    "playwright": "1.62.1"
+  },
+  "all": {
+    "info": 0,
+    "low": 0,
+    "moderate": 7,
+    "high": 0,
+    "critical": 0,
+    "total": 7
+  },
+  "production": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "remaining": [
+    {
+      "name": "@typescript-eslint/eslint-plugin",
+      "severity": "moderate",
+      "fixAvailable": true
+    },
+    {
+      "name": "@typescript-eslint/parser",
+      "severity": "moderate",
+      "fixAvailable": true
+    },
+    {
+      "name": "@typescript-eslint/type-utils",
+      "severity": "moderate",
+      "fixAvailable": true
+    },
+    {
+      "name": "@typescript-eslint/typescript-estree",
+      "severity": "moderate",
+      "fixAvailable": true
+    },
+    {
+      "name": "@typescript-eslint/utils",
+      "severity": "moderate",
+      "fixAvailable": true
+    },
+    {
+      "name": "minimatch",
+      "severity": "moderate",
+      "fixAvailable": true
+    },
+    {
+      "name": "typescript-eslint",
+      "severity": "moderate",
+      "fixAvailable": true
+    }
+  ],
+  "note": "Auditoria de registro npm; não expõe configuração ou credenciais. ESLint 9 em fim de suporte; atualização major da cadeia dev requer compatibilidade."
+}

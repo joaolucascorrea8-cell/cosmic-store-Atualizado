@@ -8,6 +8,8 @@ import {
   resolveGamePassCreator,
 } from "@/lib/byrobux";
 import { getRobuxSettings } from "@/lib/robux-settings";
+import { gamePassLink } from "@/lib/gamepass-link";
+import { checkoutReady } from "@/lib/checkout-readiness";
 import {
   cosmicRateFromSupplier,
   isRobuxPurchaseMode,
@@ -43,7 +45,8 @@ export async function POST(request: Request) {
   } | null;
   const amount = readRobuxAmount(body?.amount);
   const mode = body?.mode;
-  const link = typeof body?.link === "string" ? body.link.trim() : "";
+  const parsedLink = gamePassLink(body?.link);
+  const link = parsedLink?.url ?? "";
   const token =
     typeof body?.checkoutToken === "string" ? body.checkoutToken : "";
   if (!amount || !isRobuxPurchaseMode(mode))
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
       { error: "Quantidade ou opção de taxa inválida." },
       { status: 400 },
     );
-  if (link.length < 20 || link.length > 500)
+  if (!parsedLink)
     return NextResponse.json(
       { error: "Cole um link de GamePass válido." },
       { status: 400 },
@@ -78,6 +81,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ order: existing.data, created: false });
   }
 
+  if (!(await checkoutReady())) return NextResponse.json({ error: "As compras estão temporariamente indisponíveis. Não faça o Pix agora; se já pagou, procure o suporte." }, { status: 503 });
   try {
     const settings = await getRobuxSettings();
     if (!settings.enabled)
@@ -87,7 +91,7 @@ export async function POST(request: Request) {
       );
     const quote = await calculateByRobux(link);
     const item = quote.items?.[0];
-    if (!item || item.error)
+    if (!item || item.error || String(item.id) !== parsedLink.id)
       return NextResponse.json(
         { error: "Não conseguimos validar esse GamePass." },
         { status: 400 },

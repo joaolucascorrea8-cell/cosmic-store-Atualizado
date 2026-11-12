@@ -1,6 +1,9 @@
 "use client";
+import { productLabel } from "@/lib/product-context";
+import ProductIdentity from "@/app/components/ProductIdentity";
+import { useProductContexts } from "@/app/context/useProductContexts";
 
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { useCart } from "@/app/context/CartContext";
 import { cartKey, maxQuantity } from "@/lib/cart";
@@ -13,6 +16,7 @@ export default function CartContent() {
     clearCart,
     totalItems,
   } = useCart();
+  const productContexts = useProductContexts(items.map(item => item.id));
   const total = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
@@ -43,7 +47,7 @@ export default function CartContent() {
                       ? `/${item.kind === "combo" ? "combo" : "produto"}/${item.slug}`
                       : "/produtos"
                   }
-                  aria-label={`Ver ${item.name}`}
+                  aria-label={`Ver ${productLabel(item.name, productContexts.contexts[item.id])}`}
                   className="cart-item-image"
                 >
                   {item.image_url ? (
@@ -62,6 +66,7 @@ export default function CartContent() {
                   <h2 className="text-sm font-bold sm:text-base">
                     {item.name}
                   </h2>
+                  <ProductIdentity context={productContexts.contexts[item.id]} loading={productContexts.loading} />
                   <p className="mt-1 text-xs text-zinc-500">
                     {item.kind === "combo"
                       ? "Combo promocional"
@@ -75,7 +80,7 @@ export default function CartContent() {
                   <div className="flex items-center rounded-lg border border-white/15">
                     <button
                       type="button"
-                      aria-label={`Remover uma unidade de ${item.name}`}
+                      aria-label={`Remover uma unidade de ${productLabel(item.name, productContexts.contexts[item.id])}`}
                       onClick={() =>
                         updateQuantity(cartKey(item), item.quantity - 1)
                       }
@@ -91,7 +96,7 @@ export default function CartContent() {
                     </span>
                     <button
                       type="button"
-                      aria-label={`Adicionar uma unidade de ${item.name}`}
+                      aria-label={`Adicionar uma unidade de ${productLabel(item.name, productContexts.contexts[item.id])}`}
                       disabled={item.quantity >= maxQuantity(item)}
                       onClick={() =>
                         updateQuantity(cartKey(item), item.quantity + 1)

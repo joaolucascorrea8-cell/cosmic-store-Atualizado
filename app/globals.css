@@ -1504,3 +1504,35 @@ body {
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
+
+/* Identidade do item: informação de compra, não inferida pelo slug. */
+.product-identity { display: block; margin-top: .4rem; font-size: .75rem; line-height: 1.5; color: #c4b5e5; overflow-wrap: anywhere; }
+.product-identity strong { font-weight: 650; color: #d6c4f5; }
+
+/* A regra específica evita que o padding global de inputs cubra a lupa. */
+.catalog-search-field .admin-input { padding-inline-start: 2.75rem; }
+#catalog-search { scroll-margin-top: 6rem; }
+
+.catalog-toolbar-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-top: .8rem; min-height: 1.5rem; }
+.catalog-filter-toggle { min-height: 44px; gap: .5rem; }
+.catalog-clear { min-height: 44px; color: #d6c4f5; font-size: .8rem; text-decoration: underline; text-underline-offset: 3px; }
+.catalog-secondary { display: none; gap: .9rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ffffff12; }
+.catalog-secondary.is-open { display: grid; }
+.catalog-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.catalog-chip { display: inline-flex; align-items: center; gap: .6rem; max-width: 100%; min-height: 36px; padding: .4rem .7rem; border: 1px solid #70518e; border-radius: 999px; background: #21172e; color: #e4d7fa; font-size: .75rem; }
+.catalog-chip > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-chip:hover { background: #31203f; }
+@media (min-width: 768px) {
+  .catalog-filter-toggle { display: none; }
+  .catalog-secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; }
+}
+
+.product-detail-layout { display: grid; grid-template-areas: "heading" "media" "info"; gap: 1.25rem; }
+.product-detail-heading { grid-area: heading; }
+.product-detail-layout .product-detail-art { grid-area: media; width: 100%; height: clamp(220px, 65vw, 280px); }
+.product-detail-info { grid-area: info; min-width: 0; }
+.product-purchase-box { box-shadow: 0 0 28px #8650db0a; }
+@media (min-width: 1024px) {
+  .product-detail-layout { grid-template-columns: 1fr .9fr; grid-template-areas: "media heading" "media info"; column-gap: 3rem; row-gap: 1.5rem; align-items: start; }
+  .product-detail-layout .product-detail-art { height: auto; aspect-ratio: 1; }
+}

@@ -31,9 +31,9 @@ export default function ResetPasswordPage() {
       }
     });
 
-    void supabase.auth.getSession().then(({ data }) => {
+    void supabase.auth.getUser().then(({ data }) => {
       if (!active) return;
-      const hasSession = Boolean(data.session);
+      const hasSession = Boolean(data.user);
       setAuthorized(hasSession);
       setChecking(false);
       if (!hasSession) {
@@ -41,6 +41,11 @@ export default function ResetPasswordPage() {
           "Abra esta página pelo link de recuperação enviado ao seu e-mail.",
         );
       }
+    }).catch(() => {
+      if (!active) return;
+      setChecking(false);
+      setAuthorized(false);
+      setMessage("Não foi possível verificar a sessão. Abra novamente o link de recuperação.");
     });
 
     return () => {
@@ -65,21 +70,17 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
 
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.updateUser({
-      password,
-    });
-
-    if (error) {
-      setMessage("Não foi possível alterar a senha: " + error.message);
-    } else {
-      setSuccess(true);
-      setMessage("Senha alterada com sucesso!");
-      await supabase.auth.signOut();
-    }
-
-    setLoading(false);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) setMessage("Não foi possível alterar a senha. Confira os requisitos ou solicite outro link.");
+      else {
+        setSuccess(true);
+        setMessage("Senha alterada com sucesso!");
+        await supabase.auth.signOut();
+      }
+    } catch { setMessage("Erro de conexão. Tente novamente ou solicite outro link de recuperação."); }
+    finally { setLoading(false); }
   }
 
   return (

@@ -25,7 +25,7 @@ export default async function AccountPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("nickname, avatar_url, auth_provider, onboarding_completed")
+    .select("nickname, avatar_url, onboarding_completed")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -40,8 +40,7 @@ export default async function AccountPage({
     .slice(0, 15);
 
   const fallbackNickname = `${metadataNickname.length >= 3 ? metadataNickname : "cliente"}_${user.id.slice(0, 6)}`;
-  const provider =
-    profile?.auth_provider ?? String(user.app_metadata?.provider ?? "email");
+  const provider = String(user.app_metadata?.provider ?? "email");
   const onboardingCompleted = profile?.onboarding_completed === true;
   const requestedAfterSetup = safeInternalPath(params.next, "/");
   const afterOnboardingPath = requestedAfterSetup.startsWith("/conta")

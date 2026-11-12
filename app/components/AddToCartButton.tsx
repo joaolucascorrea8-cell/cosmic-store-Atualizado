@@ -1,4 +1,5 @@
 "use client";
+import { productLabel, type ProductContext } from "@/lib/product-context";
 import { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/app/context/CartContext";
@@ -14,11 +15,13 @@ interface AddToCartButtonProps {
     unlimited_stock?: boolean;
   };
   compact?: boolean;
+  context?: ProductContext | null;
 }
 
 export default function AddToCartButton({
   produto,
   compact = false,
+  context,
 }: AddToCartButtonProps) {
   const { addToCart, items, cartLoaded } = useCart();
   const [added, setAdded] = useState(false);
@@ -39,10 +42,10 @@ export default function AddToCartButton({
         }
         aria-label={
           soldOut
-            ? `${produto.name} está esgotado`
+            ? `${productLabel(produto.name, context)} está esgotado`
             : atLimit
-              ? `Limite no carrinho para ${produto.name}`
-              : `Adicionar ${produto.name} ao carrinho`
+              ? `Limite no carrinho para ${productLabel(produto.name, context)}`
+              : `Adicionar ${productLabel(produto.name, context)} ao carrinho`
         }
         onClick={() => {
           addToCart({

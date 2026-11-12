@@ -1,0 +1,46 @@
+{
+  "database": "PostgreSQL 17.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "isolation": "Container efêmero --network none, sem portas; dados fictícios; conexões psql independentes",
+  "results": [
+    {
+      "scenario": "upgrade preserva pedidos, itens e estoque históricos sem notificações ou conciliação inventadas",
+      "status": "PASS"
+    },
+    {
+      "scenario": "upsert do próprio perfil funciona com RLS sem liberar campos privados",
+      "status": "PASS"
+    },
+    {
+      "scenario": "duas conexões disputam a última unidade: somente uma cria pedido",
+      "status": "PASS"
+    },
+    {
+      "scenario": "retry simultâneo do mesmo token retorna o mesmo pedido e uma reserva",
+      "status": "PASS"
+    },
+    {
+      "scenario": "duas confirmações não reutilizam a mesma transação bancária",
+      "status": "PASS"
+    },
+    {
+      "scenario": "último uso do cupom é serializado com reserva e total descontado",
+      "status": "PASS"
+    },
+    {
+      "scenario": "devoluções concorrentes não ultrapassam total pago; fila tem um único executor",
+      "status": "PASS"
+    },
+    {
+      "scenario": "Game Pass concorrente mantém uma tentativa e bloqueia cancelamento durante envio",
+      "status": "PASS"
+    },
+    {
+      "scenario": "referência bancária não é reutilizada entre confirmação e recebimento excepcional concorrentes",
+      "status": "PASS"
+    },
+    {
+      "scenario": "dump e restauração isolada preservam pedidos, conciliação, créditos, devoluções e fila",
+      "status": "PASS"
+    }
+  ]
+}

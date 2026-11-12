@@ -25,7 +25,7 @@ export async function POST(
     path?: unknown;
   } | null;
   const path = typeof body?.path === "string" ? body.path : "";
-  if (!path.startsWith(`${user.id}/${id}/`))
+  if (!path.startsWith(`${user.id}/${id}/`) || path.split("/").length !== 3)
     return NextResponse.json({ error: "Arquivo inválido." }, { status: 400 });
 
   const admin = createAdminClient();

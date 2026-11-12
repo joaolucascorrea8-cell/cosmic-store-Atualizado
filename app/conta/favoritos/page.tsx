@@ -1,3 +1,4 @@
+import { productContext } from "@/lib/product-context";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -20,7 +21,7 @@ export default async function FavoritesPage() {
     client
       .from("customer_product_preferences")
       .select(
-        "product_id,favorite,restock,products(id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,categories(games(is_active)))",
+        "product_id,favorite,restock,products(id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,categories(name,games(name,is_active)))",
       )
       .eq("user_id", user.id)
       .or("favorite.eq.true,restock.eq.true")
@@ -67,7 +68,7 @@ export default async function FavoritesPage() {
               return (
                 <div key={row.product_id} className="min-w-0">
                   {visible && product ? (
-                    <ProductCard produto={product} />
+                    <ProductCard produto={product} context={productContext(product)} />
                   ) : (
                     <div className="surface rounded-xl p-5">
                       <p className="text-sm text-zinc-400">

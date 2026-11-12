@@ -1,8 +1,9 @@
-import { validateAccountOrder } from "@/lib/robux-accounts/service";
+import { readOrderDisplayItems } from "@/lib/product-context-server";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { UUID_PATTERN } from "@/lib/catalog";
+import { checkoutReady } from "@/lib/checkout-readiness";
 export const maxDuration = 300;
 export async function GET(
   _request: Request,
@@ -36,9 +37,9 @@ export async function GET(
       { status: 404 },
     );
   if (order.order_type === "robux_account" && ["awaiting_payment", "proof_rejected"].includes(order.status)) {
-    try { await validateAccountOrder(id, true); }
-    catch { return NextResponse.json({ error: "Não conseguimos confirmar a conta para pagamento. Abra seu pedido e fale com a equipe antes de pagar." }, { status: 409 }); }
+    return NextResponse.json({ error: "Esta modalidade foi descontinuada. Não faça um novo Pix; procure o suporte se já pagou." }, { status: 410 });
   }
+  if (["awaiting_payment", "proof_rejected"].includes(order.status) && !(await checkoutReady())) return NextResponse.json({ error: "Não é possível abrir o pagamento agora. Se já fez o Pix, procure o suporte." }, { status: 503 });
   const qrCode = ["awaiting_payment", "proof_rejected"].includes(order.status)
     ? await QRCode.toDataURL(order.pix_payload, {
         width: 440,
@@ -47,7 +48,7 @@ export async function GET(
       })
     : "";
   return NextResponse.json(
-    { order, qrCode },
+    { order, qrCode, items: await readOrderDisplayItems(client, id) },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

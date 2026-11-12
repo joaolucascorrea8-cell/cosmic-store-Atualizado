@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { PGlite } from "@electric-sql/pglite";
-import { createDatabase, ids } from "./fixture";
+import { createDatabase, ids, confirmPayment } from "./fixture";
 import { couponDate, readCouponForm } from "../lib/coupons";
 import {
   readDeliveryHours,
@@ -254,10 +254,7 @@ test("prazo usa produto, jogo e padrão, fica congelado e define a data após pa
     "update public.orders set status='proof_submitted' where id=$1",
     [created.order.id],
   );
-  await db.query(
-    "select public.transition_store_order($1,$2,'paid','proof_submitted','')",
-    [created.order.id, ids.admin],
-  );
+  await confirmPayment(db, created.order.id);
   const row = (
     await db.query<{ hours: number; stock: number }>(
       "select extract(epoch from (o.delivery_due_at-o.paid_at))/3600 hours,p.stock from public.orders o cross join public.products p where o.id=$1 and p.id=$2",

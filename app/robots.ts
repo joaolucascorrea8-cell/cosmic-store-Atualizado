@@ -7,14 +7,17 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/api/catalog-image"],
         disallow: [
-          "/admin/",
+          "/admin",
           "/api/",
+          "/auth/",
+          "/chat",
+          "/robux/contas",
           "/checkout",
           "/conta",
-          "/pedidos/",
-          "/suporte/",
+          "/pedidos",
+          "/suporte",
           "/login",
           "/carrinho",
           "/notificacoes",

@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import Icon from "@/app/components/Icon";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 export type ManagedProduct = {
   id: string;
+  ops_version: number;
   name: string;
   slug?: string;
   category_id: string;
@@ -47,6 +48,7 @@ function QuickProduct({
     [unlimited, setUnlimited] = useState(product.unlimited_stock),
     [active, setActive] = useState(product.is_active),
     [busy, start] = useTransition();
+  const [revision, setRevision] = useState(product.ops_version);
   const cleanSnapshot = useRef(product);
   const dirty =
     price !== Number(product.price).toFixed(2).replace(".", ",") ||
@@ -64,6 +66,7 @@ function QuickProduct({
     )
       return;
     queueMicrotask(() => {
+      setRevision(product.ops_version);
       setPrice(Number(product.price).toFixed(2).replace(".", ","));
       setStock(String(product.stock));
       setUnlimited(product.unlimited_stock);
@@ -125,6 +128,7 @@ function QuickProduct({
             try {
               const result = await updateProductQuick({
                 productId: product.id,
+                revision,
                 price,
                 stock: Number(stock),
                 unlimitedStock: unlimited,
@@ -135,6 +139,7 @@ function QuickProduct({
                 Boolean(result.error),
               );
               if (!result.error) {
+                if (result.revision !== undefined) setRevision(result.revision);
                 const normalized = parsePrice(price);
                 if (normalized !== null) setPrice(normalized.toFixed(2).replace(".", ","));
                 setStock(String(Number(stock)));

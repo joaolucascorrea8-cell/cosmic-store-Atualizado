@@ -43,7 +43,7 @@ export default async function EditarProdutoPage({
       .order("name"),
     supabase
       .from("games")
-      .select("id,name,display_order")
+      .select("id,name,slug,display_order")
       .order("display_order", { ascending: true })
       .order("name"),
   ]);

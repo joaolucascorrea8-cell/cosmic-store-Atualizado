@@ -17,7 +17,7 @@ export default function SiteFooter() {
             Uma loja de itens digitais feita para o seu universo gamer.
           </p>
           <p className="mt-4 text-xs text-zinc-500">
-            Pagamento via Pix · Confirmação manual de comprovantes
+            Pix manual · Conferência no extrato bancário
           </p>
         </div>
         <div>

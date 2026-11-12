@@ -17,6 +17,10 @@ import {
   updateOrderChat,
 } from "../actions";
 import OrderStatusActions from "../OrderStatusActions";
+import RefundForm from "../RefundForm";
+import ProductIdentity from "@/app/components/ProductIdentity";
+import { readProductContexts } from "@/lib/product-context-server";
+import { orderFinance } from "@/lib/order-finance";
 import PendingButton from "../../components/PendingButton";
 import RobuxStatusWatcher from "@/app/pedidos/[id]/RobuxStatusWatcher";
 import { executeRobuxOrder } from "@/app/admin/robux/actions";
@@ -62,6 +66,9 @@ function relation<T>(value: T | T[] | null | undefined) {
 }
 
 const actionLabels: Record<string, string> = {
+  "finance:additional_received": "Recebimento excepcional registrado",
+  "finance:refund_recorded": "Devolução financeira registrada",
+  "gamepass:retry_cancelled": "Nova tentativa após cancelamento do fornecedor",
   "account:credentials_saved": "Dados da conta salvos com segurança",
   "account:manual_acquisition": "Aquisição manual da conta registrada",
   "status:paid": "Pagamento confirmado",
@@ -88,11 +95,18 @@ export default async function AdminOrderPage({
   const { data: order } = await admin
     .from("orders")
     .select(
-      "*,order_items(product_name,unit_price,quantity,delivery_instructions),profiles(nickname),robux_orders(*)",
+      "*,order_items(product_id,product_name,unit_price,quantity,delivery_instructions),profiles(nickname),robux_orders(*)",
     )
     .eq("id", id)
     .maybeSingle();
   if (!order) notFound();
+  const { contexts: itemContexts } = await readProductContexts(admin,
+    (order.order_items ?? []).flatMap((item: { product_id?: string | null }) => item.product_id ? [item.product_id] : []), true);
+  const { data: refunds, error: refundError } = await admin.from("order_refunds")
+    .select("id,amount,bank_reference,reason,created_at").eq("order_id", id).order("created_at");
+  const { data: receipts, error: receiptError } = await admin.from("order_additional_payments")
+    .select("id,amount,bank_reference,reason,used_for_confirmation,created_at").eq("order_id", id).order("created_at");
+  const { received, refunded, remaining } = orderFinance(Number(order.total), Boolean(order.paid_at), receipts ?? [], refunds ?? []);
   const {
     data: { user },
   } = await (await createClient()).auth.getUser();
@@ -178,7 +192,7 @@ export default async function AdminOrderPage({
             ]
         : order.status === "preparing_delivery"
           ? isRobux
-            ? ["PENDING", "COMPLETED"].includes(supplierStatus)
+            ? ["SUBMITTING", "PENDING", "COMPLETED"].includes(supplierStatus)
               ? []
               : [["cancelled", "Cancelar pedido"]]
             : [
@@ -242,6 +256,7 @@ export default async function AdminOrderPage({
             {order.order_items?.map(
               (
                 item: {
+                  product_id: string | null;
                   product_name: string;
                   unit_price: number;
                   quantity: number;
@@ -249,8 +264,9 @@ export default async function AdminOrderPage({
                 index: number,
               ) => (
                 <div key={index} className="flex justify-between gap-4">
-                  <span>
+                  <span className="min-w-0 break-words">
                     {item.quantity}× {item.product_name}
+                    {item.product_id && <ProductIdentity context={itemContexts[item.product_id]} />}
                   </span>
                   <strong className="shrink-0">
                     {(Number(item.unit_price) * item.quantity).toLocaleString(
@@ -262,6 +278,7 @@ export default async function AdminOrderPage({
               ),
             )}
           </div>
+          {order.order_type === "store" && <p className="mt-3 text-xs text-zinc-400">Jogo e categoria do catálogo atual; nomes e valores permanecem como registrados no pedido. Confira também as instruções de entrega.</p>}
           <div className="my-5 border-t border-white/10" />
           <OrderDiscount
             subtotal={order.subtotal}
@@ -291,16 +308,17 @@ export default async function AdminOrderPage({
         {order.order_type === "robux_account" && <AccountOrderPanel orderId={id} status={order.status} />}
         {isRobux && robuxOrder && (
           <section className="mt-6 rounded-2xl border border-violet-500/20 bg-violet-500/[.055] p-4 sm:p-6">
-            {supplierStatus === "PENDING" && (
+            {(supplierStatus === "PENDING" || (supplierStatus === "COMPLETED" && order.status !== "delivered")) && (
               <RobuxStatusWatcher orderId={id} initialSupplierStatus={supplierStatus} />
             )}
+            {supplierStatus === "SUBMITTING" && <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">O envio ainda não teve resposta confirmada. Após dois minutos, use Comprar e entregar para recuperar a mesma tentativa, com a mesma chave idempotente. Não faça outra compra nem cancele antes de reconciliar com o fornecedor.</p>}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[.16em] text-violet-300">Entrega automática · ByRobux</p>
                 <h2 className="mt-1 text-xl font-black">Pedido de Robux</h2>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-black ${supplierStatus === "COMPLETED" ? "bg-emerald-500/15 text-emerald-300" : supplierStatus === "PENDING" ? "bg-violet-500/15 text-violet-200" : supplierStatus === "CANCELLED" || supplierStatus === "FAILED" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-zinc-300"}`}>
-                {supplierStatus === "NOT_STARTED" ? "Aguardando execução" : supplierStatus === "PENDING" ? "Processando" : supplierStatus === "COMPLETED" ? "GamePass comprado" : supplierStatus === "CANCELLED" ? "Cancelado pelo fornecedor" : "Falha"}
+                {supplierStatus === "NOT_STARTED" ? "Aguardando execução" : supplierStatus === "SUBMITTING" ? "Aguardando confirmação do envio" : supplierStatus === "PENDING" ? "Processando" : supplierStatus === "COMPLETED" ? "GamePass comprado" : supplierStatus === "CANCELLED" ? "Cancelado pelo fornecedor" : "Falha"}
               </span>
             </div>
 
@@ -361,13 +379,26 @@ export default async function AdminOrderPage({
               </p>
             )}
             <OrderStatusActions
-              key={`${id}:${order.status}`}
+              key={id}
               orderId={id}
               status={order.status}
               buttons={buttons}
+              total={Number(order.total)}
+              hasProof={Boolean(order.proof_path)}
             />
           </section>
         )}
+        <section className="mt-6 rounded-2xl border border-violet-500/20 bg-[#111122] p-4 sm:p-6">
+          <h2 className="font-black">Recebimentos e devoluções</h2>
+          {refundError || receiptError ? <p role="alert" className="mt-3 text-amber-200">Não foi possível consultar o registro financeiro. Confira as migrations antes de registrar movimentações.</p> : <>
+            <p className="mt-2 text-sm text-zinc-300">Recebido: R$ {received.toFixed(2).replace(".", ",")} · Devolvido: R$ {refunded.toFixed(2).replace(".", ",")} · Saldo não devolvido: R$ {remaining.toFixed(2).replace(".", ",")}</p>
+            {order.status === "cancelled" && remaining > 0 && <p className="mt-3 text-sm text-amber-200">Cancelamento não confirma reembolso. Confira a devolução pendente no banco.</p>}
+            {(refunds ?? []).map(refund => <p key={refund.id} className="mt-3 break-words text-sm text-zinc-400">R$ {Number(refund.amount).toFixed(2).replace(".", ",")} · {refund.bank_reference} · {refund.reason}</p>)}
+            {(receipts ?? []).map(receipt => <p key={receipt.id} className="mt-3 break-words text-sm text-zinc-400">Recebido R$ {Number(receipt.amount).toFixed(2).replace(".", ",")} · {receipt.bank_reference} · {receipt.reason}{receipt.used_for_confirmation ? " · incluído na confirmação principal" : ""}</p>)}
+            {remaining > 0 && <RefundForm key={id} orderId={id} token={crypto.randomUUID()} remaining={remaining} />}
+            <details className="mt-5 rounded-xl border border-white/10 p-4"><summary className="cursor-pointer font-bold text-violet-200">Registrar Pix excepcional (tardio, repetido ou divergente)</summary><RefundForm receipt key={`receipt:${id}`} orderId={id} token={crypto.randomUUID()} remaining={0} /></details>
+          </>}
+        </section>
         {(canRetryPaymentEmail || canRetryDeliveryEmail) && (
           <section className="mt-6 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 sm:p-5">
             <h2 className="font-black text-amber-100">E-mail pendente</h2>
@@ -380,6 +411,7 @@ export default async function AdminOrderPage({
                 <form action={resendOrderEmail}>
                   <input type="hidden" name="order_id" value={id} />
                   <input type="hidden" name="email_kind" value="payment" />
+                  <label className="mb-3 flex items-start gap-2 text-sm"><input name="checked_provider" type="checkbox" required className="mt-1" />Conferi o histórico do Gmail para evitar envio duplicado.</label>
                   <PendingButton className="min-h-11 rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-black">
                     Reenviar e-mail de pagamento
                   </PendingButton>
@@ -389,6 +421,7 @@ export default async function AdminOrderPage({
                 <form action={resendOrderEmail}>
                   <input type="hidden" name="order_id" value={id} />
                   <input type="hidden" name="email_kind" value="delivery" />
+                  <label className="mb-3 flex items-start gap-2 text-sm"><input name="checked_provider" type="checkbox" required className="mt-1" />Conferi o histórico do Gmail para evitar envio duplicado.</label>
                   <PendingButton className="min-h-11 rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-black">
                     Reenviar e-mail de entrega
                   </PendingButton>

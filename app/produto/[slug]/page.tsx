@@ -1,3 +1,4 @@
+import ProductIdentity from "@/app/components/ProductIdentity";
 import DeliveryInstructions from "@/app/components/DeliveryInstructions";
 import ProductPreferenceButton from "@/app/components/ProductPreferenceButton";
 import ShareProduct from "@/app/components/ShareProduct";
@@ -7,7 +8,7 @@ import { deliveryText } from "@/lib/store-service";
 import { cache } from "react";
 import type { Metadata } from "next";
 import ProductCard from "@/app/components/ProductCard";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SiteHeader from "@/app/components/SiteHeader";
@@ -21,27 +22,14 @@ const getProduct = cache(async (slug: string) => {
   const client = await createClient();
   const { data: product, error } = await client
     .from("products")
-    .select(
-      "id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,category_id,delivery_hours,delivery_instructions",
-    )
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
+    .select("id,name,slug,description,price,image_url,stock,unlimited_stock,is_active,category_id,delivery_hours,delivery_instructions,categories!inner(name,slug,game_id,games!inner(name,slug,is_active,delivery_hours,delivery_instructions))")
+    .eq("slug", slug).eq("is_active", true).eq("categories.games.is_active", true).maybeSingle();
   if (error) throw new Error("Não foi possível carregar o produto.");
   if (!product) return null;
-  const { data: category } = await client
-    .from("categories")
-    .select("name,slug,game_id")
-    .eq("id", product.category_id)
-    .maybeSingle();
-  if (!category) return null;
-  const { data: game } = await client
-    .from("games")
-    .select("name,slug,delivery_hours,delivery_instructions")
-    .eq("id", category.game_id)
-    .eq("is_active", true)
-    .maybeSingle();
-  return game ? { ...product, category, game } : null;
+  const { categories, ...values } = product;
+  const category = Array.isArray(categories) ? categories[0] : categories;
+  const game = Array.isArray(category?.games) ? category.games[0] : category?.games;
+  return category && game ? { ...values, category, game } : null;
 });
 export async function generateMetadata({
   params,
@@ -56,11 +44,11 @@ export async function generateMetadata({
     `${product.name} para ${product.game.name}. Pague com Pix e acompanhe a entrega na Cosmic Store.`
   ).slice(0, 160);
   return {
-    title: product.name,
+    title: `${product.name} · ${product.game.name}`,
     description,
     alternates: { canonical: `/produto/${product.slug}` },
     openGraph: {
-      title: product.name,
+      title: `${product.name} · ${product.game.name}`,
       description,
       images: product.image_url ? [product.image_url] : [],
     },
@@ -106,6 +94,9 @@ export default async function ProductDetail({
   const structured = {
     "@context": "https://schema.org",
     "@type": "Product",
+    "@id": new URL(`/produto/${product.slug}#product`, site).href,
+    sku: product.id,
+    category: `${product.game.name} · ${product.category.name}`,
     name: product.name,
     description: product.description || product.name,
     image: new URL(
@@ -121,13 +112,22 @@ export default async function ProductDetail({
       seller: { "@type": "Organization", name: "Cosmic Store" },
     },
   };
+  const breadcrumbs = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { name: "Início", path: "/" },
+      { name: product.game.name, path: `/${product.game.slug}` },
+      { name: product.category.name, path: `/${product.game.slug}/${product.category.slug}` },
+      { name: product.name, path: `/produto/${product.slug}` },
+    ].map((item, i) => ({ "@type": "ListItem", position: i + 1, name: item.name, item: new URL(item.path, site).href })),
+  };
   return (
     <div className="min-h-screen">
       <SiteHeader />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(structured).replace(/</g, "\\u003c"),
+          __html: JSON.stringify([structured, breadcrumbs]).replace(/</g, "\\u003c"),
         }}
       />
       <main
@@ -149,22 +149,13 @@ export default async function ProductDetail({
           <span>/</span>
           <span className="text-zinc-200">{product.name}</span>
         </nav>
-        <div className="grid items-start gap-7 lg:grid-cols-[1fr_.9fr] lg:gap-12">
-          <div className="product-detail-art relative aspect-square overflow-hidden rounded-2xl border border-white/10">
-            <Image
-              src={product.image_url || "/images/products/placeholder.svg"}
-              alt={product.name}
-              fill
-              priority
-              sizes="(max-width:1024px) 100vw,50vw"
-              className="object-contain p-8 md:p-14"
-            />
-          </div>
-          <div className="lg:pt-4">
+        <div className="product-detail-layout" aria-labelledby="product-title">
+          <div className="product-detail-heading">
             <span className="inline-flex rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-violet-200">
               ITEM DIGITAL
             </span>
-            <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
+            <ProductIdentity context={{ game: product.game.name, category: product.category.name }} />
+            <h1 id="product-title" className="mt-4 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
               {product.name}
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-400">
@@ -173,6 +164,47 @@ export default async function ProductDetail({
               </span>
               <span>Pagamento via Pix</span>
               <span>Suporte no site</span>
+            </div>
+          </div>
+          <div className="product-detail-art relative overflow-hidden rounded-2xl border border-white/10">
+            <Image
+              src={product.image_url || "/images/products/placeholder.svg"}
+              alt={product.name}
+              fill
+              priority
+              sizes="(max-width:1024px) 100vw,50vw"
+              className="object-contain p-4 md:p-8 lg:p-12"
+            />
+          </div>
+          <div className="product-detail-info">
+            <div className="product-purchase-box rounded-xl border border-violet-400/25 bg-[#17121f] p-5 sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Valor do item
+              </p>
+              <strong className="mt-2 block text-3xl font-black tracking-tight sm:text-4xl">
+                {Number(product.price).toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })}
+              </strong>
+              <p className="mt-2 text-xs text-zinc-500">
+                {product.unlimited_stock
+                  ? "Estoque ilimitado"
+                  : `${product.stock} unidades disponíveis`}
+              </p>
+              <p className="mt-3 text-xs leading-5 text-violet-200">
+                {estimatedHours ? deliveryText(estimatedHours) : "Consulte a equipe para combinar o prazo."}
+              </p>
+              <div className="mt-5">
+                <AddToCartButton produto={product} context={{ game: product.game.name, category: product.category.name }} />
+              </div>
+              {soldOut && (
+                <ProductPreferenceButton id={product.id} kind="restock" />
+              )}
+              <ProductPreferenceButton id={product.id} />
+              <Link href="/carrinho" className="btn-secondary mt-3 w-full">
+                Ir para o carrinho →
+              </Link>
             </div>
             <p className="mt-6 whitespace-pre-line text-sm leading-7 text-zinc-400 sm:text-base">
               {product.description ||
@@ -193,38 +225,7 @@ export default async function ProductDetail({
                 },
               ]}
             />
-            <div className="mt-8 rounded-xl border border-white/10 bg-[#17121f] p-5 sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Valor do item
-              </p>
-              <strong className="mt-2 block text-3xl font-black tracking-tight sm:text-4xl">
-                {Number(product.price).toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-              </strong>
-              <p className="mt-2 text-xs text-zinc-500">
-                {product.unlimited_stock
-                  ? "Estoque ilimitado"
-                  : `${product.stock} unidades disponíveis`}
-              </p>
-              <div className="mt-6">
-                <AddToCartButton produto={product} />
-              </div>
-              {soldOut && (
-                <ProductPreferenceButton id={product.id} kind="restock" />
-              )}
-              <ProductPreferenceButton id={product.id} />
-              <Link href="/carrinho" className="btn-secondary mt-3 w-full">
-                Ir para o carrinho →
-              </Link>
-            </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs leading-6 text-zinc-400">
-                {estimatedHours
-                  ? deliveryText(estimatedHours)
-                  : "Consulte a equipe para combinar o prazo."}
-              </p>
               <ShareProduct
                 name={product.name}
                 path={`/produto/${product.slug}`}
@@ -269,7 +270,7 @@ export default async function ProductDetail({
             </div>
             <div className="product-grid mt-5">
               {related?.map((item) => (
-                <ProductCard key={item.id} produto={item} />
+                <ProductCard key={item.id} produto={item} context={{ game: product.game.name, category: product.category.name }} />
               ))}
             </div>
           </section>

@@ -1,8 +1,9 @@
 "use client";
-import Image from "next/image";
+import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveProduct, type ProductEditorState } from "../actions";
+import { automaticProductSlug } from "@/lib/product-slug";
 import { money, parsePrice, slugify } from "@/lib/catalog";
 import { applyDescriptionTemplate } from "@/lib/description-templates";
 import { robuxPrice, readRobuxRate } from "@/lib/robux-pricing";
@@ -32,7 +33,7 @@ type Category = {
   game_id: string;
   description_template?: string;
 };
-type Game = { id: string; name: string };
+type Game = { id: string; name: string; slug: string };
 const initial: ProductEditorState = { error: null, success: null };
 export default function ProductEditor({
   product,
@@ -124,6 +125,7 @@ export default function ProductEditor({
         setSlug("");
       } else if (state.id) {
         setCurrentId(state.id);
+        if (state.slug) { setSlug(state.slug); setCustomSlug(true); }
         setRevision((old) => state.revision ?? old);
         if (state.locked !== undefined) setLocked(state.locked);
         if (state.rate !== undefined) setBaseRate(String(state.rate ?? ""));
@@ -139,7 +141,7 @@ export default function ProductEditor({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
-  const effectiveSlug = customSlug ? slug : slugify(name),
+  const effectiveSlug = customSlug ? slug : automaticProductSlug(games.find((g) => g.id === game)?.slug ?? "jogo", name),
     visibleCategories = categories.filter((c) => c.game_id === game);
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">

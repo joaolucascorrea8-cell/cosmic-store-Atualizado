@@ -1,0 +1,15 @@
+# Game Pass e recuperação de comunicações
+
+Somente Game Pass continua disponível para novas compras. Rotas de contas descontinuadas permanecem HTTP 410; os fluxos antigos de entrega/histórico foram preservados.
+
+`202611120003` persiste `SUBMITTING` e uma trava de dois minutos antes de enviar a compra. Dois administradores não obtêm a mesma execução simultânea. Após timeout ou falha ao salvar a resposta, recuperar mantém a mesma chave idempotente; não se deve fazer compra avulsa no fornecedor. Somente CANCELLED definitivo permite girar a chave, sob lock e com histórico da tentativa anterior. A garantia externa depende de o fornecedor respeitar `requestId`/`Idempotency-Key`, como previsto na integração existente; requer homologação específica com o fornecedor antes de habilitar vendas reais.
+
+Cancelamento financeiro é bloqueado no SQL enquanto há compra SUBMITTING/PENDING/COMPLETED. Conclusão de Game Pass exige COMPLETED. A busca agora pagina além dos primeiros 50 registros (limite de 20 páginas e orçamento de tempo; excesso exige conciliação manual). Isso evita pendência silenciosa de lotes antigos.
+
+`202611120004` cria uma fila privada de e-mails apenas para NOVAS transições de pagamento/entrega. Não enfileira pedidos anteriores. Há uma trava por pedido/evento, registro atômico de envio e até cinco tentativas de preparação com espera. Interrupção durante SMTP é ambígua: fica `uncertain`, sem reenvio automático. O administrador confere o Gmail antes de usar o reenvio manual. Não prometemos envio exatamente uma vez por SMTP; sem idempotência do provedor isso não é demonstrável.
+
+O cron existente faz recuperação limitada (até três Game Pass e três e-mails por chamada), sem executar compras nem confirmar Pix. A frequência diária existente foi preservada para não pressupor plano pago da Vercel. A equipe deve monitorar a fila e os pedidos pendentes; intervalos menores exigem decisão operacional e validação do plano. Timeout/erro não desfaz pedido ou pagamento. Discord agora valida HTTP e tem limite de oito segundos; falhas são registradas, mas não há garantia de entrega de DM nem fila de retry do Discord. A notificação interna e o histórico do pedido continuam sendo os canais de consulta.
+
+Nenhuma migration ou rotina foi executada no Supabase real. Testes PGlite/HTTP simulado: concorrência de execução, chave estável após timeout, nova chave apenas após CANCELLED, conclusão e preparação atômicas, paginação, single-flight de e-mail, recuperação ambígua, backoff e Discord 401/429/500/204. Os limites efetivos de execução/SMTP/cron na Vercel precisam de verificação na conta de hospedagem.
+
+Revisão final: SMTP tem prazo total de 45 segundos e a recuperação respeita orçamento de três minutos. Falha TLS antes do greeting foi simulada e tratada sem rejeição órfã. Pedidos históricos não pagos da modalidade encerrada não voltam a emitir Pix; histórico e entrega de pedidos já pagos continuam preservados.

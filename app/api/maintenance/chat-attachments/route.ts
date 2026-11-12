@@ -3,9 +3,11 @@ import { recordStoreIssue } from "@/lib/store-issues";
 import { NextRequest, NextResponse } from "next/server";
 
 import { cleanupExpiredChatAttachments } from "@/lib/chat-attachment-retention";
+import { recoverOrderOperations } from "@/lib/order-recovery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 function isAuthorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -27,6 +29,7 @@ export async function GET(request: NextRequest) {
   let closedOrders = 0,
     cleanup = null;
   let failed = false;
+  let recovery = null;
   try {
     const { data, error } = await createAdminClient().rpc("ops_expire_orders");
     if (error)
@@ -46,8 +49,15 @@ export async function GET(request: NextRequest) {
     failed = true;
     await recordStoreIssue("cron", error, "/api/maintenance/chat-attachments");
   }
+  try {
+    recovery = await recoverOrderOperations();
+    if (recovery.failures) failed = true;
+  } catch (error) {
+    failed = true;
+    await recordStoreIssue("cron", error, "/api/maintenance/chat-attachments");
+  }
   return NextResponse.json(
-    { ok: !failed, closedOrders, cleanup },
+    { ok: !failed, closedOrders, cleanup, recovery },
     { status: failed ? 500 : 200 },
   );
 }

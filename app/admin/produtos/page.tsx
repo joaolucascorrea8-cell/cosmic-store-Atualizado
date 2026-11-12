@@ -13,6 +13,7 @@ type Product = {
   description: string | null;
   delivery_hours: number | null;
   low_stock_threshold: number;
+  ops_version: number;
   price: number;
   stock: number;
   unlimited_stock: boolean;
@@ -27,7 +28,7 @@ type Category = {
   description_template: string;
   display_order: number;
 };
-type Game = { id: string; name: string; display_order: number };
+type Game = { id: string; name: string; slug: string; display_order: number };
 type Params = {
   sucesso?: string;
   novo?: string;
@@ -69,7 +70,7 @@ export default async function AdminProducts({
       allRows(
         client
           .from("games")
-          .select("id,name,display_order")
+          .select("id,name,slug,display_order")
           .order("display_order", { ascending: true })
           .order("name")
           .order("id"),
@@ -210,6 +211,7 @@ export default async function AdminProducts({
               products={products.map(
                 ({
                   id,
+                  ops_version,
                   name,
                   category_id,
                   image_url,
@@ -220,6 +222,7 @@ export default async function AdminProducts({
                   unlimited_stock,
                 }) => ({
                   id,
+                  ops_version,
                   name,
                   category_id,
                   image_url,
