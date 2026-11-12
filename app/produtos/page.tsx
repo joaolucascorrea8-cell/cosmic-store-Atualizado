@@ -163,7 +163,7 @@ export default async function ProductsPage({
           <p className="eyebrow">CATÁLOGO COSMIC</p>
           <h1 className="section-title">Encontre seu próximo item.</h1>
           <p className="section-description">
-            Busque por jogo, produto ou categoria. Robux, contas e outros
+            Busque por jogo, produto ou categoria. Robux via Game Pass e outros
             serviços também aparecem na busca.
           </p>
         </div>

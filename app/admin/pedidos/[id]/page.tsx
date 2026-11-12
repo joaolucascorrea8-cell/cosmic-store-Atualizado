@@ -64,6 +64,9 @@ function relation<T>(value: T | T[] | null | undefined) {
 }
 
 const actionLabels: Record<string, string> = {
+  "finance:additional_received": "Recebimento excepcional registrado",
+  "finance:refund_recorded": "Devolução financeira registrada",
+  "gamepass:retry_cancelled": "Nova tentativa após cancelamento do fornecedor",
   "account:credentials_saved": "Dados da conta salvos com segurança",
   "account:manual_acquisition": "Aquisição manual da conta registrada",
   "status:paid": "Pagamento confirmado",
