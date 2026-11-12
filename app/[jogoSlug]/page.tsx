@@ -43,20 +43,15 @@ export default async function GamePage({
   const client = await createClient();
   const game = await getGame(jogoSlug);
   if (!game) notFound();
-  const { data: categories, error } = await client
-    .from("categories")
-    .select("id,name,slug,image_url,display_order")
-    .eq("game_id", game.id)
-    .order("display_order", { ascending: true })
-    .order("name");
-  const { data: counts } = await client
-    .from("products")
-    .select("category_id")
-    .eq("is_active", true)
-    .in(
-      "category_id",
-      (categories ?? []).map((c) => c.id),
-    );
+  const [{ data: categories, error }, { data: counts }] = await Promise.all([
+    client.from("categories")
+      .select("id,name,slug,image_url,display_order")
+      .eq("game_id", game.id)
+      .order("display_order", { ascending: true }).order("name"),
+    client.from("products")
+      .select("category_id,categories!inner()")
+      .eq("is_active", true).eq("categories.game_id", game.id),
+  ]);
   return (
     <div className="min-h-screen">
       <SiteHeader />

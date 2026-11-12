@@ -61,7 +61,7 @@ export default function ProductCard({ produto, context }: { produto: Product; co
               currency: "BRL",
             })}
           </p>
-          <AddToCartButton produto={produto} context={context} compact />
+          <AddToCartButton produto={{ id: produto.id, name: produto.name, slug: produto.slug, price: produto.price, image_url: produto.image_url, stock: produto.stock, unlimited_stock: produto.unlimited_stock }} context={context} compact />
         </div>
       </div>
     </article>

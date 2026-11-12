@@ -63,7 +63,7 @@ export default async function ProductDetail({
   const product = await getProduct(slug);
   if (!product) notFound();
   const client = await createClient();
-  const [{ data: feedbacks }, { data: related }] = await Promise.all([
+  const [{ data: feedbacks }, { data: related }, service] = await Promise.all([
     client
       .from("feedbacks")
       .select(
@@ -81,9 +81,9 @@ export default async function ProductDetail({
       .order("display_order")
       .order("name")
       .limit(4),
+    getStoreService(),
   ]);
   const signedFeedbacks = await withSignedReviewAttachments(feedbacks ?? []);
-  const service = await getStoreService();
   const estimatedHours =
     product.delivery_hours ??
     product.game.delivery_hours ??
@@ -196,7 +196,7 @@ export default async function ProductDetail({
                 {estimatedHours ? deliveryText(estimatedHours) : "Consulte a equipe para combinar o prazo."}
               </p>
               <div className="mt-5">
-                <AddToCartButton produto={product} context={{ game: product.game.name, category: product.category.name }} />
+                <AddToCartButton produto={{ id: product.id, name: product.name, slug: product.slug, price: product.price, image_url: product.image_url, stock: product.stock, unlimited_stock: product.unlimited_stock }} context={{ game: product.game.name, category: product.category.name }} />
               </div>
               {soldOut && (
                 <ProductPreferenceButton id={product.id} kind="restock" />
