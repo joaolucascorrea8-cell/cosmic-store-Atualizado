@@ -173,14 +173,18 @@ export async function sendGmailEmail({
     servername: "smtp.gmail.com",
     rejectUnauthorized: true,
   });
+  // Evita erro de socket sem listener entre comandos/encerramento e limita o job inteiro.
+  socket.on("error", () => {});
+  const totalTimeout = setTimeout(() => socket.destroy(new Error("Tempo total de envio SMTP excedido.")), 45_000);
   socket.setTimeout(25_000, () =>
     socket.destroy(new Error("Tempo esgotado na conexão SMTP.")),
   );
 
   try {
-    const greetingPromise = waitForResponse(socket);
-    await once(socket, "secureConnect");
-    const greeting = await greetingPromise;
+    const [, greeting] = await Promise.all([
+      once(socket, "secureConnect"),
+      waitForResponse(socket),
+    ]);
     if (greeting.code !== 220)
       throw new Error(
         `Gmail SMTP não iniciou corretamente: ${greeting.raw.slice(0, 500)}`,
@@ -222,6 +226,7 @@ export async function sendGmailEmail({
       // O e-mail já foi aceito; falha ao encerrar a sessão não invalida o envio.
     }
   } finally {
+    clearTimeout(totalTimeout);
     socket.end();
     socket.destroy();
   }
