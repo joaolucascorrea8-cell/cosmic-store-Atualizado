@@ -41,3 +41,14 @@ test("comprovante só entra em pedido próprio aberto e não pode ser substituí
   await assert.rejects(db.query("insert into storage.objects(bucket_id,name) values('payment-proofs',$1)", [`${ids.user}/${id}/comprovante-novo.png`]), /row-level security/);
   await db.exec("reset role");
 });
+test("cliente não se promove nem enumera administradores; consulta da própria role continua funcionando", async () => {
+  await db.exec(`grant usage on schema public,auth to authenticated;set role authenticated;select set_config('request.jwt.claim.sub','${ids.user}',false);`);
+  assert.equal((await db.query("select * from public.admins")).rows.length, 0);
+  await assert.rejects(db.query("insert into public.admins(user_id,role) values($1,'owner')", [ids.user]), /permission denied/);
+  await assert.rejects(db.query("update public.admins set role='owner'"), /permission denied/);
+  await assert.rejects(db.query("delete from public.admins"), /permission denied/);
+  await db.exec(`select set_config('request.jwt.claim.sub','${ids.admin}',false)`);
+  assert.equal((await db.query<{ role: string }>("select role from public.admins where user_id=$1", [ids.admin])).rows[0].role, "owner");
+  await db.exec("reset role");
+  assert.equal((await db.query<{ allowed: boolean }>("select public.is_store_admin($1) allowed", [ids.user])).rows[0].allowed, false);
+});

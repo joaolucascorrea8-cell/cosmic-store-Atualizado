@@ -22,7 +22,12 @@
  });
  await check('HTTP concorrente reserva última unidade, recupera retry e gera QR Pix fictício',async()=>{
    await db.exec(`update products set stock=1 where id='${ids.a}'`);const a=payload(),b=payload();
-   const r=await Promise.all([post('/api/orders',a),post('/api/orders',b)]);assert.deepEqual(r.map(x=>x.status).sort(),[200,409]);
+   const r=await Promise.all([post('/api/orders',a),post('/api/orders',b)]);
+   assert.equal(r.filter(x=>x.status===200).length,1);
+   // A segunda consulta pode observar a reserva no preflight (400) ou no SQL (409).
+   const rejected=r.find(x=>x.status!==200);assert.ok([400,409].includes(rejected.status));
+   assert.match(rejected.data.error,/estoque|indisponível/i);assert.equal(rejected.data.order,undefined);assert.equal(rejected.data.qrCode,undefined);
+   assert.equal(Number((await row('select count(*) from orders')).count),1);
    const winner=r[0].status===200?0:1;first=r[winner].data.order.id;
    assert.match(r[winner].data.qrCode,/^data:image\/png/);
    assert.equal((await post('/api/orders',winner===0?a:b)).data.order.id,first);

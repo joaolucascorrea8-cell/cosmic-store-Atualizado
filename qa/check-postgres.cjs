@@ -41,7 +41,7 @@ async function check(scenario, fn) { await fn(); results.push({ scenario, status
     sql(fixtureSeedSql);
     const old = JSON.parse(sql(create()));
     sql(`select public.transition_store_order('${old.order.id}','${ids.admin}','paid','awaiting_payment','');`);
-    const snapshotQuery = `select jsonb_build_object('orders',(select jsonb_agg(jsonb_build_object('id',id,'user_id',user_id,'code',order_code,'status',status,'paid_at',paid_at,'total',total,'pix_payload',pix_payload)) from public.orders),'items',(select jsonb_agg(to_jsonb(i)) from public.order_items i),'products',(select jsonb_agg(to_jsonb(p)) from public.products p))`;
+    const snapshotQuery = `select jsonb_build_object('orders',(select jsonb_agg(jsonb_build_object('id',id,'user_id',user_id,'code',order_code,'status',status,'paid_at',paid_at,'total',total,'pix_payload',pix_payload)) from public.orders),'items',(select jsonb_agg(to_jsonb(i)) from public.order_items i),'products',(select jsonb_agg(to_jsonb(p)) from public.products p),'admins',(select jsonb_agg(to_jsonb(a)) from public.admins a))`;
     const before = JSON.parse(sql(snapshotQuery));
     for (const f of files.filter(f => f >= '202611120001')) sql(readFileSync('supabase/migrations/' + f, 'utf8'));
     await check('upgrade preserva pedidos, itens e estoque históricos sem notificações ou conciliação inventadas', async () => {
@@ -55,7 +55,9 @@ async function check(scenario, fn) { await fn(); results.push({ scenario, status
         insert into public.profiles(id,nickname,avatar_url,onboarding_completed) values('${ids.user}','ClienteTeste',null,true)
         on conflict(id) do update set id=excluded.id,nickname=excluded.nickname,avatar_url=excluded.avatar_url,onboarding_completed=excluded.onboarding_completed;`);
       assert.throws(() => sql(`set role authenticated;select discord_id from public.profiles`));
-      assert.equal(sql('select public.store_checkout_ready()'), 't');
+      assert.throws(() => sql(`set role authenticated;insert into public.admins(user_id,role) values('${ids.user}','owner')`));
+      assert.equal(sql(`set role authenticated;select set_config('request.jwt.claim.sub','${ids.admin}',false);select role from public.admins where user_id='${ids.admin}'`).split('\n').at(-1), 'owner');
+      assert.equal(sql("select public.store_checkout_capabilities()->>'ready'"), 'true');
     });
     await check('duas conexões disputam a última unidade: somente uma cria pedido', async () => {
       reset(); const r = await Promise.all([concurrent(create()), concurrent(create(randomUUID(), ids.admin))]);

@@ -9,11 +9,11 @@ source = source.replaceAll('3120', '3140').replaceAll('54328', '54326');
 // NextURL normaliza loopback para localhost em redirects; cookies precisam da mesma origem.
 source = source.replace("const base = 'http://127.0.0.1:3140';", "const base = 'http://localhost:3140';");
 source = source.replace("const testEnv = require('./isolated-env.cjs')(api,base);", "const testEnv = require('./isolated-env.cjs')(api,base,{BYROBUX_API_KEY:'local-test',BYROBUX_API_BASE_URL:api+'/provider',CRON_SECRET:'local-cron-test'});\nlet providerStatus='PENDING',schemaReady=true;const executions=new Map();");
-source = source.replace("['ops_import_products','set_product_preference','ops_record_issue']", "['ops_import_products','set_product_preference','ops_record_issue','ops_expire_orders','ops_report','ops_interest','store_financial_summary','store_checkout_ready','quote_store_checkout','create_store_order_with_coupon','create_robux_store_order','confirm_manual_store_payment','record_manual_store_refund','record_additional_store_payment','transition_store_order','claim_gamepass_execution','finish_gamepass_execution','claim_order_email','finish_order_email']");
+source = source.replace("['ops_import_products','set_product_preference','ops_record_issue']", "['ops_import_products','set_product_preference','ops_record_issue','ops_expire_orders','ops_report','ops_interest','store_financial_summary','store_checkout_capabilities','quote_store_checkout','create_store_order_with_coupon','create_robux_store_order','confirm_manual_store_payment','record_manual_store_refund','record_additional_store_payment','transition_store_order','claim_gamepass_execution','finish_gamepass_execution','claim_order_email','finish_order_email']");
 source = source.replace("if(u.pathname==='/auth/v1/user') return send(user);", "if(u.pathname==='/auth/v1/user'||u.pathname.startsWith('/auth/v1/admin/users/')) return send(user);");
 source = source.replace("const body=raw?JSON.parse(raw):null;", "const body=raw&&(req.headers['content-type']??'').includes('application/json')?JSON.parse(raw):null;");
 source = source.replace("  try {\n    const result = await db.transaction", `
-  if(u.pathname==='/rest/v1/rpc/store_checkout_ready'&&!schemaReady)return send(false);
+  if(u.pathname==='/rest/v1/rpc/store_checkout_capabilities'&&!schemaReady)return send(false);
   if(u.pathname==='/auth/v1/signup')return send({user:{...user,id:ids.user},session:null});
   if(['/auth/v1/recover','/auth/v1/resend','/auth/v1/logout'].includes(u.pathname))return send({});
   if(u.pathname==='/auth/v1/verify'){if(body.token_hash==='expired'){res.statusCode=400;return send({error_code:'otp_expired',message:'Token expirado'});}return send(session);}
