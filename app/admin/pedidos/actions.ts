@@ -194,7 +194,7 @@ export async function recordOrderRefund(
 ): Promise<OrderStatusFormState> {
   const user = await requireAdmin();
   const orderId = String(formData.get("order_id") ?? "");
-  const token = String(formData.get("refund_token") ?? "");
+  const token = String(formData.get("operation_token") ?? formData.get("refund_token") ?? "");
   if (!UUID_PATTERN.test(orderId) || !UUID_PATTERN.test(token)) return { error: "Operação inválida." };
   const { error } = await createAdminClient().rpc("record_manual_store_refund", {
     p_order_id: orderId, p_admin_id: user.id, p_token: token,
@@ -207,4 +207,19 @@ export async function recordOrderRefund(
   revalidatePath(`/admin/pedidos/${orderId}`);
   revalidatePath(`/pedidos/${orderId}`);
   return { error: null, success: "Devolução registrada. Nenhuma transferência é executada pelo site." };
+}
+
+export async function recordAdditionalPayment(_previous: OrderStatusFormState, formData: FormData): Promise<OrderStatusFormState> {
+  const user = await requireAdmin();
+  const orderId = String(formData.get("order_id") ?? ""), token = String(formData.get("operation_token") ?? "");
+  if (!UUID_PATTERN.test(orderId) || !UUID_PATTERN.test(token)) return { error: "Operação inválida." };
+  const { error } = await createAdminClient().rpc("record_additional_store_payment", {
+    p_order_id: orderId, p_admin_id: user.id, p_token: token,
+    p_amount: Number(String(formData.get("amount") ?? "").replace(",", ".")),
+    p_bank_reference: String(formData.get("bank_reference") ?? ""),
+    p_reason: String(formData.get("reason") ?? ""), p_bank_verified: formData.get("bank_verified") === "on",
+  });
+  if (error) return { error: error.code === "P0001" ? error.message : "Não foi possível registrar o recebimento. Confira antes de tentar novamente." };
+  revalidatePath(`/admin/pedidos/${orderId}`); revalidatePath(`/pedidos/${orderId}`);
+  return { error: null, success: "Recebimento excepcional registrado. O status e a entrega do pedido foram preservados." };
 }

@@ -18,6 +18,7 @@ import {
 } from "../actions";
 import OrderStatusActions from "../OrderStatusActions";
 import RefundForm from "../RefundForm";
+import { orderFinance } from "@/lib/order-finance";
 import PendingButton from "../../components/PendingButton";
 import RobuxStatusWatcher from "@/app/pedidos/[id]/RobuxStatusWatcher";
 import { executeRobuxOrder } from "@/app/admin/robux/actions";
@@ -96,8 +97,9 @@ export default async function AdminOrderPage({
   if (!order) notFound();
   const { data: refunds, error: refundError } = await admin.from("order_refunds")
     .select("id,amount,bank_reference,reason,created_at").eq("order_id", id).order("created_at");
-  const refunded = (refunds ?? []).reduce((sum, refund) => sum + Math.round(Number(refund.amount) * 100), 0) / 100;
-  const remaining = Math.max(0, Math.round((Number(order.total) - refunded) * 100) / 100);
+  const { data: receipts, error: receiptError } = await admin.from("order_additional_payments")
+    .select("id,amount,bank_reference,reason,used_for_confirmation,created_at").eq("order_id", id).order("created_at");
+  const { received, refunded, remaining } = orderFinance(Number(order.total), Boolean(order.paid_at), receipts ?? [], refunds ?? []);
   const {
     data: { user },
   } = await (await createClient()).auth.getUser();
@@ -376,15 +378,17 @@ export default async function AdminOrderPage({
             />
           </section>
         )}
-        {order.paid_at && <section className="mt-6 rounded-2xl border border-violet-500/20 bg-[#111122] p-4 sm:p-6">
-          <h2 className="font-black">Devoluções financeiras</h2>
-          {refundError ? <p role="alert" className="mt-3 text-amber-200">Não foi possível consultar o registro financeiro. Confira a migration antes de registrar devoluções.</p> : <>
-            <p className="mt-2 text-sm text-zinc-300">Devolvido: R$ {refunded.toFixed(2).replace(".", ",")} · Saldo pago não devolvido: R$ {remaining.toFixed(2).replace(".", ",")}</p>
+        <section className="mt-6 rounded-2xl border border-violet-500/20 bg-[#111122] p-4 sm:p-6">
+          <h2 className="font-black">Recebimentos e devoluções</h2>
+          {refundError || receiptError ? <p role="alert" className="mt-3 text-amber-200">Não foi possível consultar o registro financeiro. Confira as migrations antes de registrar movimentações.</p> : <>
+            <p className="mt-2 text-sm text-zinc-300">Recebido: R$ {received.toFixed(2).replace(".", ",")} · Devolvido: R$ {refunded.toFixed(2).replace(".", ",")} · Saldo não devolvido: R$ {remaining.toFixed(2).replace(".", ",")}</p>
             {order.status === "cancelled" && remaining > 0 && <p className="mt-3 text-sm text-amber-200">Cancelamento não confirma reembolso. Confira a devolução pendente no banco.</p>}
             {(refunds ?? []).map(refund => <p key={refund.id} className="mt-3 break-words text-sm text-zinc-400">R$ {Number(refund.amount).toFixed(2).replace(".", ",")} · {refund.bank_reference} · {refund.reason}</p>)}
+            {(receipts ?? []).map(receipt => <p key={receipt.id} className="mt-3 break-words text-sm text-zinc-400">Recebido R$ {Number(receipt.amount).toFixed(2).replace(".", ",")} · {receipt.bank_reference} · {receipt.reason}{receipt.used_for_confirmation ? " · incluído na confirmação principal" : ""}</p>)}
             {remaining > 0 && <RefundForm key={id} orderId={id} token={crypto.randomUUID()} remaining={remaining} />}
+            <details className="mt-5 rounded-xl border border-white/10 p-4"><summary className="cursor-pointer font-bold text-violet-200">Registrar Pix excepcional (tardio, repetido ou divergente)</summary><RefundForm receipt key={`receipt:${id}`} orderId={id} token={crypto.randomUUID()} remaining={0} /></details>
           </>}
-        </section>}
+        </section>
         {(canRetryPaymentEmail || canRetryDeliveryEmail) && (
           <section className="mt-6 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 sm:p-5">
             <h2 className="font-black text-amber-100">E-mail pendente</h2>

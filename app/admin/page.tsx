@@ -67,7 +67,7 @@ export default async function AdminPage() {
         <div className="admin-stat admin-stat-money">
           <span>Pagamentos neste mês</span>
           <strong>{summary ? money(summary.paidMonth) : "—"}</strong>
-          <small>Horário de Brasília</small>
+          <small><Link href="/admin/relatorios">Movimentações e devoluções ↗</Link></small>
         </div>
         <Link href="/admin/suporte?status=open" className="admin-stat">
           <span>Suporte aguardando equipe</span>

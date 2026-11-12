@@ -23,7 +23,7 @@ type Report = {
 function validDate(s: string) {
   return (
     /^\d{4}-\d{2}-\d{2}$/.test(s) &&
-    new Date(s + "T12:00:00Z").toISOString().startsWith(s)
+    !Number.isNaN(new Date(s + "T12:00:00Z").getTime()) && new Date(s + "T12:00:00Z").toISOString().startsWith(s)
   );
 }
 export default async function ReportsPage({
@@ -43,6 +43,8 @@ export default async function ReportsPage({
     to = params.ate || today;
   let error = "",
     report: Report | null = null;
+  let finance: { received: number; refunded: number; net: number } | null = null;
+  let financeError = "";
   try {
     if (!validDate(from) || !validDate(to))
       throw new Error("Confira as datas.");
@@ -56,6 +58,9 @@ export default async function ReportsPage({
     });
     if (r.error) throw new Error("Não foi possível consultar os relatórios.");
     report = r.data as Report;
+    const f = await createAdminClient().rpc("store_financial_summary", { p_from: start.toISOString(), p_to: end.toISOString() });
+    if (f.error) financeError = "Não foi possível consultar as movimentações financeiras. Confira as migrations e o diagnóstico.";
+    else finance = f.data;
   } catch (e) {
     error = e instanceof Error ? e.message : "Período inválido.";
   }
@@ -71,8 +76,8 @@ export default async function ReportsPage({
     <main id="conteudo-principal" tabIndex={-1} className="admin-page">
       <h1 className="admin-title">Relatórios da loja</h1>
       <p className="admin-description">
-        Pagamentos confirmados no período, em horário de Brasília. Valores
-        representam receita, sem cálculo de lucro.
+        Vendas e movimentações registradas no período, em horário de Brasília.
+        Os valores são conferidos manualmente e não representam saldo bancário ou lucro.
       </p>
       <form className="admin-panel mt-6 flex flex-wrap items-end gap-3">
         <label className="admin-label">
@@ -102,9 +107,15 @@ export default async function ReportsPage({
       )}
       {report && (
         <>
+          {financeError && <p role="alert" className="admin-error mt-5">{financeError}</p>}
+          {finance && <section className="admin-panel mt-5">
+            <h2 className="text-lg font-bold">Movimentações financeiras registradas</h2>
+            <div className="admin-stats mt-4">{[["Recebimentos",finance.received],["Devoluções realizadas",finance.refunded],["Recebimentos menos devoluções",finance.net]].map(([label,value])=><div className="admin-stat" key={String(label)}><span>{label}</span><strong>{money(Number(value))}</strong></div>)}</div>
+            <p className="mt-3 text-xs text-zinc-400">Inclui recebimentos de pedidos cancelados e Pix excepcionais. Considera a data de registro/conferência, sem descontar custos do fornecedor. Cancelar não registra devolução.</p>
+          </section>}
           <div className="admin-stats mt-5">
             {[
-              ["Receita recebida", money(report.revenue)],
+              ["Vendas sem cancelados", money(report.revenue)],
               ["Pedidos pagos", report.orders],
               ["Ticket médio", money(report.average)],
               ["Descontos concedidos", money(report.discount)],

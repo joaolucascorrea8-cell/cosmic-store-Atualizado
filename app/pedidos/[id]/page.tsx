@@ -266,11 +266,12 @@ export default async function OrderPage({
             </section>
           )}
 
-          {order.paid_at && <OrderRefundSummary orderId={id} total={Number(order.total)} cancelled={order.status === "cancelled"} />}
+          <OrderRefundSummary orderId={id} total={Number(order.total)} paid={Boolean(order.paid_at)} cancelled={order.status === "cancelled"} />
           {!isRobux && !isAccount && ["delivered", "cancelled"].includes(order.status) && (
             <RepurchaseButton orderId={id} />
           )}
-          {order.status === "awaiting_payment" && (
+          {isAccount && ["awaiting_payment", "proof_rejected"].includes(order.status) && <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-5 text-sm text-amber-100">Esta modalidade foi descontinuada. Não faça um novo Pix para este pedido. Se já pagou, envie o comprovante ou procure o suporte para a conferência.</p>}
+          {!isAccount && order.status === "awaiting_payment" && (
             <section className="mt-5 rounded-xl border border-violet-400/20 bg-violet-500/10 p-5">
               <h2 className="font-bold">Falta concluir o pagamento</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-400">

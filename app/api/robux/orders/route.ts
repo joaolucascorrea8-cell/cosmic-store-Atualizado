@@ -9,6 +9,7 @@ import {
 } from "@/lib/byrobux";
 import { getRobuxSettings } from "@/lib/robux-settings";
 import { gamePassLink } from "@/lib/gamepass-link";
+import { checkoutReady } from "@/lib/checkout-readiness";
 import {
   cosmicRateFromSupplier,
   isRobuxPurchaseMode,
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ order: existing.data, created: false });
   }
 
+  if (!(await checkoutReady())) return NextResponse.json({ error: "As compras estão temporariamente indisponíveis. Não faça o Pix agora; se já pagou, procure o suporte." }, { status: 503 });
   try {
     const settings = await getRobuxSettings();
     if (!settings.enabled)
