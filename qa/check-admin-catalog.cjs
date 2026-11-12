@@ -23,15 +23,14 @@ const token = `${enc({ alg: 'HS256', typ: 'JWT' })}.${enc({ sub: ids.admin, role
 const session = { access_token: token, refresh_token: 'local-test', expires_in: 7200, expires_at: Math.floor(Date.now()/1000)+7200, token_type: 'bearer', user };
 const cookieValue = 'base64-' + enc(session);
 // Explicit whitelist: never inherit application credentials or real Supabase URL.
-const testEnv = Object.fromEntries(['PATH','HOME','NODE_PATH','LANG','LC_ALL','TMPDIR'].filter(k=>process.env[k]).map(k=>[k,process.env[k]]));
-Object.assign(testEnv, { NEXT_PUBLIC_SUPABASE_URL: api, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'local-test', SUPABASE_SERVICE_ROLE_KEY: 'local-test', SUPABASE_SECRET_KEY: 'local-test', NEXT_PUBLIC_SITE_URL: base, NEXT_TELEMETRY_DISABLED: '1' });
+const testEnv = require('./isolated-env.cjs')(api,base);
 const qid = v => '"' + v.replace(/"/g,'""') + '"';
 async function row(sql, params=[]) { return (await db.query(sql,params)).rows[0]; }
 async function adapter(req, res) {
   res.setHeader('Content-Type','application/json');
   res.setHeader('Access-Control-Allow-Origin',base);
-  res.setHeader('Access-Control-Allow-Headers','*');
-  res.setHeader('Access-Control-Allow-Methods','GET,POST,PATCH,HEAD,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers',req.headers['access-control-request-headers']??'authorization,apikey,x-client-info,content-type,prefer,range');
+  res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS');
   if(req.method==='OPTIONS') return res.end();
   const u = new URL(req.url,api);
   const send = data => res.end(JSON.stringify(data));
@@ -65,8 +64,9 @@ async function adapter(req, res) {
       const where=clauses.length?' where '+clauses.join(' and '):'';
       let sql;
       if(req.method==='POST'){
-        const keys=Object.keys(body).filter(k=>cols.includes(k));params=keys.map(k=>body[k]);
-        sql=`insert into public.${qid(table)} (${keys.map(qid).join(',')}) values(${keys.map((_,i)=>'$'+(i+1)).join(',')}) returning *`;
+        const records=Array.isArray(body)?body:[body];const keys=Object.keys(records[0]).filter(k=>cols.includes(k));params=[];
+        const values=records.map(record=>'('+keys.map(k=>{params.push(record[k]);return '$'+params.length}).join(',')+')');
+        sql=`insert into public.${qid(table)} (${keys.map(qid).join(',')}) values ${values.join(',')} returning *`;
       }else if(req.method==='PATCH'){
         const sets=Object.keys(body).filter(k=>cols.includes(k)).map(k=>{params.push(body[k]);return `${qid(k)}=$${params.length}`});
         sql=`update public.${qid(table)} set ${sets.join(',')}${where} returning *`;
@@ -114,7 +114,7 @@ async function save(page){await page.locator('button[name=save_action][value=sta
  await runChild([path.join(root,'node_modules/next/dist/bin/next'),'build'],'cosmic-admin-catalog-build.log');
  const log=fs.openSync('/tmp/cosmic-admin-catalog-server.log','w');app=spawn(process.execPath,[path.join(root,'node_modules/next/dist/bin/next'),'start','-H','127.0.0.1','-p','3120'],{cwd:root,env:testEnv,stdio:['ignore',log,log]});fs.closeSync(log);
  for(let n=0;n<80;n++){try{await fetch(base+'/robots.txt');break}catch{}await new Promise(r=>setTimeout(r,150))}
- browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+ browser=await require('./chromium.cjs')();
  const ctx=await context(),p=await ctx.newPage();p.setDefaultTimeout(15000);
  let kl,blox,kl2;
  await check('1 Dragon no King Legacy',async()=>{await fillNew(p,gameKL,catKL);kl=await save(p);const r=await row('select * from products where id=$1',[kl]);assert.equal(r.slug,'king-legacy-dragon');assert.equal(r.category_id,catKL);assert.equal(await p.locator('input[name=slug]').inputValue(),r.slug);return r.slug});

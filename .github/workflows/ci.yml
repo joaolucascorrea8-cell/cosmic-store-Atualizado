@@ -1,0 +1,28 @@
+name: Isolated checks
+on:
+  push:
+    branches: [audit/cosmic-store-20261111]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54328
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: local-test
+      SUPABASE_SECRET_KEY: local-test
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3120
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run build
+      # Este build fictício não é enviado como artefato e nunca é implantado.

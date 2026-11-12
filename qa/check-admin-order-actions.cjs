@@ -36,7 +36,7 @@ const account = {
   reservation_until: now, availability: 'available', last_validation_error: null,
 };
 const testEnv = {
-  ...process.env, NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54329',
+  ...require('./isolated-env.cjs')('http://127.0.0.1:54329', 'https://www.cosmicstore.com.br'), NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54329',
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'local-test-placeholder',
   SUPABASE_SERVICE_ROLE_KEY: 'local-test-placeholder',
   NEXT_PUBLIC_SITE_URL: 'https://www.cosmicstore.com.br',

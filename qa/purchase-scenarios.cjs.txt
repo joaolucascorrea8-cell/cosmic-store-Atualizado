@@ -1,0 +1,126 @@
+(async()=>{try{
+ db=await createDatabase();
+ server=http.createServer((req,res)=>{adapter(req,res).catch(e=>{res.statusCode=500;res.end(JSON.stringify({error:e.message}));});});
+ await new Promise(r=>server.listen(54326,'127.0.0.1',r));
+ if(!process.argv.includes('--skip-build'))await runChild([path.join(root,'node_modules/next/dist/bin/next'),'build'],'cosmic-purchase-build.log');
+ const fd=fs.openSync('/tmp/cosmic-purchase-server.log','w');app=spawn(process.execPath,[path.join(root,'node_modules/next/dist/bin/next'),'start','-H','127.0.0.1','-p','3140'],{cwd:root,env:testEnv,stdio:['ignore',fd,fd]});fs.closeSync(fd);
+ for(let n=0;n<100;n++){try{await fetch(base+'/robots.txt');break}catch{}await new Promise(r=>setTimeout(r,100));}
+ browser=await require('./chromium.cjs')();
+ const ctx=await context();const p=await ctx.newPage();
+ const cookie='sb-127-auth-token='+cookieValue;
+ async function post(route,body,authorized=true){const r=await fetch(base+route,{method:'POST',headers:{'Content-Type':'application/json',...(authorized?{Cookie:cookie}:{})},body:JSON.stringify(body)});return {status:r.status,data:await r.json()};}
+ const payload=()=>({checkoutToken:randomUUID(),gameNickname:'ClienteTeste',items:[{id:ids.a,kind:'product',quantity:1,price:20}],expectedTotal:20});
+ async function waitStatus(id,status){for(let n=0;n<100;n++){if((await row('select status from orders where id=$1',[id])).status===status)return;await p.waitForTimeout(100);}throw new Error('Estado não alcançado: '+status);}
+ let first,second,gamepass;
+ await check('esquema incompleto bloqueia emissão de Pix com HTTP 503',async()=>{
+   schemaReady=false;const response=await post('/api/orders',payload());schemaReady=true;assert.equal(response.status,503);assert.equal(Number((await row('select count(*) from orders')).count),0);
+ });
+ await check('checkout real rejeita preço adulterado e sessão ausente',async()=>{
+   const body=payload();body.items[0].price=1;assert.ok([400,409].includes((await post('/api/orders',body)).status));
+   assert.equal((await post('/api/orders',payload(),false)).status,401);
+   assert.equal(Number((await row('select count(*) from orders')).count),0);
+ });
+ await check('HTTP concorrente reserva última unidade, recupera retry e gera QR Pix fictício',async()=>{
+   await db.exec(`update products set stock=1 where id='${ids.a}'`);const a=payload(),b=payload();
+   const r=await Promise.all([post('/api/orders',a),post('/api/orders',b)]);assert.deepEqual(r.map(x=>x.status).sort(),[200,409]);
+   const winner=r[0].status===200?0:1;first=r[winner].data.order.id;
+   assert.match(r[winner].data.qrCode,/^data:image\/png/);
+   assert.equal((await post('/api/orders',winner===0?a:b)).data.order.id,first);
+   assert.equal(Number((await row('select stock from products where id=$1',[ids.a])).stock),0);
+ });
+ async function paymentForm(id,amount,reference){await p.goto(base+'/admin/pedidos/'+id,{waitUntil:'networkidle'});const form=p.locator('form').filter({has:p.getByRole('heading',{name:'Conferência manual do Pix'})});await form.locator('[name=received_amount]').fill(String(amount));await form.locator('[name=bank_reference]').fill(reference);const reason=form.locator('[name=exception_reason]');if(await reason.count())await reason.fill('Conferência fictícia no extrato local');await form.locator('[name=bank_verified]').check();await form.getByRole('button',{name:'Confirmar pagamento',exact:true}).click();}
+ await check('painel recusa valor errado e confirma manualmente com referência do extrato',async()=>{
+   await paymentForm(first,19,'BANK-HTTP-FIRST');await p.getByRole('alert').filter({hasText:'valor recebido'}).waitFor();
+   assert.equal((await row('select status from orders where id=$1',[first])).status,'awaiting_payment');
+   await paymentForm(first,20,'BANK-HTTP-FIRST');await waitStatus(first,'paid');
+   assert.equal((await row('select status from orders where id=$1',[first])).status,'paid');
+   assert.equal(Number((await row('select count(*) from order_payment_confirmations')).count),1);
+   const retry=payload();retry.checkoutToken=(await row('select checkout_token from orders where id=$1',[first])).checkout_token;
+   assert.equal((await post('/api/orders',retry)).data.qrCode,'');
+ });
+ await check('segundo pedido aceita comprovante sem confirmar banco e bloqueia referência duplicada',async()=>{
+   await db.exec(`update products set stock=1 where id='${ids.a}'`);second=(await post('/api/orders',payload())).data.order.id;
+   const proof=ids.admin+'/'+second+'/comprovante.png';await db.query("insert into storage.objects(bucket_id,name) values('payment-proofs',$1)",[proof]);
+   assert.equal((await post('/api/orders/'+second+'/proof',{path:proof})).status,200);
+   assert.equal((await row('select status from orders where id=$1',[second])).status,'proof_submitted');
+   await paymentForm(second,20,'BANK-HTTP-FIRST');await p.getByRole('alert').filter({hasText:'já foi registrada'}).waitFor();
+   assert.equal((await row('select status from orders where id=$1',[second])).status,'proof_submitted');
+ });
+ await check('cancelar pagamento não cria reembolso; formulário registra devolução parcial uma vez',async()=>{
+   await p.goto(base+'/admin/pedidos/'+first,{waitUntil:'networkidle'});await p.getByRole('button',{name:'Cancelar pedido',exact:true}).click();await waitStatus(first,'cancelled');
+   assert.equal(Number((await row('select count(*) from order_refunds')).count),0);
+   const form=p.locator('form').filter({has:p.getByRole('button',{name:'Registrar devolução realizada'})});
+   await form.locator('[name=amount]').fill('5');await form.locator('[name=bank_reference]').fill('REFUND-HTTP-FIRST');await form.locator('[name=reason]').fill('Devolução parcial fictícia já conferida');await form.locator('[name=bank_verified]').check();await form.getByRole('button',{name:'Registrar devolução realizada'}).click();
+   for(let n=0;n<100;n++){if(Number((await row('select count(*) from order_refunds')).count))break;await p.waitForTimeout(100);}assert.equal(Number((await row('select sum(amount) total from order_refunds')).total),5);
+ });
+ await check('Game Pass local: criar, conferir Pix, executar com idempotência e concluir fornecedor',async()=>{
+   const r=await post('/api/robux/orders',{amount:1000,mode:'tax_not_paid',link:'https://www.roblox.com/game-pass/123456',checkoutToken:randomUUID(),expectedPrice:36});assert.equal(r.status,200,JSON.stringify(r.data));gamepass=r.data.order.id;
+   await paymentForm(gamepass,36,'BANK-GAMEPASS-HTTP');await waitStatus(gamepass,'paid');
+   await p.goto(base+'/admin/pedidos/'+gamepass,{waitUntil:'networkidle'});await p.getByRole('button',{name:'Comprar e entregar',exact:true}).click();
+   await p.getByText('Compra enviada. O status é consultado').waitFor();assert.equal(executions.size,1);
+   providerStatus='COMPLETED';await db.query("update robux_orders set last_checked_at=now()-interval '30 seconds' where order_id=$1",[gamepass]);
+   const sync=await fetch(base+'/api/robux/orders/'+gamepass+'/status',{headers:{Cookie:cookie}});assert.equal(sync.status,200);
+   assert.equal((await row('select status from orders where id=$1',[gamepass])).status,'delivered');
+ });
+ await check('falha simulada de e-mail não desfaz pagamento nem entrega e fica recuperável',async()=>{
+   assert.equal((await row('select status from orders where id=$1',[gamepass])).status,'delivered');
+   const jobs=await db.query('select status from order_email_jobs');assert.ok(jobs.rows.some(x=>['failed','uncertain'].includes(x.status)));
+ });
+ await check('painel registra Pix tardio após cancelamento sem reabrir nem entregar novamente',async()=>{
+   await p.goto(base+'/admin/pedidos/'+first,{waitUntil:'networkidle'});
+   await p.getByText('Registrar Pix excepcional (tardio, repetido ou divergente)',{exact:true}).click();
+   const form=p.locator('form').filter({has:p.getByRole('button',{name:'Registrar recebimento excepcional'})});
+   await form.locator('[name=amount]').fill('20');await form.locator('[name=bank_reference]').fill('CREDIT-HTTP-LATE');await form.locator('[name=reason]').fill('Pix tardio fictício recebido depois do cancelamento');await form.locator('[name=bank_verified]').check();await form.getByRole('button',{name:'Registrar recebimento excepcional'}).click();
+   await p.getByRole('status').filter({hasText:'Recebimento excepcional registrado'}).waitFor();
+   assert.equal(Number((await row('select sum(amount) total from order_additional_payments')).total),20);
+   assert.equal((await row('select status from orders where id=$1',[first])).status,'cancelled');assert.equal(executions.size,1);
+ });
+ await check('cadastro com confirmação, reenvio e recuperação usam apenas Auth simulado',async()=>{
+   const authContext=await context();await authContext.clearCookies();const a=await authContext.newPage();const authTrace=[];
+   a.on('response',r=>{const u=new URL(r.url());if(u.pathname.startsWith('/auth/v1/'))authTrace.push({path:u.pathname,status:r.status()});});
+   a.on('requestfailed',r=>{const u=new URL(r.url());if(u.pathname.startsWith('/auth/v1/'))authTrace.push({path:u.pathname,failed:r.failure()?.errorText});});
+   await a.goto(base+'/login',{waitUntil:'networkidle'});await a.getByRole('button',{name:'Criar conta',exact:true}).first().click();
+   await a.getByLabel('E-mail',{exact:true}).fill('ficticio@example.invalid');await a.getByLabel('Confirmar e-mail',{exact:true}).fill('ficticio@example.invalid');await a.getByPlaceholder('Crie uma senha').fill('SomenteTeste123!');
+   await a.getByRole('button',{name:'Criar conta',exact:true}).last().click();await a.getByRole('status').filter({hasText:'Confira seu e-mail'}).waitFor();
+   await a.getByRole('button',{name:'Reenviar confirmação de e-mail'}).click();await a.getByRole('status').filter({hasText:'cadastro pendente'}).waitFor();
+   await a.goto(base+'/forgot-password');await a.locator('#recovery-email').fill('ficticio@example.invalid');await a.getByRole('button',{name:'Enviar link de recuperação'}).click();await a.getByText('Se existir uma conta com esse e-mail').waitFor();
+   await a.goto(base+'/auth/confirm?token_hash=expired&type=recovery');await a.getByText('Esse link de recuperação é inválido ou expirou.').waitFor();
+   await a.goto(base+'/auth/confirm?token_hash=local-test&type=recovery');
+   await a.getByPlaceholder('Nova senha',{exact:true}).waitFor({timeout:4000}).catch(async()=>{
+     const c=(await authContext.cookies()).find(c=>c.name==='sb-127-auth-token');let meta={};try{const s=JSON.parse(Buffer.from(c.value.replace(/^base64-/,''),'base64url').toString());meta={keys:Object.keys(s),hasAccess:!!s.access_token,hasUser:!!s.user,expiryFuture:s.expires_at>Date.now()/1000,httpOnly:c.httpOnly,path:c.path};}catch{}
+     throw new Error('Recuperação em '+new URL(a.url()).pathname+': '+(await a.locator('main').innerText()).slice(0,500)+'; sessão fictícia: '+JSON.stringify(meta)+'; cookie visível: '+await a.evaluate(()=>document.cookie.includes('sb-127-auth-token='))+'; Auth: '+JSON.stringify(authTrace));
+   });
+   await a.getByPlaceholder('Nova senha',{exact:true}).fill('OutraSenhaFicticia123!');await a.getByPlaceholder('Confirmar nova senha').fill('OutraSenhaFicticia123!');await a.locator('button[type=submit]').click();await a.getByText('Senha alterada com sucesso!').waitFor();
+   await authContext.close();
+ });
+ await check('cron recusa chamada sem segredo e executa manutenção isolada sem compras',async()=>{
+   assert.equal((await fetch(base+'/api/maintenance/chat-attachments')).status,401);const before=executions.size;
+   const response=await fetch(base+'/api/maintenance/chat-attachments',{headers:{Authorization:'Bearer local-cron-test'}});assert.equal(response.status,200,await response.text());assert.equal(executions.size,before);
+ });
+ await check('pedido histórico de modalidade encerrada não emite outro Pix nem entra no checkout de produtos',async()=>{
+   const id=randomUUID(),token=randomUUID();await db.query("insert into orders(id,order_code,user_id,game_nickname,total,pix_payload,checkout_token,order_type) values($1,$2,$3,'ClienteTeste',20,'000201-ficticio-nao-pagar',$4,'robux_account')",[id,'HIST-'+id,ids.admin,token]);
+   const response=await fetch(base+'/api/orders/'+id,{headers:{Cookie:cookie}});assert.equal(response.status,410);
+   const retry=payload();retry.checkoutToken=token;assert.equal((await post('/api/orders',retry)).status,409);
+ });
+ await check('relatório separa recebimentos, devoluções e cancelamento; datas inválidas têm mensagem segura',async()=>{
+   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+   await p.setViewportSize({width:390,height:900});await p.goto(base+'/admin/relatorios?de='+today.slice(0,8)+'01&ate='+today,{waitUntil:'networkidle'});
+   const panel=p.locator('section').filter({has:p.getByRole('heading',{name:'Movimentações financeiras registradas'})});const text=await panel.innerText();assert.match(text,/76,00/);assert.match(text,/5,00/);assert.match(text,/71,00/);
+   assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+   await p.goto(base+'/admin/relatorios?de=2026-99-99&ate='+today);await p.getByRole('alert').filter({hasText:'Confira as datas'}).waitFor();
+ });
+ await check('cliente no navegador: carrinho, checkout, Pix e upload de comprovante até o histórico',async()=>{
+   await p.evaluate(()=>{sessionStorage.removeItem('cosmic-checkout-draft-v2');localStorage.removeItem('cosmic-cart');});
+   await p.goto(base+'/produto/buddha',{waitUntil:'networkidle'});await p.getByRole('button',{name:/^Adicionar Buddha(?: · .*?)? ao carrinho$/}).click();await p.waitForTimeout(100);
+   await p.goto(base+'/carrinho',{waitUntil:'networkidle'});await p.getByRole('link',{name:/^Ver Buddha(?: · .*?)?$/}).waitFor();
+   await p.goto(base+'/checkout',{waitUntil:'networkidle'});await p.getByLabel(/^Nickname no jogo/).fill('ClienteFluxo');await p.getByRole('button',{name:'Continuar para o Pix →'}).click();
+   await p.locator('input[type=file]').first().waitFor({state:'attached'});await p.locator('input[type=file]').first().setInputFiles({name:'comprovante.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aVv0AAAAASUVORK5CYII=','base64')});
+   await p.getByRole('button',{name:'Enviar comprovante →'}).click();await p.waitForURL(/\/pedidos\/[0-9a-f-]+\?proof=sent/);
+   const o=await row("select id,status,proof_path from orders where game_nickname='ClienteFluxo'");assert.equal(o.status,'proof_submitted');assert.ok(o.proof_path);assert.equal(Number((await row('select stock from products where id=$1',[ids.b])).stock),9);
+   assert.equal(Number((await row('select count(*) from order_payment_confirmations where order_id=$1',[o.id])).count),0);
+ });
+ for(const width of [390,1440]){await p.setViewportSize({width,height:900});await p.goto(base+'/admin/pedidos/'+first,{waitUntil:'networkidle'});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);fs.mkdirSync('/workspace/scratch/cosmic-final',{recursive:true});await p.screenshot({path:'/workspace/scratch/cosmic-final/financeiro-'+width+'.png',fullPage:true});}
+ await ctx.close();const report={results,adapterErrors,browserErrors,externalRequests:[...new Set(externalRequests)],isolation:'Next compilado, HTTP Supabase local/PGlite, fornecedor local idempotente, SMTP desconfigurado intencionalmente; sem pagamentos ou notificações externas'};
+ fs.writeFileSync(path.join(root,'qa/results/final-purchase-http.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
+ if(results.some(r=>r.status==='FAIL')||adapterErrors.length||browserErrors.length)process.exitCode=1;
+}finally{if(browser)await browser.close();if(app&&app.exitCode===null){app.kill();await once(app,'exit')}if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}if(db)await db.close()}})().catch(e=>{console.error(e.stack);process.exitCode=1});

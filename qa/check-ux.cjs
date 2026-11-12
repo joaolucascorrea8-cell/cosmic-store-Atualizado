@@ -39,5 +39,6 @@ for(const width of [390,1440]){
 }
 assert.ok(checks.every(c=>Object.values(c).every(v=>v!==false)));assert.ok(observations.every(o=>!o.overflow&&!o.broken&&!o.errors.length));
 fs.writeFileSync(out+'/observations.json',JSON.stringify({observations,checks,scope:'Interface com fixture sintético; nenhuma geração de pedido ou cobrança real'},null,2));console.log(JSON.stringify({checks,screenshots:out+'/after'},null,2));
+if(process.argv.some(x=>x.startsWith('--report=')))fs.writeFileSync(path.resolve(root,process.argv.find(x=>x.startsWith('--report=')).slice(9)),JSON.stringify({observations,checks,screenshots:out+'/after'},null,2));
 `+source.slice(end);
 const filename=root+'/qa/ux-inspection-virtual.cjs';const m=new Module(filename,module);m.filename=filename;m.paths=Module._nodeModulePaths(root+'/qa');m._compile(source,filename);
