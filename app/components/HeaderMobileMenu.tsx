@@ -69,9 +69,6 @@ export default function HeaderMobileMenu({
         <Link href="/" onClick={closeMenu} className={linkClass}>
           Início
         </Link>
-        <Link href="/produtos" onClick={closeMenu} className={linkClass}>
-          Produtos
-        </Link>
         <Link href="/jogos" onClick={closeMenu} className={linkClass}>
           Jogos
         </Link>

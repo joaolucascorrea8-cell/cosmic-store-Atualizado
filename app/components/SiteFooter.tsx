@@ -23,7 +23,6 @@ export default function SiteFooter() {
         <div>
           <h2 className="footer-title">Explorar</h2>
           <nav className="footer-links">
-            <Link href="/produtos">Todos os produtos</Link>
             <Link href="/jogos">Jogos</Link>
             <Link href="/robux">Robux</Link>
             <Link href="/servidores">Servidores</Link>
