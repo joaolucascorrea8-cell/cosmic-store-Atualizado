@@ -38,11 +38,11 @@ export function readRobuxAmount(value: unknown) {
 }
 
 export function gamepassForDesiredNetRobux(netRobux: number) {
-  return Math.ceil(netRobux / ROBLOX_CREATOR_SHARE);
+  return Math.ceil(netRobux * 10 / 7);
 }
 
 export function estimatedNetFromGamepass(gamepassRobux: number) {
-  return Math.floor(gamepassRobux * ROBLOX_CREATOR_SHARE);
+  return Math.floor(gamepassRobux * 7 / 10);
 }
 
 export function robuxBreakdown(
@@ -126,3 +126,10 @@ export type PriceBatch = {
   expires_at: string;
   created_at: string;
 };
+
+// A ByRobux informa o custo efetivo em centavos, inclusive para passes pequenos.
+export function supplierQuoteFits(cost: number, rate: number, robux: number, sale: number, settings: RobuxPricingSettings) {
+  if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(rate) || rate <= 0 || rate > settings.maxSupplierK) return false;
+  return effectiveMarginPerThousand(sale, robux, rate) >= settings.minMarginPerThousand &&
+    Math.round(cost * 100) <= Math.round((sale - robux * settings.minMarginPerThousand / 1000) * 100);
+}

@@ -6,7 +6,7 @@
  const fd=fs.openSync('/tmp/cosmic-purchase-server.log','w');app=spawn(process.execPath,[path.join(root,'node_modules/next/dist/bin/next'),'start','-H','127.0.0.1','-p','3140'],{cwd:root,env:testEnv,stdio:['ignore',fd,fd]});fs.closeSync(fd);
  for(let n=0;n<100;n++){try{await fetch(base+'/robots.txt');break}catch{}await new Promise(r=>setTimeout(r,100));}
  browser=await require('./chromium.cjs')();
- const ctx=await context();const p=await ctx.newPage();
+ const ctx=await context();const p=await ctx.newPage();p.setDefaultTimeout(15000);
  const cookie='sb-127-auth-token='+cookieValue;
  async function post(route,body,authorized=true){const r=await fetch(base+route,{method:'POST',headers:{'Content-Type':'application/json',...(authorized?{Cookie:cookie}:{})},body:JSON.stringify(body)});return {status:r.status,data:await r.json()};}
  const payload=()=>({checkoutToken:randomUUID(),gameNickname:'ClienteTeste',items:[{id:ids.a,kind:'product',quantity:1,price:20}],expectedTotal:20});
@@ -134,7 +134,7 @@
    await p.goto(base+'/admin/relatorios?de=2026-99-99&ate='+today);await p.getByRole('alert').filter({hasText:'Confira as datas'}).waitFor();
  });
  await check('cliente no navegador: carrinho, checkout, Pix e upload de comprovante até o histórico',async()=>{
-   await p.evaluate(()=>{sessionStorage.removeItem('cosmic-checkout-draft-v2');localStorage.removeItem('cosmic-cart');});
+
    await p.goto(base+'/produto/buddha',{waitUntil:'networkidle'});await p.getByRole('button',{name:/^Adicionar Buddha(?: · .*?)? ao carrinho$/}).click();await p.waitForTimeout(100);
    await p.goto(base+'/carrinho',{waitUntil:'networkidle'});await p.getByRole('link',{name:/^Ver Buddha(?: · .*?)?$/}).waitFor();
    await p.goto(base+'/checkout',{waitUntil:'networkidle'});await p.getByLabel(/^Nickname no jogo/).fill('ClienteFluxo');await p.getByRole('button',{name:'Continuar para o Pix →'}).click();
@@ -142,6 +142,152 @@
    await p.getByRole('button',{name:'Enviar comprovante →'}).click();await p.waitForURL(/\/pedidos\/[0-9a-f-]+\?proof=sent/);
    const o=await row("select id,status,proof_path from orders where game_nickname='ClienteFluxo'");assert.equal(o.status,'proof_submitted');assert.ok(o.proof_path);assert.equal(Number((await row('select stock from products where id=$1',[ids.b])).stock),9);
    assert.equal(Number((await row('select count(*) from order_payment_confirmations where order_id=$1',[o.id])).count),0);
+ });
+ async function openCartWith(slug, name) {
+   await p.goto(base+'/produto/'+slug);
+   await p.getByRole('button',{name:new RegExp('^Adicionar '+name+'(?: · .*?)? ao carrinho$')}).click();
+   await p.getByRole('link',{name:'Ver carrinho →'}).click();
+   await p.getByRole('link',{name:/Ir para pagamento/}).click();
+   await p.getByLabel(/^Nickname no jogo/).waitFor();
+ }
+ async function createFromCart(nickname) {
+   await p.getByLabel(/^Nickname no jogo/).fill(nickname);
+   await p.getByRole('button',{name:'Continuar para o Pix →'}).click();
+   await p.getByAltText('QR Code Pix do seu pedido').waitFor();
+   return new URL(p.url()).searchParams.get('pedido');
+ }
+ for (const width of [390,1440]) await check('compras consecutivas e retomada explícita na mesma aba, largura '+width, async()=>{
+   await p.setViewportSize({width,height:900});
+   await db.query('update products set stock=10,is_active=true where id in ($1,$2)',[ids.a,ids.b]);
+   await openCartWith('dragon','Dragon');
+   const old=await createFromCart('ClienteSequencia');
+   await p.reload();
+   await p.getByAltText('QR Code Pix do seu pedido').waitFor();
+   await db.query("select transition_store_order($1,$2,'cancelled','awaiting_payment','')",[old,ids.admin]);
+   await p.evaluate(()=>window.dispatchEvent(new Event('focus')));
+   await p.waitForURL(base+'/pedidos/'+old);
+   assert.equal(Number((await row('select stock from products where id=$1',[ids.a])).stock),10);
+   const closed=await fetch(base+'/api/orders/'+old,{headers:{Cookie:cookie}}).then(r=>r.json());
+   assert.equal(closed.qrCode,'');assert.equal(closed.order.pix_payload,null);
+   // Imita o rascunho já existente em um navegador que recebeu a atualização da loja.
+   await p.evaluate(id=>sessionStorage.setItem('cosmic-checkout-draft-v2',JSON.stringify({orderId:id,nickname:'Antigo'})),old);
+   await openCartWith('buddha','Buddha');
+   assert.equal(await p.getByLabel(/^Nickname no jogo/).inputValue(),'');
+   const next=await createFromCart('ClienteSequencia');assert.notEqual(next,old);
+   await p.goto(base+'/checkout?pedido='+old);await p.waitForURL(base+'/pedidos/'+old);
+   await openCartWith('buddha','Buddha');
+   await p.goto(base+'/checkout?pedido='+next);await p.getByAltText('QR Code Pix do seu pedido').waitFor();
+   await p.locator('input[type=file]').first().setInputFiles({name:'teste.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 fixture')});
+   await p.getByRole('button',{name:'Enviar comprovante →'}).click();await p.waitForURL(url=>url.pathname==='/pedidos/'+next && url.searchParams.get('proof')==='sent');
+   await p.goto(base+'/carrinho');await p.getByRole('link',{name:/Ir para pagamento/}).click();
+   const third=await createFromCart('ClienteSequencia');assert.notEqual(third,next);
+   await p.goto(base+'/checkout?pedido=invalido');await p.getByRole('alert').filter({hasText:'Pedido inválido'}).waitFor();
+   assert.equal(await p.getByLabel(/^Nickname no jogo/).count(),0);
+ });
+ await check('resposta perdida depois do commit recupera última unidade e cupom após recarga',async()=>{
+   await db.query('update products set stock=1 where id=$1',[ids.a]);
+   await db.query("insert into store_coupons(code,kind,amount,is_active,max_uses) values('RETRY2','fixed',2,true,1)");
+   await openCartWith('dragon','Dragon');
+   await p.getByLabel(/^Nickname no jogo/).fill('ClienteRetry');
+   await p.locator('#coupon-code').fill('RETRY2');await p.getByRole('button',{name:'Aplicar',exact:true}).click();
+   await p.getByText('Cupom RETRY2',{exact:true}).waitFor();
+   await p.route('**/api/orders',async route=>{const response=await route.fetch();assert.equal(response.status(),200);await route.abort('failed');},{times:1});
+   await p.getByRole('button',{name:'Continuar para o Pix →'}).click();
+   await p.getByRole('button',{name:'Retomar tentativa de compra'}).waitFor();
+   await p.goto(base+'/carrinho');await p.getByRole('link',{name:'Retomar tentativa de compra'}).click();
+   await p.waitForURL(base+'/checkout');await p.getByRole('button',{name:'Retomar tentativa de compra'}).waitFor();
+   await p.reload();await p.getByRole('button',{name:'Retomar tentativa de compra'}).click();
+   await p.getByAltText('QR Code Pix do seu pedido').waitFor();
+   const orders=(await db.query("select id,checkout_token,total from orders where game_nickname='ClienteRetry'")).rows;
+   assert.equal(orders.length,1);assert.equal(Number(orders[0].total),18);
+   assert.equal(Number((await row('select stock from products where id=$1',[ids.a])).stock),0);
+   const changed={...payload(),checkoutToken:orders[0].checkout_token};
+   assert.equal((await post('/api/orders',changed)).status,409);
+ });
+ await check('Game Pass rejeita token reaproveitado e pausa ao perder configurações',async()=>{
+   const body={amount:1000,mode:'tax_not_paid',link:'https://www.roblox.com/game-pass/123456',checkoutToken:randomUUID(),expectedPrice:36};
+   settingsUnavailable=true;
+   try {assert.equal((await post('/api/robux/orders',body)).status,503);} finally {settingsUnavailable=false;}
+   body.checkoutToken=(await row('select checkout_token from orders where id=$1',[gamepass])).checkout_token;
+   assert.equal((await post('/api/robux/orders',body)).data.order.id,gamepass);
+   assert.equal((await post('/api/robux/orders',{...body,amount:500})).status,409);
+   assert.equal(executions.size,1);
+ });
+ await check('recusa e reenvio preservam o arquivo antigo e mantêm o pagamento em conferência', async()=>{
+   const order=await row("select id,proof_path from orders where game_nickname='ClienteFluxo'");
+   await p.goto(base+'/admin/pedidos/'+order.id);await p.getByLabel('Motivo da recusa').fill('Imagem ilegível na homologação');
+   await p.getByRole('button',{name:'Recusar comprovante'}).click();await waitStatus(order.id,'proof_rejected');
+   assert.equal((await post('/api/orders/'+order.id+'/proof',{path:order.proof_path})).status,409);
+   await p.goto(base+'/pedidos/'+order.id);await p.getByRole('heading',{name:'Enviar novo comprovante'}).waitFor();
+   await p.locator('input[type=file]').first().setInputFiles({name:'corrigido.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 fixture')});
+   await p.getByRole('button',{name:'Reenviar comprovante'}).click();await waitStatus(order.id,'proof_submitted');
+   const current=await row('select proof_path,paid_at from orders where id=$1',[order.id]);
+   assert.notEqual(current.proof_path,order.proof_path);assert.equal(current.paid_at,null);
+   assert.equal(Number((await row('select count(*) from storage.objects where name in ($1,$2)',[order.proof_path,current.proof_path])).count),2);
+ });
+ await check('Pix excepcional bloqueia outro QR e orienta o cliente a aguardar conferência',async()=>{
+   const o=await row("select id from orders where status='awaiting_payment' order by created_at desc");
+   await db.query("select record_additional_store_payment($1,$2,$3,5,'CREDIT-PENDING-TEST','Pix excepcional fictício',true)",[o.id,ids.admin,randomUUID()]);
+   const get=await fetch(base+'/api/orders/'+o.id,{headers:{Cookie:cookie}}).then(r=>r.json());
+   assert.equal(get.payable,false);assert.equal(get.order.pix_payload,null);assert.equal(get.qrCode,'');
+   await p.goto(base+'/checkout?pedido='+o.id);await p.waitForURL(base+'/pedidos/'+o.id);
+   await p.getByText('Há um Pix registrado',{exact:false}).waitFor();
+   assert.equal(await p.getByRole('link',{name:'Abrir Pix e enviar comprovante'}).count(),0);
+ });
+ await check('troca de conta preserva carrinhos independentes e impede retomada do pedido alheio',async()=>{
+   await db.query('update products set stock=5 where id=$1',[ids.b]);
+   await openCartWith('buddha','Buddha');
+   const other={...session,user:{...user,id:ids.user,email:'outro@example.invalid'},
+     access_token:enc({alg:'HS256',typ:'JWT'})+'.'+enc({sub:ids.user,role:'authenticated',exp:session.expires_at})+'.local-test'};
+   await p.goto(base+'/suporte');await p.locator('#support-subject:visible').fill('Rascunho privado de A');
+   await p.waitForFunction(()=>Object.values(sessionStorage).some(v=>v.includes('Rascunho privado de A')));
+   await ctx.addCookies([{name:'sb-127-auth-token',value:'base64-'+enc(other),url:base}]);
+   await p.goto(base+'/suporte');await p.locator('#support-subject:visible').waitFor();assert.equal(await p.locator('#support-subject:visible').inputValue(),'');
+   await p.goto(base+'/carrinho');await p.getByRole('heading',{name:'Seu carrinho está vazio'}).waitFor();
+   const forbidden=await p.request.get(base+'/api/orders/'+first);assert.equal(forbidden.status(),404);
+   await ctx.addCookies([{name:'sb-127-auth-token',value:cookieValue,url:base}]);
+   await p.goto(base+'/suporte');await p.waitForFunction(()=>[...document.querySelectorAll('#support-subject')].some(el=>el.getClientRects().length && el.value==='Rascunho privado de A'));
+   await p.goto(base+'/carrinho');await p.getByRole('link',{name:/Ir para pagamento/}).waitFor();
+   await db.query('update products set price=32,stock=2 where id=$1',[ids.b]);await p.reload();
+   await p.getByRole('status').filter({hasText:'Atualizamos o preço'}).waitFor();
+   await db.query('update products set is_active=false where id=$1',[ids.b]);await p.reload();
+   await p.getByText('Indisponível. Remova este item para continuar.').waitFor();
+   assert.equal(await p.getByRole('link',{name:/Ir para pagamento/}).count(),0);
+   await db.query('update products set is_active=true where id=$1',[ids.b]);await p.reload();
+   await p.getByRole('link',{name:/Ir para pagamento/}).click();
+   const after=await createFromCart('CarrinhoAtualizado');
+   assert.equal(Number((await row('select total from orders where id=$1',[after])).total),32);
+ });
+ await check('nova compra após entrega na mesma sessão preserva histórico e usa outro token',async()=>{
+   await db.query('update products set stock=5,is_active=true where id=$1',[ids.b]);
+   await openCartWith('buddha','Buddha');const original=await createFromCart('DepoisDaEntrega');
+   const previous=await row('select total,checkout_token from orders where id=$1',[original]);
+   await paymentForm(original,Number(previous.total),'BANK-REPEAT-FINISHED');await waitStatus(original,'paid');
+   await db.query("select transition_store_order($1,$2,'preparing_delivery','paid','')",[original,ids.admin]);
+   await db.query("insert into order_messages(order_id,user_id,message,attachment_path,attachment_type) values($1,$2,'Entrega fictícia','orders/entrega.webp','image/webp')",[original,ids.admin]);
+   await db.query("select transition_store_order($1,$2,'delivered','preparing_delivery','')",[original,ids.admin]);
+   await p.goto(base+'/checkout?pedido='+original);await p.waitForURL(base+'/pedidos/'+original);
+   await openCartWith('buddha','Buddha');const id=await createFromCart('DepoisDaEntrega');
+   assert.notEqual(id,original);assert.notEqual((await row('select checkout_token from orders where id=$1',[id])).checkout_token,previous.checkout_token);
+   assert.equal((await row('select status from orders where id=$1',[original])).status,'delivered');
+ });
+ await check('compra de Game Pass no navegador, resposta perdida e nova compra idêntica',async()=>{
+   const before=Number((await row("select count(*) from orders where order_type='robux'")).count);
+   async function validatePass(){
+     await p.goto(base+'/robux');await p.getByRole('button',{name:/^Sem taxa paga/}).click();
+     await p.getByLabel('Link do GamePass').fill('https://www.roblox.com/game-pass/123456');
+     await p.getByRole('button',{name:'Verificar GamePass'}).click();
+     await p.getByText('✓ GamePass verificado').waitFor();
+   }
+   await validatePass();
+   await p.route('**/api/robux/orders',async route=>{const response=await route.fetch();assert.equal(response.status(),200);await route.abort('failed');},{times:1});
+   await p.getByRole('button',{name:'Comprar com Pix →'}).click();await p.getByRole('alert').waitFor();
+   await validatePass();await p.getByRole('button',{name:'Comprar com Pix →'}).click();
+   await p.getByAltText('QR Code Pix do seu pedido').waitFor();const one=new URL(p.url()).searchParams.get('pedido');
+   await validatePass();await p.getByRole('button',{name:'Comprar com Pix →'}).click();
+   await p.getByAltText('QR Code Pix do seu pedido').waitFor();assert.notEqual(new URL(p.url()).searchParams.get('pedido'),one);
+   assert.equal(Number((await row("select count(*) from orders where order_type='robux'")).count)-before,2);
+   assert.equal(executions.size,1);
  });
  for(const width of [390,1440]){await p.setViewportSize({width,height:900});await p.goto(base+'/admin/pedidos/'+first,{waitUntil:'networkidle'});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);fs.mkdirSync('/workspace/scratch/cosmic-final',{recursive:true});await p.screenshot({path:'/workspace/scratch/cosmic-final/financeiro-'+width+'.png',fullPage:true});}
  await ctx.close();const report={results,adapterErrors,browserErrors,externalRequests:[...new Set(externalRequests)],isolation:'Next compilado, HTTP Supabase local/PGlite, fornecedor local idempotente, SMTP desconfigurado intencionalmente; sem pagamentos ou notificações externas'};

@@ -2,7 +2,8 @@
   "git": {
     "deploymentEnabled": {
       "audit/cosmic-store-20261111": false,
-      "perf/cosmic-store-20261112": false
+      "perf/cosmic-store-20261112": false,
+      "fix/checkout-compras-consecutivas": false
     }
   },
   "crons": [

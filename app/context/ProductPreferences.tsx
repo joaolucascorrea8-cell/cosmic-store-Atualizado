@@ -34,25 +34,16 @@ export function ProductPreferencesProvider({
   const identity = useRef<string | null>(null);
   useEffect(() => {
     let active = true;
-    void client.auth.getUser().then(({ data }) => {
-      if (active) {
-        identity.current = data.user?.id ?? null;
-        setUserId(data.user?.id ?? null);
-        if (!data.user) setLoaded(true);
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      const nextUser = session?.user.id ?? null;
+      if (identity.current !== nextUser || !nextUser) {
+        generation.current++;
+        setValues({});
+        setLoaded(!nextUser);
       }
-    });
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((_event, session) => {
-      if (active) {
-        identity.current = session?.user.id ?? null;
-        setUserId(session?.user.id ?? null);
-        if (!session) {
-          generation.current++;
-          setValues({});
-          setLoaded(true);
-        }
-      }
+      identity.current = nextUser;
+      setUserId(nextUser);
     });
     return () => {
       active = false;

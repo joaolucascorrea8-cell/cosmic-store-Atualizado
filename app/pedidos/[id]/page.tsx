@@ -3,6 +3,7 @@ import { readProductContexts } from "@/lib/product-context-server";
 import DeliveryInstructions from "@/app/components/DeliveryInstructions";
 import OrderDiscount from "@/app/components/OrderDiscount";
 import RepurchaseButton from "./RepurchaseButton";
+import { gamePassPendingTime } from "@/lib/robux-settings";
 import { deliveryText } from "@/lib/store-service";
 import Link from "next/link";
 import CopyButton from "@/app/components/CopyButton";
@@ -35,7 +36,6 @@ type RobuxOrderRow = {
   roblox_username: string;
   quoted_cosmic_k: number;
   supplier_status: string;
-  supplier_error_message: string | null;
   executed_at: string | null;
   completed_at: string | null;
 };
@@ -58,26 +58,29 @@ export default async function OrderPage({
   } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/pedidos/${id}`);
 
-  const { data: order } = await supabase
+  const { data: order, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_type,order_items(product_id,product_name,unit_price,quantity,delivery_instructions),robux_orders(mode,requested_robux,gamepass_robux,net_robux,gamepass_url,gamepass_id,roblox_username,quoted_cosmic_k,supplier_status,supplier_error_message,executed_at,completed_at)",
+      "id,order_code,status,total,subtotal,discount_total,coupon_code,delivery_hours,game_nickname,created_at,paid_at,delivered_at,delivery_due_at,chat_closed_at,rejection_reason,payment_email_sent_at,delivery_email_sent_at,order_type,order_additional_payments(amount),order_items(product_id,product_name,unit_price,quantity,delivery_instructions),robux_orders(mode,requested_robux,gamepass_robux,net_robux,gamepass_url,gamepass_id,roblox_username,quoted_cosmic_k,supplier_status,executed_at,completed_at)",
     )
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
+  if (orderError) throw new Error("Não foi possível consultar o pedido.");
   if (!order) notFound();
 
   const { contexts: itemContexts } = await readProductContexts(supabase, (order.order_items ?? []).flatMap(item => item.product_id ? [item.product_id] : []));
+  const hasReceipt = Boolean(order.order_additional_payments?.length);
   const isAccount = order.order_type === "robux_account";
   const { data: accountPolicy } = isAccount ? await supabase.from("robux_account_policy_acceptances").select("policy_body,accepted_at").eq("order_id", id).maybeSingle() : { data: null };
   const { data: accountDetails } = isAccount ? await supabase.from("robux_account_order_details").select("robux,cosmic_k,sale_price,fulfillment_status").eq("order_id", id).maybeSingle() : { data: null };
   const robuxOrder = relation(order.robux_orders as RobuxOrderRow | RobuxOrderRow[] | null);
   const isRobux = order.order_type === "robux" && Boolean(robuxOrder);
+  const pendingTime = isRobux && order.status === "delivered" ? await gamePassPendingTime() : null;
   const supplierStatus = robuxOrder?.supplier_status ?? "";
   const status = isAccount && ["paid", "preparing_delivery"].includes(order.status)
     ? { label: accountDetails?.fulfillment_status === "review" ? "Entrega em revisão" : accountDetails?.fulfillment_status === "acquired" ? "Conta em preparação" : "Aguardando aquisição da conta", className: "text-violet-200 bg-violet-500/10" }
-    : isRobux
+    : isRobux && order.status !== "cancelled"
     ? supplierStatus === "COMPLETED" || order.status === "delivered"
       ? { label: "GamePass comprado", className: "text-emerald-300 bg-emerald-500/10" }
       : supplierStatus === "PENDING"
@@ -182,9 +185,9 @@ export default async function OrderPage({
               <div className={`rounded-xl border p-3 ${supplierStatus === "COMPLETED" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-white/[.02] text-zinc-500"}`}>Robux pendentes</div>
             </div>
           ) : (
-            <OrderProgress status={order.status} />
+            <OrderProgress status={order.status} showPaymentInstruction={!hasReceipt && !isAccount && !order.paid_at} />
           )}
-          {order.delivery_hours && !isRobux && (
+          {order.delivery_hours && !isRobux && !["delivered", "cancelled"].includes(order.status) && (
             <p className="mt-3 text-xs text-zinc-400">
               {deliveryText(order.delivery_hours)}
             </p>
@@ -260,7 +263,7 @@ export default async function OrderPage({
               {(supplierStatus === "COMPLETED" || order.status === "delivered") && (
                 <div className="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm leading-6 text-emerald-100">
                   <strong className="block">✓ GamePass comprado com sucesso</strong>
-                  <span className="mt-1 block">Agora o Roblox processa a liberação. Os Robux podem aparecer como <strong>pendentes</strong> e normalmente levam cerca de 3 a 7 dias para ficar disponíveis. Esse prazo é controlado pelo Roblox.</span>
+                  <span className="mt-1 block">Agora o Roblox processa a liberação. Os Robux aparecem como <strong>pendentes</strong> e podem levar {pendingTime ?? "alguns dias"} para ficar disponíveis. Esse prazo é controlado pelo Roblox.</span>
                 </div>
               )}
             </section>
@@ -271,7 +274,9 @@ export default async function OrderPage({
             <RepurchaseButton orderId={id} />
           )}
           {isAccount && ["awaiting_payment", "proof_rejected"].includes(order.status) && <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-5 text-sm text-amber-100">Esta modalidade foi descontinuada. Não faça um novo Pix para este pedido. Se já pagou, envie o comprovante ou procure o suporte para a conferência.</p>}
-          {!isAccount && order.status === "awaiting_payment" && (
+          {hasReceipt && !order.paid_at && ["awaiting_payment", "proof_rejected"].includes(order.status) &&
+            <p className="mt-5 rounded-xl border border-amber-400/20 p-5 text-sm text-amber-100">Há um Pix registrado para este pedido. Aguarde a conferência da equipe antes de fazer outro pagamento.</p>}
+          {!isAccount && !order.paid_at && !hasReceipt && order.status === "awaiting_payment" && (
             <section className="mt-5 rounded-xl border border-violet-400/20 bg-violet-500/10 p-5">
               <h2 className="font-bold">Falta concluir o pagamento</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-400">

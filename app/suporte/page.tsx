@@ -74,6 +74,8 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
           <section className="surface rounded-3xl p-6">
             <h2 className="text-xl font-black">Novo atendimento</h2>
             <SupportForm
+              key={JSON.stringify([user.id, linkedOrder?.order_code])}
+              owner={user.id}
               orderCode={linkedOrder?.order_code}
               orderType={linkedOrder?.order_type}
               deliveredAt={linkedOrder?.delivered_at ? localDate(linkedOrder.delivered_at) : undefined}

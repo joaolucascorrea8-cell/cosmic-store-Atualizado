@@ -2,8 +2,8 @@
 import { useActionState, useEffect, useState } from "react";
 import { createSupportTicket, type SupportState } from "./actions";
 import { useRouter } from "next/navigation";
-export default function SupportForm({ orderCode, orderType, deliveredAt }: { orderCode?: string; orderType?: string; deliveredAt?: string }) {
-  const key = orderCode ? `cosmic-support-order-${orderCode}` : "cosmic-support-draft-v1";
+export default function SupportForm({ owner, orderCode, orderType, deliveredAt }: { owner: string; orderCode?: string; orderType?: string; deliveredAt?: string }) {
+  const key = `cosmic-support-v2:${owner}:${orderCode ?? "general"}`;
   const router = useRouter();
   const [state, action, pending] = useActionState<SupportState, FormData>(
     createSupportTicket,
@@ -47,14 +47,14 @@ export default function SupportForm({ orderCode, orderType, deliveredAt }: { ord
     });
   }, [key, orderCode, orderType, deliveredAt]);
   useEffect(() => {
-    if (loaded)
+    if (loaded && !state.destination)
       try {
         sessionStorage.setItem(
           key,
           JSON.stringify({ id, subject, category, message }),
         );
       } catch {}
-  }, [id, subject, category, message, loaded, key]);
+  }, [id, subject, category, message, loaded, key, state.destination]);
   useEffect(() => {
     if (state.destination) {
       try {

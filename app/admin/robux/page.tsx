@@ -68,13 +68,14 @@ export default async function AdminRobuxPage() {
       )}
 
 
-      <RobuxSettingsForm settings={settings} />
+      {settings.updatedAt ? <RobuxSettingsForm settings={settings} /> :
+        <p role="alert" className="admin-error mt-4">Não foi possível carregar as configurações. Atualize a página para editá-las.</p>}
 
       <section className="admin-panel mt-6 max-w-4xl">
         <h2 className="text-lg font-black">Como a confirmação funciona</h2>
         <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm leading-6 text-zinc-400">
           <li>O cliente escolhe os Robux, valida o GamePass e paga por Pix.</li>
-          <li>Você confere o comprovante e marca o pagamento como confirmado.</li>
+          <li>Você confere o crédito no extrato e registra a confirmação manual do Pix.</li>
           <li>No pedido, a Cosmic mostra saldo, custo e margem atual da ByRobux.</li>
           <li>Você clica em “Comprar e entregar”. A partir daí a API executa e o status é acompanhado automaticamente.</li>
         </ol>

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useCart } from "@/app/context/CartContext";
+import { readAttempt, writeAttempt } from "@/lib/checkout-attempt";
 import { useRouter } from "next/navigation";
 import {
   type RobuxPurchaseMode,
@@ -31,21 +33,29 @@ type Validation = {
   price: number;
 };
 
-export default function RobuxCalculator({
-  initialCosmicK,
-  available,
-  unavailableMessage,
-  tutorialUrl,
-  pendingDaysMin,
-  pendingDaysMax,
-}: {
+type CalculatorProps = {
   initialCosmicK: number | null;
   available: boolean;
   unavailableMessage: string;
   tutorialUrl: string;
   pendingDaysMin: number;
   pendingDaysMax: number;
-}) {
+};
+
+export default function RobuxCalculator(props: CalculatorProps) {
+  const { cartOwner } = useCart();
+  return <CalculatorForm key={cartOwner} {...props} owner={cartOwner} />;
+}
+
+function CalculatorForm({
+  owner,
+  initialCosmicK,
+  available,
+  unavailableMessage,
+  tutorialUrl,
+  pendingDaysMin,
+  pendingDaysMax,
+}: CalculatorProps & { owner: string | null }) {
   const router = useRouter();
   const [amountText, setAmountText] = useState("1000");
   const [mode, setMode] = useState<RobuxPurchaseMode>("tax_paid");
@@ -54,7 +64,14 @@ export default function RobuxCalculator({
   const [validation, setValidation] = useState<Validation | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<"validate" | "order" | "">("");
-  const checkoutToken = useRef(crypto.randomUUID());
+  const locked = useRef(false);
+  const active = useRef(false);
+  const revision = useRef(0);
+  const lastAttempt = useRef<ReturnType<typeof readAttempt>>(null);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   const amount = readRobuxAmount(amountText);
 
   const options = useMemo(() => {
@@ -75,12 +92,14 @@ export default function RobuxCalculator({
   const selected = options?.[mode] ?? null;
 
   function resetValidation() {
+    revision.current++;
     setValidation(null);
     setError("");
   }
 
   async function validateGamepass() {
     if (!amount || !selected || !link.trim() || busy) return;
+    const request = ++revision.current;
     setBusy("validate");
     setError("");
     setValidation(null);
@@ -91,6 +110,7 @@ export default function RobuxCalculator({
         body: JSON.stringify({ amount, mode, link: link.trim() }),
       });
       const data = await response.json();
+      if (!active.current || request !== revision.current) return;
       if (response.status === 401) {
         router.push("/login?next=/robux");
         return;
@@ -111,10 +131,20 @@ export default function RobuxCalculator({
   }
 
   async function createOrder() {
-    if (!amount || !validation || busy) return;
+    if (!amount || !validation || busy || locked.current || !owner) return;
+    locked.current = true;
+    let accepted = false;
     setBusy("order");
     setError("");
     try {
+      const key = `cosmic-gamepass-attempt:${owner}`;
+      const signature = JSON.stringify([validation.gamepassId, amount, mode]);
+      const saved = lastAttempt.current ?? readAttempt(key);
+      const attempt = saved?.signature === signature ? saved : {
+        signature, token: crypto.randomUUID(), total: validation.price, nickname: validation.username, coupon: "",
+      };
+      lastAttempt.current = attempt;
+      writeAttempt(key, attempt);
       const response = await fetch("/api/robux/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,20 +152,30 @@ export default function RobuxCalculator({
           amount,
           mode,
           link: link.trim(),
-          checkoutToken: checkoutToken.current,
-          expectedPrice: validation.price,
+          checkoutToken: attempt.token,
+          cartOwner: owner === "guest" ? undefined : owner,
+          expectedPrice: attempt.total,
         }),
       });
       const data = await response.json();
+      if (!active.current) return;
       if (response.status === 401) {
         router.push("/login?next=/robux");
         return;
       }
       if (!response.ok) {
-        if (response.status === 409) setValidation(null);
+        if (response.status === 409 || response.status === 400) {
+          setValidation(null);
+          writeAttempt(key, null);
+          lastAttempt.current = null;
+        }
         throw new Error(data.error ?? "Não foi possível criar seu pedido.");
       }
-      router.push(`/checkout?pedido=${data.order.id}`);
+      writeAttempt(key, null);
+      lastAttempt.current = null;
+      accepted = true;
+      router.push(["awaiting_payment", "proof_rejected"].includes(data.order.status) ?
+        `/checkout?pedido=${data.order.id}` : `/pedidos/${data.order.id}`);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -143,7 +183,7 @@ export default function RobuxCalculator({
           : "Não foi possível criar seu pedido.",
       );
     } finally {
-      setBusy("");
+      if (!accepted) { locked.current = false; setBusy(""); }
     }
   }
 
