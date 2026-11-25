@@ -43,6 +43,8 @@ async function check(scenario, fn) { await fn(); results.push({ scenario, status
     sql(`select public.transition_store_order('${old.order.id}','${ids.admin}','paid','awaiting_payment','');`);
     const snapshotQuery = `select jsonb_build_object('orders',(select jsonb_agg(jsonb_build_object('id',id,'user_id',user_id,'code',order_code,'status',status,'paid_at',paid_at,'total',total,'pix_payload',pix_payload)) from public.orders),'items',(select jsonb_agg(to_jsonb(i)) from public.order_items i),'products',(select jsonb_agg(to_jsonb(p)) from public.products p),'admins',(select jsonb_agg(to_jsonb(a)) from public.admins a))`;
     const before = JSON.parse(sql(snapshotQuery));
+    // Reproduz ACLs diretas que podem existir mesmo após REVOKE de PUBLIC.
+    sql("grant execute on function public.set_product_display_order(uuid[]),public.set_game_display_order(uuid[]),public.set_category_display_order(uuid,uuid[]) to anon,authenticated");
     for (const f of files.filter(f => f >= '202611120001')) sql(readFileSync('supabase/migrations/' + f, 'utf8'));
     await check('upgrade preserva pedidos, itens e estoque históricos sem notificações ou conciliação inventadas', async () => {
       assert.deepEqual(JSON.parse(sql(snapshotQuery)), before);
@@ -114,6 +116,41 @@ async function check(scenario, fn) { await fn(); results.push({ scenario, status
       assert.equal(r.filter(x => x.code === 0).length, 1);
       assert.equal(sql('select (select count(*) from public.order_payment_confirmations)+(select count(*) from public.order_additional_payments)'), '1');
     });
+    await check('crédito em conferência bloqueia expiração e preserva a última unidade reservada', async () => {
+      reset(); const id = JSON.parse(sql(create())).order.id;
+      sql(`select public.record_additional_store_payment('${id}','${ids.admin}','${randomUUID()}',5,'BANK-EXPIRY-TEST','Crédito fictício em conferência',true);
+        update public.store_ops_settings set auto_close_enabled=true,auto_close_hours=24,enabled_by='${ids.admin}',enabled_at=now()-interval '3 days';
+        alter table public.orders disable trigger orders_updated_at;
+        update public.orders set created_at=now()-interval '2 days',updated_at=now()-interval '2 days';
+        alter table public.orders enable trigger orders_updated_at;`);
+      assert.equal(sql('select public.ops_expire_orders()'), '0');
+      assert.equal(sql(`select status from public.orders where id='${id}'`), 'awaiting_payment');
+      assert.equal(sql(`select stock from public.products where id='${ids.a}'`), '0');
+      assert.equal(sql("select has_function_privilege('authenticated','public.ops_expire_orders()','execute')"), 'f');
+    });
+    await check('cliente vê entrega própria e a equipe mantém acesso aos dados operacionais do fornecedor', async () => {
+      reset();
+      const o = JSON.parse(sql(`select public.create_robux_store_order('${ids.user}','${randomUUID()}','TEST-${randomUUID()}','000201-ficticio-nao-pagar',36,'tax_not_paid',1000,1000,700,'https://www.roblox.com/game-pass/123456','123456','ClienteRoblox',25,36,25)`));
+      sql('grant usage on schema public,auth to authenticated; grant select on public.orders to authenticated;');
+      const asBuyer = `set role authenticated;select set_config('request.jwt.claim.sub','${ids.user}',false);`;
+      assert.equal(sql(asBuyer + `select net_robux from public.robux_orders where order_id='${o.order.id}'`).split('\n').at(-1), '700');
+      assert.equal(sql(`set role authenticated;select set_config('request.jwt.claim.sub','${randomUUID()}',false);select count(order_id) from public.robux_orders`).split('\n').at(-1),'0');
+      for (const column of ['supplier_request_id','supplier_error_message','quoted_supplier_cost','supplier_batch_id','executed_by']) {
+        assert.equal(sql(`select has_column_privilege('authenticated','public.robux_orders','${column}','select')`),'f');
+        assert.equal(sql(`select has_column_privilege('service_role','public.robux_orders','${column}','select')`),'t');
+      }
+    });
+    await check('RPCs de ordenação ficam no servidor e a consulta de cargo respeita o usuário atual', async () => {
+      sql('grant usage on schema public, auth to anon, authenticated;');
+      assert.equal(sql(`set role anon; select public.is_store_admin('${ids.admin}')`),'f');
+      const role = buyer => `set role authenticated; select set_config('request.jwt.claim.sub','${buyer}',false);`;
+      assert.equal(sql(role(ids.user) + `select public.is_store_admin('${ids.admin}')`).split('\n').at(-1),'f');
+      assert.equal(sql(role(ids.admin) + 'select public.is_store_admin()').split('\n').at(-1),'t');
+      for (const fn of ['set_product_display_order(uuid[])','set_game_display_order(uuid[])','set_category_display_order(uuid,uuid[])']) {
+        for (const role of ['anon','authenticated','service_role'])
+          assert.equal(sql(`select has_function_privilege('${role}','public.${fn}','execute')`), role === 'service_role' ? 't' : 'f');
+      }
+    });
     await check('dump e restauração isolada preservam pedidos, conciliação, créditos, devoluções e fila', async () => {
       reset(); const id = JSON.parse(sql(create())).order.id; sql(confirm(id, 'BANK-DUMP-TEST'));
       sql(`select public.record_additional_store_payment('${id}','${ids.admin}','${randomUUID()}',5,'CREDIT-DUMP-TEST','Recebimento fictício',true);
@@ -127,6 +164,6 @@ async function check(scenario, fn) { await fn(); results.push({ scenario, status
       assert.deepEqual(JSON.parse(after), before);
     });
     const report = { database: sql('select version()'), isolation: 'Container efêmero --network none, sem portas; dados fictícios; conexões psql independentes', results };
-    writeFileSync('qa/results/final-postgres.json', JSON.stringify(report, null, 2) + '\n');
+    writeFileSync(process.argv.find(arg => arg.startsWith('--report='))?.slice(9) ?? 'qa/results/final-postgres.json', JSON.stringify(report, null, 2) + '\n');
   } finally { if (started) run(['stop','-t','1',name]); }
 })().catch(e => { console.error(e.message); process.exitCode = 1; });

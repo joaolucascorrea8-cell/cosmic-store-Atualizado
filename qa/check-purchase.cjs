@@ -8,11 +8,12 @@ let source = fs.readFileSync(file, 'utf8').split('(async()=>{try{')[0];
 source = source.replaceAll('3120', '3140').replaceAll('54328', '54326');
 // NextURL normaliza loopback para localhost em redirects; cookies precisam da mesma origem.
 source = source.replace("const base = 'http://127.0.0.1:3140';", "const base = 'http://localhost:3140';");
-source = source.replace("const testEnv = require('./isolated-env.cjs')(api,base);", "const testEnv = require('./isolated-env.cjs')(api,base,{BYROBUX_API_KEY:'local-test',BYROBUX_API_BASE_URL:api+'/provider',CRON_SECRET:'local-cron-test',NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED:process.argv.includes('--oauth')?'true':'false'});\nlet providerStatus='PENDING',schemaReady=true;const executions=new Map();");
+source = source.replace("const testEnv = require('./isolated-env.cjs')(api,base);", "const testEnv = require('./isolated-env.cjs')(api,base,{BYROBUX_API_KEY:'local-test',BYROBUX_API_BASE_URL:api+'/provider',CRON_SECRET:'local-cron-test',NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED:process.argv.includes('--oauth')?'true':'false'});\nlet providerStatus='PENDING',schemaReady=true,settingsUnavailable=false;const executions=new Map();");
 source = source.replace("['ops_import_products','set_product_preference','ops_record_issue']", "['ops_import_products','set_product_preference','ops_record_issue','ops_expire_orders','ops_report','ops_interest','store_financial_summary','store_checkout_capabilities','quote_store_checkout','create_store_order_with_coupon','create_robux_store_order','confirm_manual_store_payment','record_manual_store_refund','record_additional_store_payment','transition_store_order','claim_gamepass_execution','finish_gamepass_execution','claim_order_email','finish_order_email']");
-source = source.replace("if(u.pathname==='/auth/v1/user') return send(user);", "if(u.pathname==='/auth/v1/user'||u.pathname.startsWith('/auth/v1/admin/users/')) return send(user);");
+source = source.replace("if(u.pathname==='/auth/v1/user') return send(user);", "if(u.pathname==='/auth/v1/user'){const sub=JSON.parse(Buffer.from((req.headers.authorization??'').split('.')[1]??'e30','base64url')).sub;return send(sub===ids.user?{...user,id:ids.user,email:'outro@example.invalid'}:user);}if(u.pathname.startsWith('/auth/v1/admin/users/'))return send(user);");
 source = source.replace("const body=raw?JSON.parse(raw):null;", "const body=raw&&(req.headers['content-type']??'').includes('application/json')?JSON.parse(raw):null;");
 source = source.replace("  try {\n    const result = await db.transaction", `
+  if(u.pathname==='/rest/v1/robux_settings'&&settingsUnavailable){res.statusCode=503;return send({message:'Fixture indisponível'});}
   if(u.pathname==='/rest/v1/rpc/store_checkout_capabilities'&&!schemaReady)return send(false);
   if(u.pathname==='/auth/v1/signup')return send({user:{...user,id:ids.user},session:null});
   if(['/auth/v1/recover','/auth/v1/resend','/auth/v1/logout'].includes(u.pathname))return send({});
@@ -34,7 +35,7 @@ source = source.replace("  try {\n    const result = await db.transaction", `
   if(u.pathname.startsWith('/storage/v1/object/sign/'))return send({signedURL:'/object/sign/local-test.png'});
   try {
     const result = await db.transaction`);
-source = source.replace("o.robux_orders=null;", "o.robux_orders=(await tx.query('select * from robux_orders where order_id=$1',[o.id])).rows[0]??null;o.profiles=(await tx.query('select nickname from profiles where id=$1',[o.user_id])).rows[0];");
+source = source.replace("o.robux_orders=null;", "o.order_additional_payments=(await tx.query('select amount from order_additional_payments where order_id=$1',[o.id])).rows;o.robux_orders=(await tx.query('select * from robux_orders where order_id=$1',[o.id])).rows[0]??null;o.profiles=(await tx.query('select nickname from profiles where id=$1',[o.user_id])).rows[0];");
 source += fs.readFileSync(path.join(__dirname, 'purchase-scenarios.cjs.txt'), 'utf8');
 const compiled = new Module(__filename, module);
 compiled.filename = __filename;

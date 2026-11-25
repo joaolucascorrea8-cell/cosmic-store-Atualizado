@@ -38,7 +38,7 @@ for(const width of (profileBrowser?[390,1440]:[]))for(const route of routes){
   }
   if(route==='/produto/dragon'){
    await p.getByRole('button',{name:/^Adicionar Dragon(?: · .*?)? ao carrinho$/}).click();await p.waitForTimeout(80);
-   const cart=await p.evaluate(()=>JSON.parse(localStorage.getItem('cosmic-cart')));assert.equal(cart[0].id,products[0].id);assert.equal(cart[0].price,20);
+   const cart=await p.evaluate(()=>JSON.parse(localStorage.getItem('cosmic-cart-v2:guest')));assert.equal(cart[0].id,products[0].id);assert.equal(cart[0].price,20);
   }
   if(route==='/jogos'){await p.getByLabel('Buscar jogo').fill('Blox');await p.waitForTimeout(80);}
   samples.at(-1).interactionDurations=await p.evaluate(()=>window.__perf.events);

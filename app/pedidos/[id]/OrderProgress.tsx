@@ -1,5 +1,6 @@
 type OrderProgressProps = {
   status: string;
+  showPaymentInstruction: boolean;
 };
 
 const steps = [
@@ -20,7 +21,7 @@ const statusIndex: Record<string, number> = {
   delivered: 4,
 };
 
-export default function OrderProgress({ status }: OrderProgressProps) {
+export default function OrderProgress({ status, showPaymentInstruction }: OrderProgressProps) {
   const cancelled = status === "cancelled";
   const currentIndex = statusIndex[status] ?? 0;
   const rejected = status === "proof_rejected";
@@ -82,7 +83,7 @@ export default function OrderProgress({ status }: OrderProgressProps) {
         })}
       </ol>
 
-      {!cancelled && status === "awaiting_payment" && (
+      {showPaymentInstruction && status === "awaiting_payment" && (
         <p className="mt-4 text-xs leading-5 text-zinc-400">
           Faça o Pix e envie o comprovante para a equipe começar a análise.
         </p>

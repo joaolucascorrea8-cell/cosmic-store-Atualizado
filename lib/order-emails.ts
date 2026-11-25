@@ -1,3 +1,4 @@
+import { gamePassPendingTime } from "./robux-settings";
 import { recordStoreIssue, cleanIssueMessage } from "./store-issues";
 import "server-only";
 
@@ -307,6 +308,7 @@ export async function sendOrderStatusEmail(
         buttonLabel: "Acompanhar meu pedido",
       });
     } else if (order.order_type === "robux") {
+      const pendingTime = await gamePassPendingTime();
       html = baseTemplate({
         eyebrow: "GamePass comprado",
         title: "A compra do seu GamePass foi concluída! 🎮",
@@ -314,7 +316,7 @@ export async function sendOrderStatusEmail(
           "A Cosmic concluiu a compra do GamePass. Agora a liberação dos Robux depende do período de pendência do Roblox.",
         order,
         extra:
-          '<div style="margin:0;padding:16px;border-radius:14px;background:#123024;border:1px solid #166534;color:#dcfce7;font-size:15px;line-height:1.65;">⏳ <strong>Robux pendentes:</strong> após a compra do GamePass, o Roblox pode manter os Robux pendentes por alguns dias. Normalmente informamos uma estimativa de 3 a 7 dias, mas o prazo final é controlado pelo Roblox.</div>',
+          `<div style="margin:0;padding:16px;border-radius:14px;background:#123024;border:1px solid #166534;color:#dcfce7;font-size:15px;line-height:1.65;">⏳ <strong>Robux pendentes:</strong> após a compra do GamePass, o Roblox pode manter os Robux pendentes por alguns dias. A estimativa atual é de ${pendingTime}. O Roblox controla o prazo final.</div>`,
         buttonLabel: "Acompanhar meus Robux",
       });
     } else if (order.order_type === "robux_account") {

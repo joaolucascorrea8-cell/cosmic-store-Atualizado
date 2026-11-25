@@ -27,3 +27,8 @@ export const orderStatus: Record<string, { label: string; className: string }> =
       className: "text-red-300 bg-red-500/10",
     },
   };
+
+export function orderIsPayable(order: { status: string; order_type?: string; paid_at?: string | null }) {
+  return !order.paid_at && order.order_type !== "robux_account" &&
+    ["awaiting_payment", "proof_rejected"].includes(order.status);
+}

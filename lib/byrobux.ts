@@ -273,7 +273,10 @@ export function getByRobuxBalance() {
   return requestByRobux<ByRobuxBalanceResponse>("/balance");
 }
 
-export function calculateByRobux(links: string) {
+export async function calculateByRobux(links: string) {
+  const rates = await getByRobuxRates();
+  if (rates.catalogMaintenance || !Number.isFinite(Number(rates.robuxRateBrlPerThousand)) || Number(rates.robuxRateBrlPerThousand) <= 0)
+    throw new Error("A cotação do fornecedor está indisponível no momento.");
   return requestByRobux<ByRobuxCalculateResponse>("/quick-buy/calculate", {
     method: "POST",
     body: { links },

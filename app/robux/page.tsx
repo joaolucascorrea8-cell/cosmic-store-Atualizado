@@ -15,6 +15,7 @@ export default async function RobuxPage() {
   if (available) {
     try {
       const rate = await getByRobuxRates();
+      if (!Number.isFinite(Number(rate.robuxRateBrlPerThousand)) || Number(rate.robuxRateBrlPerThousand) <= 0) throw new Error("Cotação inválida.");
       if (rate.catalogMaintenance) {
         available = false;
         unavailableMessage =

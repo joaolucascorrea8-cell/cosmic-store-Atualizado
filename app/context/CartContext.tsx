@@ -1,12 +1,18 @@
 "use client";
 import {
   useEffect,
+  useCallback,
+  useRef,
   useState,
   createContext,
   useContext,
   type ReactNode,
 } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
+  cartSignature,
+  reconcileCart,
+  type CartCatalog,
   cartKey,
   mergeRepurchase,
   maxQuantity,
@@ -28,6 +34,9 @@ export type CartItem = StoredItem & { max_quantity?: number };
 type CartContextType = {
   items: CartItem[];
   cartLoaded: boolean;
+  cartOwner: string | null;
+  consumeCart: (signature: string) => void;
+  refreshProducts: (catalog: CartCatalog) => void;
   addToCart: (product: CartProduct) => void;
   removeFromCart: (key: string) => void;
   updateQuantity: (key: string, quantity: number) => void;
@@ -44,33 +53,52 @@ function decode(value: string | null) {
   }
 }
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]),
-    [cartLoaded, setCartLoaded] = useState(false);
+  const [cartOwner, setOwner] = useState<string | null>(null);
+  const [items, setItems] = useState<CartItem[]>([]);
+  const ownerRef = useRef<string | null>(null);
+  const cartLoaded = cartOwner !== null;
   useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
+    const key = (owner: string) => `cosmic-cart-v2:${owner}`;
+    const { data } = createClient().auth.onAuthStateChange((_event, session) => {
+      const owner = session?.user.id ?? "guest";
+      if (ownerRef.current === owner) return;
+      let restored: CartItem[] = [];
       try {
-        setItems(decode(localStorage.getItem("cosmic-cart")));
+        restored = decode(localStorage.getItem(key(owner)));
+        if (session) {
+          const guest = decode(localStorage.getItem(key("guest")));
+          if (guest.length) {
+            restored = mergeRepurchase(restored, guest).items;
+            localStorage.setItem(key(owner), JSON.stringify(restored));
+            localStorage.removeItem(key("guest"));
+          }
+        }
       } catch {}
-      setCartLoaded(true);
+      ownerRef.current = owner;
+      setOwner(owner);
+      setItems(restored);
     });
-    const sync = (e: StorageEvent) => {
-      if (e.key === "cosmic-cart") setItems(decode(e.newValue));
+    const sync = (event: StorageEvent) => {
+      if (ownerRef.current && event.key === key(ownerRef.current)) setItems(decode(event.newValue));
     };
     window.addEventListener("storage", sync);
     return () => {
-      cancelled = true;
+      data.subscription.unsubscribe();
       window.removeEventListener("storage", sync);
     };
   }, []);
   useEffect(() => {
-    if (cartLoaded) {
-      try {
-        localStorage.setItem("cosmic-cart", JSON.stringify(items));
-      } catch {}
+    if (cartOwner && ownerRef.current === cartOwner) {
+      try { localStorage.setItem(`cosmic-cart-v2:${cartOwner}`, JSON.stringify(items)); } catch {}
     }
-  }, [cartLoaded, items]);
+  }, [cartOwner, items]);
+  const refreshProducts = useCallback((catalog: CartCatalog) => {
+    if (ownerRef.current === cartOwner) setItems(current => reconcileCart(current, catalog));
+  }, [cartOwner]);
+  function consumeCart(signature: string) {
+    if (ownerRef.current === cartOwner)
+      setItems(current => cartSignature(current) === signature ? [] : current);
+  }
   function addToCart(input: CartProduct) {
     if (input.kind !== undefined && input.kind !== "product") return;
     const product = {
@@ -123,6 +151,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       value={{
         items,
         cartLoaded,
+        cartOwner,
+        consumeCart,
+        refreshProducts,
         addToCart,
         addItemsToCart: (incoming) => {
           if (!cartLoaded) return 0;

@@ -29,12 +29,13 @@ export async function POST(
     return NextResponse.json({ error: "Arquivo inválido." }, { status: 400 });
 
   const admin = createAdminClient();
-  const { data: order } = await admin
+  const { data: order, error: lookupError } = await admin
     .from("orders")
     .select("id,order_code,total,user_id,status,proof_path")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
+  if (lookupError) return NextResponse.json({ error: "Não foi possível consultar o pedido. Tente novamente." }, { status: 503 });
   if (!order)
     return NextResponse.json(
       { error: "Pedido não encontrado." },
@@ -67,11 +68,14 @@ export async function POST(
   const { data: files, error: listError } = await admin.storage
     .from("payment-proofs")
     .list(`${user.id}/${id}`, { limit: 1, search: fileName });
-  if (listError || !files?.some((file) => file.name === fileName))
+  if (listError) return NextResponse.json({ error: "O armazenamento está indisponível. Tente novamente." }, { status: 503 });
+  if (!files?.some((file) => file.name === fileName))
     return NextResponse.json(
       { error: "Comprovante não encontrado. Envie o arquivo novamente." },
       { status: 400 },
     );
+  if (order.status === "proof_rejected" && order.proof_path === path)
+    return NextResponse.json({ error: "Envie um novo comprovante para a conferência." }, { status: 409 });
   // Compare-and-set avoids duplicate admin e-mails/webhook notifications on double-submit.
   const { data: updated, error } = await admin
     .from("orders")

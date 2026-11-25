@@ -43,6 +43,7 @@ export default async function RequestServerPage() {
           </p>
           <section className="surface mt-7 rounded-3xl p-5 sm:p-7">
             <ServerRequestForm
+              key={user.id}
               userId={user.id}
               games={[...new Set((games ?? []).map((game) => game.name))]}
             />

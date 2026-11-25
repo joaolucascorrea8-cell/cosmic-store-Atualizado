@@ -94,3 +94,20 @@ export function mergeRepurchase(current: CartItem[], incoming: CartItem[]) {
   }
   return { items, added };
 }
+
+export type CartCatalog = Record<string, Pick<CartItem, "price" | "stock" | "unlimited_stock">>;
+
+// A ausência no catálogo bloqueia a linha na interface, mas preserva a seleção do cliente.
+export function reconcileCart(items: CartItem[], catalog: CartCatalog) {
+  let changed = false;
+  const next = items.map(item => {
+    const live = catalog[item.id];
+    if (!live || maxQuantity(live) === 0) return item;
+    const quantity = Math.min(item.quantity, maxQuantity(live));
+    if (quantity === item.quantity && live.price === item.price &&
+        live.stock === item.stock && live.unlimited_stock === item.unlimited_stock) return item;
+    changed = true;
+    return { ...item, ...live, quantity };
+  });
+  return changed ? next : items;
+}

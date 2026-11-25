@@ -135,7 +135,7 @@ export default async function OrdersPage({
               const robuxRelation = order.robux_orders;
               const robux = Array.isArray(robuxRelation) ? robuxRelation[0] : robuxRelation;
               const supplierStatus = robux?.supplier_status ?? "";
-              const status = order.order_type === "robux"
+              const status = order.order_type === "robux" && order.status !== "cancelled"
                 ? supplierStatus === "COMPLETED" || order.status === "delivered"
                   ? { label: "GamePass comprado", className: "text-emerald-300 bg-emerald-500/10" }
                   : supplierStatus === "PENDING"

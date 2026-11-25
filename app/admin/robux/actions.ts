@@ -10,7 +10,7 @@ import {
   getByRobuxBalance,
 } from "@/lib/byrobux";
 import { getRobuxSettings } from "@/lib/robux-settings";
-import { effectiveMarginPerThousand } from "@/lib/robux-pricing";
+import { supplierQuoteFits } from "@/lib/robux-pricing";
 import { notifyCustomer } from "@/lib/notifications";
 import { UUID_PATTERN } from "@/lib/catalog";
 import { gamePassLink } from "@/lib/gamepass-link";
@@ -138,17 +138,11 @@ export async function executeRobuxOrder(formData: FormData) {
       throw new Error(
         `K atual ${supplierK.toLocaleString("pt-BR")}. O limite configurado é ${settings.maxSupplierK.toLocaleString("pt-BR")}.`,
       );
-    const margin = effectiveMarginPerThousand(
-      Number(order.total),
-      Number(details.gamepass_robux),
-      supplierK,
-    );
-    if (margin < settings.minMarginPerThousand)
-      throw new Error(
-        `Margem atual de R$ ${margin.toFixed(2).replace(".", ",")} por 1K está abaixo do mínimo de R$ ${settings.minMarginPerThousand.toFixed(2).replace(".", ",")}.`,
-      );
-
+    if (!supplierQuoteFits(item.priceBrl, supplierK, Number(details.gamepass_robux), Number(order.total), settings))
+      throw new Error("O custo atual do GamePass não atende à margem configurada. Confira a cotação.");
     const balance = await getByRobuxBalance();
+    if (!Number.isFinite(balance.balanceBrl) || balance.balanceBrl < 0)
+      throw new Error("Não foi possível confirmar o saldo da ByRobux.");
     if (Number(balance.balanceBrl) + 0.001 < Number(item.priceBrl))
       throw new Error(
         `Saldo ByRobux insuficiente. Disponível: ${Number(balance.balanceBrl).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}; custo atual: ${Number(item.priceBrl).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`,

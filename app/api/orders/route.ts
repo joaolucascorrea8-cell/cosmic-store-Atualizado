@@ -1,5 +1,7 @@
 import { readOrderDisplayItems } from "@/lib/product-context-server";
 import {recordStoreIssue} from "@/lib/store-issues";
+import { checkoutItems } from "@/lib/checkout-request";
+import { orderIsPayable } from "@/lib/order-status";
 import { couponCode } from "@/lib/coupons";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
@@ -12,76 +14,37 @@ import {
   notifyAdminDiscord,
 } from "@/lib/notifications";
 
-type RequestedItem = {
-  id?: unknown;
-  quantity?: unknown;
-  kind?: unknown;
-  price?: unknown;
-};
 type CreatedOrder = {
-  id: string;
-  order_code: string;
-  status: string;
-  total: number;
-  pix_payload: string;
-  order_type?: string;
+  id: string; order_code: string; order_type: string; status: string; total: number;
+  game_nickname: string; pix_payload: string; paid_at?: string | null;
+  coupon_code?: string | null; subtotal?: number; discount_total?: number; delivery_hours?: number;
 };
-type ProductRow = {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  unlimited_stock: boolean;
-  is_active: boolean;
-};
-type ComboProduct = {
-  id: string;
-  name: string;
-  stock: number;
-  unlimited_stock: boolean;
-  is_active: boolean;
-};
-type ComboItem = {
-  product_id: string;
-  quantity: number;
-  products: ComboProduct | ComboProduct[] | null;
-};
-type ComboRow = {
-  id: string;
-  name: string;
-  price: number;
-  is_active: boolean;
-  starts_at: string | null;
-  ends_at: string | null;
-  combo_items: ComboItem[] | null;
-};
+type RequestItems = NonNullable<ReturnType<typeof checkoutItems>>;
 
-async function orderResponse(order: CreatedOrder) {
-  if (order.order_type && order.order_type !== "store") return NextResponse.json({ error: "Esta sessão pertence a outra modalidade. Abra o pedido original para acompanhar." }, { status: 409 });
-  const qrCode = ["awaiting_payment", "proof_rejected"].includes(order.status) ? await QRCode.toDataURL(order.pix_payload, {
-    width: 440,
-    margin: 2,
-    errorCorrectionLevel: "M",
-  }) : "";
-  return NextResponse.json(
-    { order, qrCode, items: await readOrderDisplayItems(await createClient(), order.id) },
-    { headers: { "Cache-Control": "private, no-store" } },
-  );
-}
-
-function comboIsLive(combo: ComboRow) {
-  const now = Date.now();
-  return (
-    combo.is_active &&
-    (!combo.starts_at || new Date(combo.starts_at).getTime() <= now) &&
-    (!combo.ends_at || new Date(combo.ends_at).getTime() > now)
-  );
-}
-
-function nestedProduct(
-  value: ComboProduct | ComboProduct[] | null | undefined,
-) {
-  return Array.isArray(value) ? value[0] : value;
+async function orderResponse(order: CreatedOrder, request: {
+  items: RequestItems; nickname: string; code: string; total: number;
+}, replay: boolean) {
+  const conflict = () => NextResponse.json({ error: "Esta tentativa já pertence a outro pedido. Confira Meus pedidos." }, { status: 409 });
+  if (order.order_type !== "store") return conflict();
+  const client = await createClient();
+  const items = await readOrderDisplayItems(client, order.id, true);
+  if (replay && (request.nickname !== order.game_nickname || request.code !== (order.coupon_code ?? "") ||
+      Math.round(request.total * 100) !== Math.round(Number(order.total) * 100) ||
+      request.items.length !== items.length || !request.items.every(line => items.some(saved =>
+        saved.product_id === line.id && saved.quantity === line.quantity &&
+        Math.round(Number(saved.unit_price) * 100) === Math.round(line.unit_price * 100))))) return conflict();
+  let payable = orderIsPayable(order);
+  if (replay && payable) {
+    const { data: receipts, error } = await client.from("order_additional_payments").select("amount").eq("order_id", order.id).limit(1);
+    if (error) throw new Error("Não foi possível conferir os recebimentos do pedido.");
+    payable = !receipts?.length;
+  }
+  const qrCode = payable ? await QRCode.toDataURL(order.pix_payload, { width: 440, margin: 2, errorCorrectionLevel: "M" }) : "";
+  const { id, order_code, order_type, status, total, game_nickname, coupon_code, subtotal, discount_total, delivery_hours } = order;
+  return NextResponse.json({
+    order: { id, order_code, order_type, status, total, game_nickname, coupon_code, subtotal, discount_total, delivery_hours, pix_payload: payable ? order.pix_payload : null },
+    qrCode, items,
+  }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 export async function POST(request: Request) {
@@ -96,7 +59,8 @@ export async function POST(request: Request) {
     );
 
   const body = (await request.json().catch(() => null)) as {
-    items?: RequestedItem[];
+    items?: unknown;
+    cartOwner?: unknown;
     gameNickname?: unknown;
     checkoutToken?: unknown;
     couponCode?: unknown;
@@ -123,257 +87,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const admin = createAdminClient();
-  if (!(await checkoutReady())) return NextResponse.json({ error: "As compras estão temporariamente indisponíveis. Não faça o Pix agora; se já pagou, procure o suporte." }, { status: 503 });
-  const existing = await admin
-    .from("orders")
-    .select(
-      "id,order_code,status,total,pix_payload,subtotal,discount_total,coupon_code,delivery_hours,order_type",
-    )
-    .eq("user_id", user.id)
-    .eq("checkout_token", token)
-    .maybeSingle();
-  if (existing.error)
-    return NextResponse.json(
-      {
-        error:
-          "Não foi possível verificar o pedido. Confirme as migrations do banco de dados.",
-      },
-      { status: 500 },
-    );
-  if (existing.data) return orderResponse(existing.data);
-
-  if (
-    !Array.isArray(body?.items) ||
-    body.items.length === 0 ||
-    body.items.length > 40
-  ) {
-    return NextResponse.json({ error: "Carrinho inválido." }, { status: 400 });
-  }
-
-  if (body.items.some((item) => item && item.kind !== undefined && item.kind !== "product")) {
-    return NextResponse.json(
-      { error: "Combos não estão mais disponíveis. Atualize o carrinho." },
-      { status: 400 },
-    );
-  }
-
-  const requested = body.items.map((item) => ({
-    id:
-      item && typeof item === "object" && typeof item.id === "string"
-        ? item.id
-        : "",
-    quantity: item && typeof item === "object" ? item.quantity : null,
-    price: item && typeof item === "object" ? item.price : undefined,
-    kind:
-      item && typeof item === "object" && item.kind === "combo"
-        ? ("combo" as const)
-        : ("product" as const),
-  }));
-
-  if (
-    requested.some(
-      (item) =>
-        !/^[0-9a-f-]{36}$/i.test(item.id) ||
-        typeof item.quantity !== "number" ||
-        !Number.isInteger(item.quantity) ||
-        item.quantity < 1 ||
-        item.quantity > 99,
-    ) ||
-    new Set(requested.map((item) => `${item.kind}:${item.id}`)).size !==
-      requested.length
-  ) {
-    return NextResponse.json(
-      { error: "Itens ou quantidades inválidos." },
-      { status: 400 },
-    );
-  }
-
-  const productIds = requested
-    .filter((item) => item.kind === "product")
-    .map((item) => item.id);
-  const comboIds = requested
-    .filter((item) => item.kind === "combo")
-    .map((item) => item.id);
-
-  const [productResult, comboResult] = await Promise.all([
-    productIds.length
-      ? admin
-          .from("products")
-          .select("id,name,price,stock,unlimited_stock,is_active")
-          .in("id", productIds)
-      : Promise.resolve({ data: [] as ProductRow[], error: null }),
-    comboIds.length
-      ? admin
-          .from("combos")
-          .select(
-            "id,name,price,is_active,starts_at,ends_at,combo_items(product_id,quantity,products(id,name,stock,unlimited_stock,is_active))",
-          )
-          .in("id", comboIds)
-      : Promise.resolve({ data: [] as ComboRow[], error: null }),
-  ]);
-
-  if (productResult.error || comboResult.error) {
-    return NextResponse.json(
-      { error: "Não foi possível verificar os itens do carrinho." },
-      { status: 500 },
-    );
-  }
-
-  const products = (productResult.data ?? []) as ProductRow[];
-  const combos = (comboResult.data ?? []) as unknown as ComboRow[];
-  if (
-    products.length !== productIds.length ||
-    combos.length !== comboIds.length
-  ) {
-    return NextResponse.json(
-      { error: "Um item não está mais disponível." },
-      { status: 400 },
-    );
-  }
-
-  const stockNeeds = new Map<
-    string,
-    { product: ComboProduct | ProductRow; quantity: number }
-  >();
-  const addStockNeed = (
-    product: ComboProduct | ProductRow,
-    quantity: number,
-  ) => {
-    const current = stockNeeds.get(product.id);
-    stockNeeds.set(product.id, {
-      product,
-      quantity: (current?.quantity ?? 0) + quantity,
-    });
-  };
-
-  let itemRows: {
-    product_id: string | null;
-    combo_id: string | null;
-    product_name: string;
-    unit_price: number;
-    quantity: number;
-  }[];
-  try {
-    itemRows = requested.map((item) => {
-      if (item.kind === "product") {
-        const product = products.find((entry) => entry.id === item.id);
-        if (!product?.is_active) throw new Error("Produto indisponível.");
-        if (
-          typeof item.price !== "number" ||
-          Math.round(item.price * 100) !==
-            Math.round(Number(product.price) * 100)
-        )
-          throw new Error("O preço mudou. Atualize o carrinho antes de pagar.");
-        if (
-          !Number.isFinite(Number(product.price)) ||
-          Number(product.price) < 0
-        )
-          throw new Error("Preço inválido.");
-        addStockNeed(product, item.quantity as number);
-        return {
-          product_id: product.id,
-          combo_id: null,
-          product_name: product.name,
-          unit_price: Number(product.price),
-          quantity: item.quantity as number,
-        };
-      }
-
-      const combo = combos.find((entry) => entry.id === item.id);
-      if (!combo || !comboIsLive(combo))
-        throw new Error("Combo indisponível ou promoção encerrada.");
-      if (
-        typeof item.price !== "number" ||
-        Math.round(item.price * 100) !== Math.round(Number(combo.price) * 100)
-      )
-        throw new Error("O preço do combo mudou. Atualize o carrinho.");
-      if (!Number.isFinite(Number(combo.price)) || Number(combo.price) <= 0)
-        throw new Error("Preço do combo inválido.");
-      if (!combo.combo_items?.length)
-        throw new Error("Este combo não possui produtos.");
-
-      for (const comboItem of combo.combo_items) {
-        const product = nestedProduct(comboItem.products);
-        if (!product?.is_active)
-          throw new Error(
-            `Um produto do combo ${combo.name} não está disponível.`,
-          );
-        addStockNeed(
-          product,
-          Number(comboItem.quantity) * (item.quantity as number),
-        );
-      }
-
-      return {
-        product_id: null,
-        combo_id: combo.id,
-        product_name: combo.name,
-        unit_price: Number(combo.price),
-        quantity: item.quantity as number,
-      };
-    });
-
-    for (const { product, quantity } of stockNeeds.values()) {
-      if (!product.unlimited_stock && Number(product.stock) < quantity) {
-        throw new Error(`Estoque insuficiente para ${product.name}.`);
-      }
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Item indisponível." },
-      { status: 400 },
-    );
-  }
-
-  let total =
-    Math.round(
-      itemRows.reduce((sum, item) => sum + item.unit_price * item.quantity, 0) *
-        100,
-    ) / 100;
-  if (total <= 0)
-    return NextResponse.json(
-      { error: "O total do pedido deve ser positivo." },
-      { status: 400 },
-    );
-
+  if (body?.cartOwner && body.cartOwner !== user.id)
+    return NextResponse.json({ error: "A conta mudou. Confira o carrinho da conta atual." }, { status: 409 });
+  const items = checkoutItems(body?.items);
   const code = couponCode(body?.couponCode);
-  if (code.length > 30)
-    return NextResponse.json({ error: "Cupom inválido." }, { status: 400 });
-  const rpcItems = itemRows.map((item) => ({
-    id: item.combo_id ?? item.product_id,
-    kind: item.combo_id ? "combo" : "product",
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-  }));
-  const quote = await admin.rpc("quote_store_checkout", {
-    p_user_id: user.id,
-    p_items: rpcItems,
-    p_code: code,
-  });
-  if (quote.error || !quote.data)
-    return NextResponse.json(
-      {
-        error:
-          quote.error?.code === "P0001"
-            ? quote.error.message
-            : "Não foi possível conferir os valores. Tente novamente.",
-      },
-      { status: 409 },
-    );
-  total = Number(quote.data.total);
-  if (
-    code &&
-    (typeof body?.expectedTotal !== "number" ||
-      Math.round(body.expectedTotal * 100) !== Math.round(total * 100))
-  )
-    return NextResponse.json(
-      {
-        error:
-          "O desconto mudou. Aplique o cupom novamente para conferir o valor.",
-      },
-      { status: 409 },
-    );
+  if (!items || code.length > 30)
+    return NextResponse.json({ error: "Confira os itens, quantidades e cupom do carrinho." }, { status: 400 });
+  // Clientes antigos sem cupom podem enviar apenas os valores unitários.
+  const total = body?.expectedTotal ?? (!code ? items.reduce((sum, item) => sum + Math.round(item.unit_price * 100) * item.quantity, 0) / 100 : null);
+  if (typeof total !== "number" || !Number.isFinite(total) || total <= 0 || !Number.isSafeInteger(Math.round(total * 100)))
+    return NextResponse.json({ error: "Confira o total do pedido." }, { status: 400 });
+  const admin = createAdminClient();
+  if (!(await checkoutReady())) return NextResponse.json({ error: "As compras estão temporariamente indisponíveis. Se já pagou, procure o suporte." }, { status: 503 });
   const orderCode = `COSMIC-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
   try {
     const pixPayload = createPixPayload(total, orderCode);
@@ -387,12 +112,7 @@ export async function POST(request: Request) {
         p_pix_payload: pixPayload,
         p_expected_total: total,
         p_code: code,
-        p_items: itemRows.map((item) => ({
-          id: item.combo_id ?? item.product_id,
-          kind: item.combo_id ? "combo" : "product",
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-        })),
+        p_items: items,
       },
     );
     if (orderError || !result?.order) {
@@ -404,7 +124,7 @@ export async function POST(request: Request) {
       throw orderError ?? new Error("Não foi possível criar o pedido.");
     }
     const order = result.order as CreatedOrder;
-    if (!result.created) return orderResponse(order);
+    if (!result.created) return await orderResponse(order, { items, nickname, code, total }, true);
 
     await Promise.allSettled([
       createAdminNotifications(
@@ -417,7 +137,7 @@ export async function POST(request: Request) {
         `🛒 Novo pedido **${order.order_code}** — ${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`,
       ),
     ]);
-    return orderResponse(order);
+    return await orderResponse(order, { items, nickname, code, total }, false);
   } catch (error) {
     await recordStoreIssue("checkout",error,"/api/orders");
     console.error(

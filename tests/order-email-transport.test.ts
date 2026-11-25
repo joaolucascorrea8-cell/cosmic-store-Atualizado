@@ -53,6 +53,7 @@ function load() {
     },
   };
   const dependencies: Record<string, unknown> = {
+    "./robux-settings": { gamePassPendingTime: async () => "2 a 5 dias" },
     "server-only": {}, "@/lib/supabase/admin": { createAdminClient: () => admin },
     "@/lib/chat-attachments": { CHAT_ATTACHMENT_BUCKET: "chat-attachments" },
     "./store-issues": { cleanIssueMessage: () => "Falha simulada", recordStoreIssue: async () => undefined },

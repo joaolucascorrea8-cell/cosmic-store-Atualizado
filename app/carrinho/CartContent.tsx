@@ -3,10 +3,12 @@ import { productLabel } from "@/lib/product-context";
 import ProductIdentity from "@/app/components/ProductIdentity";
 import { useProductContexts } from "@/app/context/useProductContexts";
 
+import { useEffect, useState } from "react";
 import Image from "@/app/components/StoreImage";
 import Link from "next/link";
 import { useCart } from "@/app/context/CartContext";
-import { cartKey, maxQuantity } from "@/lib/cart";
+import { readAttempt } from "@/lib/checkout-attempt";
+import { cartSignature, cartKey, maxQuantity } from "@/lib/cart";
 export default function CartContent() {
   const {
     items,
@@ -14,9 +16,39 @@ export default function CartContent() {
     removeFromCart,
     updateQuantity,
     clearCart,
+    refreshProducts,
+    cartOwner,
     totalItems,
   } = useCart();
-  const productContexts = useProductContexts(items.map(item => item.id));
+  const [revision, setRevision] = useState(0);
+  const [attemptScope, setAttemptScope] = useState({ owner: "", signature: "" });
+  const [notice, setNotice] = useState("");
+  const productContexts = useProductContexts(items.map(item => item.id), revision);
+  const catalog = productContexts.catalog;
+  const unavailable = (id: string) => !!catalog && (!catalog[id] || maxQuantity(catalog[id]) < 1);
+  const needsUpdate = !!catalog && items.some(item => catalog[item.id] && !unavailable(item.id) &&
+    (catalog[item.id].price !== item.price || maxQuantity(catalog[item.id]) < item.quantity));
+  const attemptLoaded = attemptScope.owner === cartOwner;
+  const matchingAttempt = attemptLoaded && attemptScope.signature === cartSignature(items);
+  useEffect(() => {
+    const saved = readAttempt(`cosmic-checkout-attempt:${cartOwner}`);
+    queueMicrotask(() => setAttemptScope({ owner: cartOwner ?? "", signature: saved?.signature ?? "" }));
+  }, [cartOwner]);
+  useEffect(() => {
+    if (!catalog || !attemptLoaded || matchingAttempt) return;
+    if (needsUpdate) queueMicrotask(() => setNotice("Atualizamos o preço ou a quantidade conforme o catálogo. Confira o total."));
+    refreshProducts(catalog);
+  }, [catalog, needsUpdate, attemptLoaded, matchingAttempt, refreshProducts]);
+  useEffect(() => {
+    const refresh = () => setRevision(value => value + 1);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+    };
+  }, []);
+  const ready = catalog && !needsUpdate && items.every(item => !unavailable(item.id));
   const total = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
@@ -66,6 +98,7 @@ export default function CartContent() {
                   <h2 className="text-sm font-bold sm:text-base">
                     {item.name}
                   </h2>
+                  {unavailable(item.id) && <p className="text-sm text-amber-300">Indisponível. Remova este item para continuar.</p>}
                   <ProductIdentity context={productContexts.contexts[item.id]} loading={productContexts.loading} />
                   <p className="mt-1 text-xs text-zinc-500">
                     {item.kind === "combo"
@@ -97,7 +130,7 @@ export default function CartContent() {
                     <button
                       type="button"
                       aria-label={`Adicionar uma unidade de ${productLabel(item.name, productContexts.contexts[item.id])}`}
-                      disabled={item.quantity >= maxQuantity(item)}
+                      disabled={!catalog || unavailable(item.id) || item.quantity >= maxQuantity(item)}
                       onClick={() =>
                         updateQuantity(cartKey(item), item.quantity + 1)
                       }
@@ -149,9 +182,11 @@ export default function CartContent() {
             <p className="mt-2 text-xs text-zinc-500">
               Pagamento via Pix. Sem cobrança automática nesta etapa.
             </p>
-            <Link href="/checkout" className="btn-primary mt-6 w-full">
-              Ir para pagamento →
-            </Link>
+            {notice && <p role="status" className="mt-2 text-xs text-amber-300">{notice}</p>}
+            {productContexts.error && <button className="btn-secondary mt-4" onClick={() => setRevision(value => value + 1)}>Tentar atualizar o carrinho</button>}
+            {ready || matchingAttempt ? <Link href="/checkout" className="btn-primary mt-6 w-full">
+              {matchingAttempt ? "Retomar tentativa de compra" : "Ir para pagamento →"}
+            </Link> : <button disabled className="btn-primary mt-6 w-full opacity-50">{productContexts.loading ? "Conferindo carrinho…" : "Ir para pagamento →"}</button>}
             <div className="mt-5 border-t border-white/10 pt-4 text-xs leading-6 text-zinc-400">
               <p>✓ Pix com QR Code e código para copiar</p>
               <p>✓ Envio de comprovante</p>

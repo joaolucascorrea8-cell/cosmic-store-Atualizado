@@ -165,3 +165,15 @@ test("relatório financeiro mantém recebimento cancelado e não duplica crédit
   const { rows } = await db.query<{ r: { received: number; refunded: number; net: number } }>("select public.store_financial_summary(now()-interval '1 day',now()+interval '1 day') r");
   assert.deepEqual(rows[0].r, { received: 20, refunded: 5, net: 15 });
 });
+
+test("crédito excepcional preserva a reserva até conferência mesmo após o prazo automático", async () => {
+  const { order: o } = await order();
+  await credit(o.id, 5);
+  await db.exec(`update public.store_ops_settings set auto_close_enabled=true,auto_close_hours=24,enabled_by='${ids.admin}',enabled_at=now()-interval '3 days';
+    alter table public.orders disable trigger orders_updated_at;
+    update public.orders set created_at=now()-interval '2 days',updated_at=now()-interval '2 days';
+    alter table public.orders enable trigger orders_updated_at;`);
+  assert.equal((await db.query<{ n: number }>("select public.ops_expire_orders() n")).rows[0].n, 0);
+  assert.equal((await db.query<{ status: string }>("select status from orders where id=$1", [o.id])).rows[0].status, "awaiting_payment");
+  assert.equal(await stock(), 0);
+});

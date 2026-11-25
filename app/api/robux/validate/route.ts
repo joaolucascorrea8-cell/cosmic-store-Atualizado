@@ -13,6 +13,7 @@ import {
   readRobuxAmount,
   robuxBreakdown,
   salePriceForGamepass,
+  supplierQuoteFits,
 } from "@/lib/robux-pricing";
 
 export async function POST(request: Request) {
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
       );
 
     const breakdown = robuxBreakdown(amount, mode);
+    if (!breakdown.netRobux) return NextResponse.json({ error: "A quantidade precisa entregar pelo menos 1 Robux após a taxa." }, { status: 400 });
     if (Number(item.robux) !== breakdown.gamepassRobux)
       return NextResponse.json(
         {
@@ -85,6 +87,8 @@ export async function POST(request: Request) {
 
     const cosmicK = cosmicRateFromSupplier(supplierK, settings);
     const price = salePriceForGamepass(breakdown.gamepassRobux, cosmicK);
+    if (!supplierQuoteFits(item.priceBrl, supplierK, breakdown.gamepassRobux, price, settings))
+      return NextResponse.json({ error: "O custo do fornecedor não permite confirmar esta cotação. Tente novamente mais tarde." }, { status: 503 });
     const creator = await resolveGamePassCreator({
       gamePassId: item.id,
       byRobuxUsername: item.username,

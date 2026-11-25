@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   if (!ids.length || ids.length > 40 || ids.some(id => !UUID_PATTERN.test(id)))
     return Response.json({ error: "Produtos inválidos." }, { status: 400 });
   const result = await readProductContexts(await createClient(), ids);
-  return Response.json(result.error ? { error: "Não foi possível confirmar jogo e categoria." } : { contexts: result.contexts }, {
+  return Response.json(result.error ? { error: "Não foi possível confirmar jogo e categoria." } : { contexts: result.contexts, catalog: result.catalog }, {
     status: result.error ? 503 : 200, headers: { "Cache-Control": "private, no-store" },
   });
 }

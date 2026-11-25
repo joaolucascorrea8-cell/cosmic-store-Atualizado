@@ -16,6 +16,7 @@ import {
   readRobuxAmount,
   robuxBreakdown,
   salePriceForGamepass,
+  supplierQuoteFits,
 } from "@/lib/robux-pricing";
 import {
   createAdminNotifications,
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     mode?: unknown;
     link?: unknown;
     checkoutToken?: unknown;
+    cartOwner?: unknown;
     expectedPrice?: unknown;
   } | null;
   const amount = readRobuxAmount(body?.amount);
@@ -65,20 +67,25 @@ export async function POST(request: Request) {
       { status: 400 },
     );
 
+  if (body?.cartOwner && body.cartOwner !== user.id) return NextResponse.json({ error: "A conta mudou. Confira esta compra novamente." }, { status: 409 });
   const admin = createAdminClient();
   const existing = await admin
     .from("orders")
-    .select("id,order_code,status,total,order_type")
+    .select("id,order_code,status,total,order_type,robux_orders(gamepass_id,mode,requested_robux)")
     .eq("user_id", user.id)
     .eq("checkout_token", token)
     .maybeSingle();
+  if (existing.error) return NextResponse.json({ error: "Não foi possível verificar a tentativa anterior." }, { status: 503 });
+  const conflict = () => NextResponse.json({ error: "Esta sessão já foi usada em outro pedido." }, { status: 409 });
+  function matches(detail: { gamepass_id: string; mode: string; requested_robux: number } | null, total: number) {
+    return detail?.gamepass_id === parsedLink?.id && detail?.mode === mode && detail?.requested_robux === amount &&
+      typeof body?.expectedPrice === "number" && Math.round(body.expectedPrice * 100) === Math.round(Number(total) * 100);
+  }
   if (existing.data) {
-    if (existing.data.order_type !== "robux")
-      return NextResponse.json(
-        { error: "Esta sessão já foi usada em outro pedido." },
-        { status: 409 },
-      );
-    return NextResponse.json({ order: existing.data, created: false });
+    const { id, order_code, status, total, order_type, robux_orders } = existing.data;
+    const detail = Array.isArray(robux_orders) ? robux_orders[0] : robux_orders;
+    if (order_type !== "robux" || !matches(detail, total)) return conflict();
+    return NextResponse.json({ order: { id, order_code, status, total, order_type }, created: false });
   }
 
   if (!(await checkoutReady())) return NextResponse.json({ error: "As compras estão temporariamente indisponíveis. Não faça o Pix agora; se já pagou, procure o suporte." }, { status: 503 });
@@ -109,6 +116,7 @@ export async function POST(request: Request) {
       );
 
     const breakdown = robuxBreakdown(amount, mode);
+    if (!breakdown.netRobux) return NextResponse.json({ error: "A quantidade precisa entregar pelo menos 1 Robux após a taxa." }, { status: 400 });
     if (Number(item.robux) !== breakdown.gamepassRobux)
       return NextResponse.json(
         {
@@ -119,6 +127,8 @@ export async function POST(request: Request) {
 
     const cosmicK = cosmicRateFromSupplier(supplierK, settings);
     const total = salePriceForGamepass(breakdown.gamepassRobux, cosmicK);
+    if (!supplierQuoteFits(item.priceBrl, supplierK, breakdown.gamepassRobux, total, settings))
+      return NextResponse.json({ error: "O custo do fornecedor não permite confirmar esta cotação. Tente novamente mais tarde." }, { status: 503 });
     const creator = await resolveGamePassCreator({
       gamePassId: item.id,
       byRobuxUsername: item.username,
@@ -177,7 +187,10 @@ export async function POST(request: Request) {
       id: string;
       order_code: string;
       total: number;
+      status: string;
+      order_type: string;
     };
+    if (!result.created && !matches(result.robux, order.total)) return conflict();
     if (result.created) {
       await Promise.allSettled([
         createAdminNotifications(
@@ -191,7 +204,8 @@ export async function POST(request: Request) {
         ),
       ]);
     }
-    return NextResponse.json({ order, created: Boolean(result.created) });
+    const { id, order_code, total: orderTotal, status, order_type } = order;
+    return NextResponse.json({ order: { id, order_code, total: orderTotal, status, order_type }, created: Boolean(result.created) });
   } catch (error) {
     console.error("[robux/order]", error);
     return NextResponse.json(

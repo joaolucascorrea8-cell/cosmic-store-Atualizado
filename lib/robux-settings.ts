@@ -32,7 +32,7 @@ export async function getRobuxSettings(): Promise<RobuxSettings> {
       )
       .eq("id", 1)
       .maybeSingle();
-    if (error || !data) return DEFAULT_ROBUX_SETTINGS;
+    if (error || !data) return { ...DEFAULT_ROBUX_SETTINGS, enabled: false };
     return {
       enabled: Boolean(data.enabled),
       minCosmicK: Number(data.min_cosmic_k),
@@ -45,6 +45,14 @@ export async function getRobuxSettings(): Promise<RobuxSettings> {
       updatedAt: data.updated_at ?? null,
     };
   } catch {
-    return DEFAULT_ROBUX_SETTINGS;
+    return { ...DEFAULT_ROBUX_SETTINGS, enabled: false };
   }
+}
+
+export async function gamePassPendingTime() {
+  const settings = await getRobuxSettings();
+  if (!settings.updatedAt) return "alguns dias";
+  return settings.pendingDaysMin === settings.pendingDaysMax
+    ? `${settings.pendingDaysMax} ${settings.pendingDaysMax === 1 ? "dia" : "dias"}`
+    : `${settings.pendingDaysMin} a ${settings.pendingDaysMax} dias`;
 }
